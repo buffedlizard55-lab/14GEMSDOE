@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round-3 hypotheses — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html" class="active">Hypotheses (round 3)</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Round-3 hypotheses — the completeness angle, continuation cones,
+magnetic fabric, scarplet linkage</h1>
+<p class="lede">
+Round 2 found that a multiplicative blend of classifier × geophysical prior
+beats every single-field idea. Round 3 asks the next question: are there
+<strong>structures and transform families nothing in the repo has ever
+computed</strong> — catalogue-geometry continuation, catalogue-vs-geology
+residuals, magnetic fabric, scarplet connectivity — that change the verdict?
+Each hypothesis names its layers, its physical signature, why it targets a fault
+<strong>missing from the USGS/INGENIOUS catalogue</strong>, and how it differs
+from everything already implemented. All were gated on the spatially-blocked
+holdout <strong>before any submission slot</strong>. Sources inline, opened
+2026-09-28; full record in <code>research/hypotheses_round3.md</code>.
+</p>
+
+<div class="note"><strong>Gate verdict (2026-09-28, synthetic forward model —
+see honesty note).</strong> <strong>No round-3 candidate beat the incumbent</strong>
+(BMUL 0.3842 combined DTI; best challenger BMUL-R3A 0.3790, −0.0052). All five
+candidates and both incumbent-stack variants were killed. The follow-up prior
+test was exactly null (+0.0000) and yielded this session's most useful
+mechanism finding: <em>the multiplicative prior can only re-weight the
+classifier's support — it can never extend it</em>, so any "field X through the
+prior" proposal is dead unless X overlaps the classifier's confident pixels.
+No slot was spent. The gate has now killed 6 round-2/3 arms with literature
+support — that is it working.</div>
+
+<h2>Ranking (pre-registered, by expected DTI × cost) and gate outcome</h2>
+<table>
+<tr><th>Rank</th><th>ID</th><th>Hypothesis</th><th>Signature transform</th><th>Layers</th><th>Why it catches MISSING faults</th><th>New data?</th><th>Gate</th></tr>
+<tr><td>1</td><td><a href="#r3a">R3A</a></td><td><strong>Tip-continuation cones</strong> — a trace that stops is an unfinished object; the wedge past its tip is scoreable geometry</td>
+    <td>oriented anisotropic distance transform: decaying wedge past each terminal pixel along its local strike</td>
+    <td>catalogue traces only</td>
+    <td>staff ruling: "new fault" <em>includes a continuation past a mapped tip</em> (<a href="https://community.drivendata.org/t/where-do-you-draw-the-line/11536" target="_blank" rel="noopener">forum 11536</a>); terminations host 16.7–22% of GB systems (<a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2026/Faulds.pdf" target="_blank" rel="noopener">Faulds SGW 2026</a>)</td>
+    <td>no</td><td class="bad">killed −0.107</td></tr>
+<tr><td>2</td><td><a href="#r3b">R3B</a></td><td><strong>Completeness-angle residual</strong> — where strain + relief say "fault here" but the catalogue is empty</td>
+    <td>coarse-cell ridge OLS of log catalogue density on relief/strain/range-front; signed residual raster</td>
+    <td>detrended elevation, strain rates, catalogue (context only)</td>
+    <td>Qfault density is partly a map of who mapped what (<a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2025/Hermant.pdf" target="_blank" rel="noopener">Hermant SGW 2025</a>); ~39% of systems are blind (<a href="https://gbcge.org/recent-projects/characterizing-structural-controls/" target="_blank" rel="noopener">GBCGE</a>)</td>
+    <td>no</td><td class="bad">killed −0.105</td></tr>
+<tr><td>3</td><td><a href="#r3c">R3C</a></td><td><strong>Magnetic-basement lineaments</strong> — fabric the surface cannot show</td>
+    <td>structure-tensor orientation/coherence + hysteresis ridge skeleton + strike-agreement vs catalogue</td>
+    <td>RTP magnetics, TMI + slopes, magnetic source depth</td>
+    <td>basement-rooted faults with no scarp still offset magnetised basement; GeoDAWN magnetics see through basin fill (<a href="https://doi.org/10.5066/P93LGLVQ" target="_blank" rel="noopener">DOI 10.5066/P93LGLVQ</a>)</td>
+    <td>no (in-stack)</td><td class="bad">killed −0.103</td></tr>
+<tr><td>4</td><td><a href="#r3d">R3D</a></td><td><strong>Scarplet curvature-linkage</strong> — the bridge matters, not the scarp</td>
+    <td>Laplacian negative-curvature threshold → speckle removal → trend closing → LINK pixels</td>
+    <td>detrended elevation (+ 1 m lidar later)</td>
+    <td>decimetre scarplets below catalogue amplitude; experts confirm real faults on lidar that Qfault lacks (Hermant SGW 2025); lakebeds hide pre-Holocene rupture (Faulds SGW 2026)</td>
+    <td>no</td><td class="bad">killed −0.079 (best non-blend gain, +0.019 vs baseline)</td></tr>
+<tr><td>5</td><td><a href="#r3e">R3E</a></td><td><strong>Dilation-tendency-weighted corridors</strong> — spend probability where opening-mode failure is admissible</td>
+    <td>tendency raster × corridor score re-weighting (with a prior-overlap test first)</td>
+    <td>slip &amp; dilation tendency + catalogue geometry</td>
+    <td>step-overs/terminations are the highest-dilation settings (<a href="https://www.lyellcollection.org/doi/full/10.1144/geoenergy2023-009" target="_blank" rel="noopener">Geoenergy 2023</a>, <a href="https://pangea.stanford.edu/ERE/pdf/IGAstandard/SGW/2025/Giddens.pdf" target="_blank" rel="noopener">Giddens SGW 2025</a>)</td>
+    <td><strong>yes</strong> — <a href="https://doi.org/10.5066/P9YL58W6" target="_blank" rel="noopener">DOI 10.5066/P9YL58W6</a> (free, official, obtainable; not yet fetched)</td>
+    <td class="warn">not gated — no data</td></tr>
+</table>
+
+<h2 id="r3a">The gate record (identical round-2 protocol, 3 seeds × 4 folds)</h2>
+<table>
+<tr><th>arm</th><th>recovery</th><th>discovery</th><th>combined DTI</th><th>Δ vs incumbent</th><th>verdict</th></tr>
+<tr><td>baseline (reference)</td><td>0.3073</td><td>0.0081</td><td>0.2863</td><td>−0.0979</td><td>reproduces round 2 exactly</td></tr>
+<tr><td><strong>BMUL — incumbent (classifier(ALL) × (1+0.5·prior))</strong></td><td><strong>0.3673</strong></td><td><strong>0.0612</strong></td><td><strong>0.3842</strong></td><td>—</td><td class="ok">stands</td></tr>
+<tr><td>R3A tip-continuation cones</td><td>0.2977</td><td>0.0080</td><td>0.2772</td><td>−0.1071</td><td class="bad">killed</td></tr>
+<tr><td>R3B completeness residual</td><td>0.3003</td><td>0.0078</td><td>0.2796</td><td>−0.1047</td><td class="bad">killed</td></tr>
+<tr><td>R3C magnetic lineaments</td><td>0.3023</td><td>0.0079</td><td>0.2815</td><td>−0.1028</td><td class="bad">killed</td></tr>
+<tr><td>R3D scarplet linkage</td><td>0.3322</td><td>0.0056</td><td>0.3056</td><td>−0.0787</td><td class="bad">killed (best non-blend)</td></tr>
+<tr><td>R3AC cones + magnetics</td><td>0.2930</td><td>0.0078</td><td>0.2726</td><td>−0.1116</td><td class="bad">killed</td></tr>
+<tr><td>BMUL-R3A (incumbent + cones)</td><td>0.3624</td><td>0.0607</td><td>0.3790</td><td>−0.0052</td><td class="bad">killed — dilutes</td></tr>
+<tr><td>BMUL-R3AC (incumbent + cones + magnetics)</td><td>0.3599</td><td>0.0598</td><td>0.3758</td><td>−0.0084</td><td class="bad">killed — dilutes</td></tr>
+<tr><td>BMUL-R3Dp (bridge field into the prior)</td><td>0.3673</td><td>0.0612</td><td>0.3842</td><td>+0.0000</td><td class="warn">null — support mechanism below</td></tr>
+</table>
+
+<div class="note"><strong>The null that teaches something.</strong> The
+multiplicative prior scales the classifier's own probability: at a bridge pixel
+where the classifier says ~0, (1 + 0.5·prior)·0 stays 0; where the classifier
+is ~1 the product clips at 1 anyway. <strong>The prior re-weights the
+classifier's support; it cannot extend it.</strong> Any future proposal of the
+form "add field X to the prior" must first demonstrate pixel-level overlap with
+the classifier's confident support — otherwise it is null by construction. This
+single measurement retires an entire family of would-be ideas cheaply.</div>
+
+<h2 id="r3e">What was fixed along the way (audit trail)</h2>
+<ul>
+<li>Run 1 of the gate was <strong>voided</strong>: a unit test caught a
+coordinate-frame bug that emptied the R3A cones on axis-aligned traces
+(<code>_outward_direction</code>); fixed and pinned by
+<code>tests/test_hypotheses_round3.py</code>.</li>
+<li>Run 1's incumbent was also <strong>wrong in our favour</strong>: round-2's
+BLEND-MUL trains its classifier on the ALL block, and the first re-run compared
+candidates against a weaker baseline-only incumbent. <code>validate_round3.py</code>
+now reproduces the exact round-2 emission (baseline recovery matches round 2 to
+4 decimals, pinning protocol equivalence).</li>
+<li>Honesty: all numbers are the <strong>synthetic forward model</strong>, as in
+round 2. They validate the machinery and the sign of each effect — not a
+leaderboard score. The script runs unchanged on the real rasters once
+<code>data/raw/</code> is populated (one command; see
+<a href="data.html">Data &amp; sources</a>).</li>
+</ul>
+
+<h2>Where the leverage is now</h2>
+<ol>
+<li><strong>Land the real rasters</strong> — every synthetic verdict must be
+re-measured on the 19-band stack (<code>bash scripts/download_competition_data.sh</code>
+on any unrestricted machine; the official no-login mirrors are wired in).</li>
+<li><strong>Re-run the gate on real data</strong> — the incumbent, N2 and N5
+are re-measured; R3E's tendency raster gets its prior-overlap test first.</li>
+<li><strong>U-Net capacity</strong> — the logistic model's support is the
+binding constraint the null result exposes; the reference architecture and its
+exact hyperparameters are recorded (knowledge base C24).</li>
+</ol>
+</main>
+<footer>Verified 2026-09-28 · artifacts: <code>artifacts/holdout_round3.json</code>,
+<code>artifacts/holdout_round3_followup.json</code> · code:
+<code>gems/hypotheses.py</code>, <code>scripts/validate_round3.py</code></footer>
+</body>
+</html>

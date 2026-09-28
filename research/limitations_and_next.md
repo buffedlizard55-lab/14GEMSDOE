@@ -1,57 +1,62 @@
 # Limitations & next steps — the working queue
 
-Updated 2026-09-28 (round-2 session). Ordered by "what most raises P(win) per
-unit effort". Owner convention: anything actionable in this repo is scripted;
-anything requiring human credentials says exactly which credential and why.
+Updated 2026-09-28 (round-3 session, 14GEMSDOE). Ordered by "what most raises
+P(win) per unit effort". Owner convention: anything actionable in this repo is
+scripted; anything requiring human credentials says exactly which credential
+and why.
 
-## Round-2 outcome in one line
+## Round-3 outcome in one line
 
-`scripts/validate_round2.py` gated nine arms on the spatially-blocked holdout:
-**BLEND-MUL (classifier × (1 + 0.5·geophysical prior)) won with +0.0979
-combined DTI and improved recovery AND discovery; the literature-ranked top
-candidate N1 (gravity-gradient edge terminations) was killed at −0.0059.** No
-submission slot was spent. Full record: `research/hypotheses_round2.md`.
+`scripts/validate_round3.py` gated five new candidates + two incumbent stacks +
+one prior-channel follow-up against the TRUE round-2 incumbent (BMUL 0.3842,
+reproduced exactly): **the incumbent stands; all R3 arms were killed; the
+prior-extensibility test was exactly null, establishing that the multiplicative
+prior cannot extend the classifier's support.** No submission slot was spent.
+Full record: `research/hypotheses_round3.md`. Also this session: the
+submission-form NaN rejection (T9/FLAG #10) mitigated with a finite default
+download; the official no-login data mirrors wired into
+`scripts/download_competition_data.sh`; leaderboard re-verified live (T11);
+101/101 tests green.
 
 ## A. Blockers
 
 | # | Blocker | Why it blocks | Action | Status |
 |---|---------|---------------|--------|--------|
-| B1 | Competition data not in `data/raw/` (DrivenData login required, C18) | no real features/labels/template ⇒ no real holdout numbers | run `scripts/download_competition_data.sh` on a machine with a DrivenData account, then `python3 scripts/prepare_data.py` | **needs human credential** (one-time) |
-| B2 | Sandbox TLS policy blocks binary downloads (FLAG #1) | external INGENIOUS/ScienceBase layers and DEM tiles must be fetched elsewhere | run `scripts/download_external_data.sh` + the `1m_DEM_links.csv` fetch on an unrestricted machine | scripted; needs unrestricted machine |
-| B3 | No GPU in this environment | U-Net (reference-solution class) training is slow to impossible | train logistic baseline for protocol work; port U-Net on GPU box; protocol unchanged | environmental |
-| B4 | ~~Band order of the 19-layer stack unpublished~~ **RESOLVED (C23)**: the order is in the GeoTIFF band tags (`description`, `data_category`); the reference notebook reads them. 15 of 19 layers are named in the official provided-features list; the remaining 4 are not enumerated publicly (FLAG #6b) | feature naming for the real stack | read `src.tags(i)` for all 19 bands on arrival; `prepare_data.py` still refuses to guess | waits on B1 |
+| B1 | Competition data not in `data/raw/` | no real features/labels/template ⇒ no real holdout numbers | **one command on any unrestricted machine**: `bash scripts/download_competition_data.sh` (official no-login Dropbox mirrors wired in this session, sha256 recorded; T10), then `python3 scripts/prepare_data.py` | scripted; mirrors TLS-blocked only inside this sandbox (T8) |
+| B2 | Sandbox TLS policy blocks binary downloads (FLAG #1, re-measured 2026-09-28T09:1xZ: allowlist unchanged) | external INGENIOUS/ScienceBase layers and DEM tiles must be fetched elsewhere | run `scripts/download_external_data.sh` + the `1m_DEM_links.csv` fetch on an unrestricted machine | scripted; needs unrestricted machine |
+| B3 | No GPU in this environment | U-Net (reference-solution class) training is slow to impossible | train logistic baseline for protocol work; port U-Net on GPU box; protocol unchanged | environmental — **now the binding constraint after the round-3 support-extensibility null** |
+| B4 | ~~Band order unpublished~~ **RESOLVED (C23)**: per-band `description`/`data_category` tags; 15 of 19 named officially, 4 not (FLAG #6b) | feature naming for the real stack | read `src.tags(i)` for all 19 bands on arrival; `prepare_data.py` still refuses to guess | waits on B1 |
 
 ## B. Next-session work (in priority order)
 
-1. **Land the data (B1), then re-run the round-2 gate on the real rasters.**
-   `scripts/validate_round2.py` runs unchanged once `data/processed/` exists.
-   Deliverable: the same nine-arm table computed on real labels. BLEND-MUL is
-   the incumbent to beat; nothing may be uploaded until it does.
+1. **Land the data (B1), then re-run BOTH gates on the real rasters**
+   (`scripts/validate_round2.py` and `scripts/validate_round3.py` run unchanged
+   once `data/processed/` exists). Deliverable: the arm tables computed on real
+   labels, BLEND-MUL re-measured as the incumbent; nothing may be uploaded
+   until it does.
 2. **Only then spend a weekly slot**, with
-   `scripts/build_submission.py --policy "blend-mul w0.5 holdout<VALUE>"` and
+   `scripts/build_submission.py --policy "bmul w0.5 holdout<VALUE>"` and
    `scripts/check_submission_uniqueness.py` run first (exit 0 required).
-3. **Scale `strike_field` and `relay_corridors` to the full grid** (tiled
-   convolutions; KD-tree pruning for component pairs). Currently correct but
-   tuned for ≤1k-component synthetic regions.
-4. **H2 (magnetic lineaments) behind the same gate.** Structure-tensor stack on
-   the RTP magnetics + TMI-slope bands; strike-mismatch feature; A/B vs H1.
-5. **External layers (H3/H4)** once B2 completes: rasterize springs/sinter/vents
-   and the slip/dilation tendency onto the template grid; enrichment statistic
-   on hidden traces before any emission change.
-6. **U-Net port** (reference notebook) with hide-and-recover batches: hide
-   components per sample rather than per epoch for stochasticity; keep the same
-   hidden-recovery scoring. Note the reference's hyperparameters are now recorded
-   (C24) so the port is a like-for-like comparison; note also that the reference
-   trains on the known-fault population and has no masking (C25), so it is a
-   floor to beat, not a target to match.
-7. **Masking diagnostic slot** (S5-style catalogue-hedge probe) — only when the
+   **Upload the FINITE (0.0-outside) file** — the NaN variant is known-rejected
+   (T9/FLAG #10).
+3. **R3E prior-overlap test first**: when the INGENIOUS slip/dilation raster
+   lands, compute the pixel-level overlap between the tendency field and the
+   classifier's confident support BEFORE any gate run (the round-3 null makes
+   this the mandatory first step for every prior-extension proposal).
+4. **Scale `strike_field` and `relay_corridors` to the full grid** (tiled
+   convolutions; KD-tree pruning). Currently correct but tuned for ≤1k-component
+   synthetic regions.
+5. **U-Net port** (reference notebook) with hide-and-recover batches: hide
+   components per sample rather than per epoch; keep the same hidden-recovery
+   scoring; reference hyperparameters recorded (C24); the reference trains on
+   the known-fault population with no masking (C25) — a floor to beat.
+6. **Masking diagnostic slot** (S5-style catalogue-hedge probe) — only when the
    slot budget is otherwise unused; interpretation written *before* upload.
-8. **Site payload swap:** after the first real validated submission,
+7. **Site payload swap:** after the first real validated submission,
    `build_site_payload.py submissions/GEMS_….tif` and confirm the banner flips
    from DEMO to the real artifact hash.
-9. **Leaderboard feed:** schedule `scripts/refresh_leaderboard.py` (locally or
-   via GitHub Action on a runner with network) so the site's snapshot stays
-   current; the snapshot timestamp always shows on the Leaderboard page.
+8. **Leaderboard feed:** schedule `scripts/refresh_leaderboard.py` (locally or
+   via GitHub Action on a runner with network) so the snapshot stays current.
 
 ## C. Irregularities flagged for human review
 
@@ -81,11 +86,9 @@ submission slot was spent. Full record: `research/hypotheses_round2.md`.
    25/20/18/7 later). Brief numbers kept as primary; hypotheses robust to both.
    **Round-2 adds the 2026 vintage (S8–S10): 39.6/26.1/16.7/6.8 for FSS counts,
    27.5/22.1/16.6/5.7 for the 403 known systems — all VERIFIED.**
-2. **FLAG #2 — Faulds percentage vintage drift** (32/22/22/8 in 2012 vs
-   25/20/18/7 later). Brief numbers kept as primary; hypotheses robust to both.
 5. **FLAG #3 — stale brief figure "0.3049 is the highest score"**: live top on
-   2026-09-28 is 0.3168 (DARD); live top 5 recorded in T7. 0.3049 not in the
-   top 50.
+   2026-09-28 is 0.3168 (DARD); live top 5 recorded in T7 and re-verified in
+   T11 (09:22Z). 0.3049 not in the top 50.
 6. **FLAG #4 — "geothermal vents" wording**: the scored target is faults.
    Vents (GDR volcanics layer) are used only as an independent structure proxy.
 7. **FLAG #5 — masking semantics ambiguity** (C11). Staff wrote: "Pixels
@@ -103,17 +106,41 @@ submission slot was spent. Full record: `research/hypotheses_round2.md`.
     H25-ctx-ridge, h28-dotted-ridge, r7-nms3 entries have no reported score in
     the project thread; ledger leaves them blank rather than guessing.
 11. **FLAG #8 — identical-score submissions across accounts** (three LB accounts
-    at 0.1563, VERIFIED T6): if those are ours, note that multiple identical
-    uploads waste slots and produce no information. The mechanical prevention is
-    now in place: `scripts/check_submission_uniqueness.py` (hash-identity,
-    name-identity, NOTE/MANIFEST provenance, manifest integrity, ledger
-    score+artifact collisions) is wired into `tests/test_submission_uniqueness.py`
-    and must exit 0 before any upload.
+    at 0.1563, VERIFIED T6, re-verified T11 09:22Z): if those are ours, note
+    that multiple identical uploads waste slots and produce no information. The
+    mechanical prevention is in place: `scripts/check_submission_uniqueness.py`
+    must exit 0 before any upload.
 12. **FLAG #9 — staff will not disclose the provenance of the hidden test
     faults** (C12, forum 11527). Every hypothesis about *which* fault types are
-    in the test set is therefore inference. This is why `validate_round2.py`
-    scores three targets (recovery / discovery / combined) instead of one, and
-    why the promotion gate uses the union.
+    in the test set is therefore inference. This is why the gates score three
+    targets (recovery / discovery / combined) instead of one.
+13. **FLAG #10 — the form's range check rejects NaN** anywhere in the raster,
+    including the format page's permitted "null or NaN" outside the footprint
+    (T9: real upload bounced 2026-09-28 with exactly "Predicted values must be
+    in range [0, 1]"). Mechanism inferred, not disclosed. Mitigated: finite
+    default emission in the site builder and `build_submission.py`. Needs one
+    real finite-file upload to confirm the fix end-to-end.
+
+## C2. Session log — 14GEMSDOE (2026-09-28, round 3)
+
+* **Pass 1 (implement + verify).** R3 arms implemented
+  (`gems/hypotheses.py`, context-threaded through `train_hide_recover.py`),
+  `scripts/validate_round3.py` written with the round-2 protocol, tests added
+  (`tests/test_hypotheses_round3.py`, `tests/test_data_path.py`), site finite
+  default + value gate, mirror download script, KB/ledger/docs updated.
+* **Pass 2 (review, find bugs, fix).** Found and fixed:
+  (a) `_outward_direction` coordinate-frame bug (cones empty on axis-aligned
+  traces) — caught by the new unit test after gate run 1 had started; run 1
+  voided and re-run; (b) the round-3 incumbent initially reproduced round 2
+  with the WRONG classifier block (baseline instead of ALL) — corrected so
+  baseline/BMUL reproduce round-2 numbers exactly (0.3073/0.3842), pinning
+  protocol equivalence; (c) R3D linkage scale parameterised after measuring
+  real flank spacing (5×5 closing bridged nothing: flanks 7 px apart → 9×9);
+  (d) a URL typo in the knowledge base fixed on proofread; (e) nav link missing
+  on the round-2 page.
+* **Pass 3 (re-check against the original request).** Full suite 101/101;
+  end-to-end demo re-run; uniqueness gate exit 0; every standing-prompt line
+  re-checked against deliverables (traceability table in README).
 
 ## D. Standing decisions (do not relitigate without new evidence)
 

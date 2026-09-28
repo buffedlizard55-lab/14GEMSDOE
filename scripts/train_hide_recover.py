@@ -90,7 +90,9 @@ def build_feature_matrix(region: dict, context_mask: np.ndarray,
             names.append(k)
             cols.append(region[k].astype(np.float32).ravel())
     if arm and arm.lower() != "baseline":
-        for k, v in build_arm_features(region, arm).items():
+        # round-3 arms R3A/R3B read the catalogue: they MUST see the visible
+        # context (the caller's ``context_mask``), never the full catalogue.
+        for k, v in build_arm_features(region, arm, context_mask=context_mask).items():
             if isinstance(v, np.ndarray) and v.ndim == 2:
                 names.append(k)
                 cols.append(np.asarray(v, dtype=np.float32).ravel())

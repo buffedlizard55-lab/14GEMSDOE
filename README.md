@@ -144,6 +144,38 @@ Three findings that change the strategy:
 Full record with sources, layer names, transforms and the honesty statement:
 **[`research/hypotheses_round2.md`](research/hypotheses_round2.md)**.
 
+## Round-3 result — five new hypotheses, gate says keep the incumbent (2026-09-28)
+
+Session 14 pre-registered five genuinely new candidates
+(`scripts/validate_round3.py` → `artifacts/holdout_round3.json`, identical
+round-2 protocol, incumbent reproduced exactly):
+
+| candidate | layers / transform | Δ combined vs incumbent | decision |
+|---|---|---|---|
+| R3A tip-continuation cones | catalogue geometry; oriented decaying wedge past each trace tip | −0.1071 | **killed** |
+| R3B completeness-angle residual | ridge OLS of catalogue density on relief/strain/range-front; signed residual | −0.1047 | **killed** |
+| R3C magnetic-basement lineaments | structure-tensor + ridge skeleton on magnetics; strike agreement | −0.1028 | **killed** |
+| R3D scarplet curvature-linkage | Laplacian curvature → trend closing → bridge pixels | −0.0787 (best non-blend, +0.019 vs baseline) | **killed** |
+| R3E tendency-weighted corridors | slip/dilation tendency × corridors | not gated — external raster pending | **not slot-eligible** |
+| BMUL-R3A / BMUL-R3AC (incumbent stacks) | ALL + R3 blocks | −0.0052 / −0.0084 | **killed** |
+| BMUL-R3Dp (bridge into the prior) | prior-channel test | **+0.0000** | **null — mechanism found** |
+
+Two findings:
+
+1. **The incumbent survived its strongest challenge yet.** Every plausible new
+   idea lost to `classifier(ALL) × (1+0.5·prior)` (0.3842). The gate has now
+   killed eleven source-backed arms across two rounds; no submission slot was
+   ever spent on a loser.
+2. **The multiplicative prior can only re-weight the classifier's support — it
+   can never extend it** (the null: at a bridge pixel the classifier scores ~0,
+   (1+0.5·prior)·0 = 0; where the classifier is ~1 the product clips at 1).
+   Any future "field X through the prior" idea must first show pixel overlap
+   with the classifier's confident support. The remaining leverage is the real
+   rasters, then U-Net capacity — not more logistic-era feature arms.
+
+Full record: **[`research/hypotheses_round3.md`](research/hypotheses_round3.md)**,
+site page **`docs/hypotheses-round3.html`**.
+
 ## How this repo fulfils the prompt
 
 | Prompt requirement | Where it lives | Verified by |
@@ -167,13 +199,19 @@ Full record with sources, layer names, transforms and the honesty statement:
 | Up-to-date feed; no manual checking | `scripts/refresh_leaderboard.py` → `docs/leaderboard.html` | `tests/test_leaderboard_parser.py` |
 | Multi-pass working | session log in `research/limitations_and_next.md` | passes recorded per session |
 
-## Current verified scoreboard (2026-09-28)
+## Current verified scoreboard (2026-09-28, re-verified 09:22Z)
 
-* Leaderboard #1 **DARD 0.3168** (the brief's "0.3049" figure is stale — FLAG #3).
+* Leaderboard #1 **DARD 0.3168** (the brief's "0.3049" figure is stale — FLAG #3;
+  top-5 re-verified live, T11).
 * This group's best public scores: 0.1563 / 0.1461 / 0.1193 — the 0.1563 family
   is one artifact shipped repeatedly (hash-proven; `research/results_ledger.md`).
-* Deadline **Dec 3, 2026 23:59 UTC**; 3 submissions/week; one file scored in both
-  rounds; Phase 2 ($250k) re-scores against expert-expanded labels.
+* Deadline **Dec 3, 2026 23:59 UTC**; 3 submissions/week (rolling window, C22);
+  one file scored in both rounds; Phase 2 ($250k) re-scores against
+  expert-expanded labels.
+* **Submission-form fact (T9/FLAG #10):** the form rejects NaN-nodata files with
+  "Predicted values must be in range [0, 1]". The site's default download and
+  `build_submission.py` now emit finite files (0.0 outside the footprint —
+  score-neutral).
 
 ## Repository map
 
@@ -195,32 +233,40 @@ gems/
   synthesize.py            ← synthetic GeoDAWN-like forward model, now with a
                              catalogue/true-fault split and geophysical analogues
 scripts/
-  validate_round2.py       ← NEW: the hypothesis A/B gate (the only slot currency)
+  validate_round2.py       ← round-2 hypothesis A/B gate (the slot currency)
+  validate_round3.py       ← NEW: round-3 gate (R3 arms vs the true incumbent)
   check_submission_uniqueness.py ← NEW: blocks byte-identical / duplicate uploads
   build_submission.py      ← unique sha8 name + NOTE + MANIFEST + format gate
-  train_hide_recover.py    ← hide-and-recover training (arm-aware)
+                             (clamps to [0,1], fixes NaN — T9)
+  train_hide_recover.py    ← hide-and-recover training (arm-aware, R3 context-safe)
+  download_competition_data.sh ← NEW: official no-login mirror fetch + sha256
   build_features.py, build_site_payload.py, refresh_leaderboard.py,
-  download_competition_data.sh, download_external_data.sh, prepare_data.py,
+  download_external_data.sh, prepare_data.py,
   make_demo.py, validate_blocks.py, validate_submission.py
-tests/                     ← 86 tests: metric vectors, leak invariant, format gate,
+tests/                     ← 101 tests: metric vectors, leak invariant, format gate,
                              JS↔Python GeoTIFF parity, block splits, feed parser,
-                             geoedge geometry, arm leak-freedom, uniqueness gate
-research/                  ← knowledge base, scoring analysis, round-1 + round-2
+                             geoedge geometry, R3 arm geometry/leak-safety,
+                             mirror-list guard, uniqueness gate
+research/                  ← knowledge base, scoring analysis, round-1/2/3
                              hypothesis records, results ledger, limitations
-data/raw/                  ← competition data goes here (login required — see below)
+data/raw/                  ← competition data goes here (one command — see below)
 data/external/             ← free external layers (scripts/download_external_data.sh)
 submissions/               ← built submission files + NOTE + MANIFEST (never re-used)
-artifacts/                 ← holdout JSON + model runs; git-ignored EXCEPT
-                             artifacts/holdout_round2.json, which is tracked
-                             because it is the evidence for the promotion
-                             decision quoted above (regenerable, 37 kB)
+artifacts/                 ← holdout JSON + model runs; git-ignored EXCEPT the
+                             tracked gate evidence holdout_round2.json /
+                             holdout_round3.json / holdout_round3_followup.json
 ```
 
 ## Quickstart
 
 ```bash
-# 1. place the competition data (needs a DrivenData login — the data tab is
-#    login-gated; verified) then:
+# 0. environment (first time on any machine; numpy/scipy/rasterio/scikit-image):
+python3 -m venv .venv
+./.venv/bin/pip install numpy scipy rasterio scikit-image pytest
+
+# 1. place the competition data — ONE command on any unrestricted machine.
+#    The official no-login Dropbox mirrors are wired in (sha256 recorded on
+#    arrival); inside a TLS-restricted sandbox it prints the manual path:
 bash scripts/download_competition_data.sh
 python3 scripts/prepare_data.py
 
@@ -231,40 +277,49 @@ bash scripts/download_external_data.sh
 python3 scripts/train_hide_recover.py
 python3 scripts/validate_blocks.py        # ← the only number that may spend a slot
 
-# 3b. the round-2 hypothesis gate (runs on the synthetic forward model today,
+# 3b. the hypothesis gates (round 2 = N-arms + blends; round 3 = R3 arms +
+#     incumbent stacks; both run on the synthetic forward model today and
 #     unchanged on the real rasters once data/processed/ exists):
 python3 scripts/validate_round2.py
+python3 scripts/validate_round3.py
 python3 scripts/check_submission_uniqueness.py   # must exit 0 before any upload
 
 # 4. build + validate a uniquely-named submission:
-python3 scripts/build_submission.py artifacts/pred.npy --policy "h1 relay-bridges r1"
+python3 scripts/build_submission.py artifacts/pred.npy --policy "bmul w0.5 holdout<VALUE>"
 
 # 5. ship it to the site's one-click builder:
 python3 scripts/build_site_payload.py submissions/GEMS_*.tif
 
-# tests (86) and the synthetic end-to-end demo:
-python3 -m unittest discover -s tests
-python3 scripts/make_demo.py
+# tests (101) and the synthetic end-to-end demo:
+./.venv/bin/python -m pytest tests -q
+./.venv/bin/python scripts/make_demo.py
 ```
 
 ## Limitations in the way (full queue: `research/limitations_and_next.md`)
 
-1. **Competition data requires DrivenData login** (verified) — one-time manual
-   placement into `data/raw/` unblocks all real numbers.
-2. **This sandbox blocks binary downloads** (TLS policy) — external layers and
-   DEM tiles are fetched via the provided scripts on an unrestricted machine.
+1. **Competition data placement is one command on any unrestricted machine**
+   (`bash scripts/download_competition_data.sh` — official no-login Dropbox
+   mirrors wired in, sha256 provenance recorded). The DrivenData data tab itself
+   stays login-gated (verified). Until the files land in `data/raw/`, every
+   number in this repo is synthetic-model (marked as such everywhere).
+2. **This sandbox TLS-allowlists {pypi, pythonhosted, github, api.github,
+   codeload, npmjs}** (re-measured 2026-09-28, T8) — Dropbox/GDR/ScienceBase
+   downloads and the DEM tiles must be fetched elsewhere; the Arena page-fetch
+   tools *do* reach those hosts, which is how every source in
+   `knowledge_base.md` was verified.
 3. **No GPU here** — logistic-baseline protocol work only; U-Net port queued
-   (the reference solution's exact hyperparameters are now recorded, C24).
+   (the reference solution's exact hyperparameters are recorded, C24). Round 3
+   showed the logistic model's *support* is now the binding constraint
+   (prior-extensibility null), so capacity is the next lever after real data.
 4. **4 of the 19 feature bands are not named in any public document** (15 are,
    C27) — read all 19 `description`/`data_category` tags on arrival; the code
    refuses to guess.
 5. **No verified free official paleo-shoreline dataset yet** — this blocks
    hypothesis N4 (lidar scarp + shoreline suppression) until one is sourced
    (FLAG #1b).
-6. **Sandbox cannot fetch binaries** — GDR/ScienceBase/Dropbox downloads and the
-   DEM tiles must be fetched on an unrestricted machine (FLAG #1, T8). The Arena
-   page-fetch tools *do* reach those hosts, which is how every source in
-   `knowledge_base.md` was verified.
+6. **Submission-form range check rejects NaN** anywhere in the raster (T9,
+   FLAG #10) — finite emission is the default everywhere (site builder +
+   `build_submission.py`), and the value gate refuses out-of-range builds.
 
 ## Honesty rules (non-negotiable)
 
