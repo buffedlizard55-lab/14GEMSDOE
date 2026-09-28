@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round-2 hypotheses — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html" class="active">Hypotheses (round 2)</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Round-2 hypotheses — five ideas we had not tried</h1>
+<p class="lede">
+Round 1 asked <em>"where does the catalogue imply a fault should be?"</em>
+Round 2 asks <em>"where does the physics say a fault must be, in a place the
+catalogue never looked?"</em> — which is the population the prize actually
+scores. Each hypothesis names its layers, its physical signature, why it should
+catch a fault <strong>missing from the USGS/INGENIOUS catalogue</strong> rather
+than one already in it, and how it differs from everything already in this repo.
+Every geological claim is quoted from a source opened on 2026-09-28; the link is
+inline. <strong>No submission slot was spent before the holdout gate ran.</strong>
+</p>
+
+<div class="note"><strong>Why "new fault" includes extensions and splays.</strong>
+DrivenData staff, forum thread 11536 (2026-09-23): <em>"For the purposes of this
+competition, 'new fault' means 'any fault pixel not already captured by
+USGS/INGENIOUS' and can include newly mapped geometry of an existing fault
+system."</em> And thread 11516 (2026-09-16): <em>"Pixels corresponding to known
+USGS/INGENIOUS faults are masked / excluded from evaluation, so they do not count
+towards penalty terms."</em> Together these mean the entire score comes from
+off-catalogue pixels — a continuation past a mapped tip, a splay, or a strand
+buried under basin fill all count.</div>
+
+<h2>Ranking (by expected DTI gain × implementation cost)</h2>
+<table>
+<tr><th>Rank</th><th>ID</th><th>Hypothesis</th><th>Signature transform</th><th>Layers</th><th>New data?</th><th>Cost</th></tr>
+<tr><td>1</td><td><a href="#n1">N1</a></td><td>Gravity-gradient edge <strong>terminations and intersections</strong> = the fault tips and crossings the catalogue omits</td>
+    <td>horizontal-gradient magnitude → NMS across the ridge → hysteresis → 1-px skeleton → <strong>endpoint &amp; branch-point extraction</strong></td>
+    <td>isostatic gravity anomaly + its slope (in-stack)</td><td>no</td><td>low</td></tr>
+<tr><td>2</td><td><a href="#n2">N2</a></td><td><strong>Seismicity-density / strain-invariant lineaments</strong> = faults buried under basin fill</td>
+    <td>structure-tensor orientation + coherence on the earthquake-density and strain-invariant fields</td>
+    <td>earthquake density, dilatation &amp; shear strain rate, 2nd strain invariant (in-stack)</td><td>no</td><td>low–medium</td></tr>
+<tr><td>3</td><td><a href="#n3">N3</a></td><td><strong>Hydrothermal alteration-cap margin</strong>: high conductance AND magnetic low, fault at the cap boundary</td>
+    <td>boolean conjunction of anomaly masks → <strong>level-set boundary</strong> of the cap</td>
+    <td>surface conductivity, depth to conductive base, RTP magnetics (in-stack)</td><td>no</td><td>medium</td></tr>
+<tr><td>4</td><td><a href="#n4">N4</a></td><td><strong>1 m lidar scarp / profile-curvature lineaments</strong> with a <strong>paleo-shoreline negative mask</strong></td>
+    <td>multi-azimuth hillshade + local relief model → <strong>profile-curvature</strong> ridge; shoreline mask removes the dominant FP class</td>
+    <td>1 m 3DEP lidar DEM (external, free)</td><td><strong>yes</strong></td><td>high</td></tr>
+<tr><td>5</td><td><a href="#n5">N5</a></td><td><strong>Range-front topographic step / interbasinal high</strong> = step-over and accommodation-zone proxies</td>
+    <td>slope + structure-tensor coherence of detrended elevation; step-distance transform</td>
+    <td>detrended elevation + its slope (in-stack)</td><td>no</td><td>low</td></tr>
+</table>
+
+<h2 id="n1">N1 · Gravity-gradient edge terminations and intersections</h2>
+<p><strong>Layers.</strong> <code>training_features.tif</code>: isostatic gravity
+anomaly and the slope of the isostatic gravity anomaly — both enumerated in the
+official <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#provided-features" target="_blank" rel="noopener">provided-features list</a>.
+Optional upgrade: INGENIOUS regional gravity/magnetics,
+<a href="https://doi.org/10.5066/P9Z6SA1Z" target="_blank" rel="noopener">DOI 10.5066/P9Z6SA1Z</a>.</p>
+
+<p><strong>Physical signature.</strong> A near-vertical density contrast across a
+fault is a step in the potential field, so |∇g| is a ridge running
+<em>along</em> the fault — and the ridge <strong>vanishes where the contrast
+dies</strong>, i.e. at the fault tip. Two ridges that stop against each other
+mark an intersection. Code: <code>gems/geoedges.py</code>
+(<code>ridge_skeleton</code>, <code>edge_terminations</code>,
+<code>edge_junctions</code>, <code>edge_termination_field</code>).</p>
+
+<p><strong>Why it catches a fault missing from the catalogue.</strong> Verbatim
+from the INGENIOUS structural-settings compilation
+(<a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2026/Faulds.pdf" target="_blank" rel="noopener">Faulds et al., Stanford Geothermal Workshop 2026</a>):</p>
+<blockquote>"Isostatic residual and horizontal gradient gravity data were the most
+useful. For example, terminating and intersecting gravity gradients respectively
+defined many of the fault terminations and fault intersections. This was
+especially important in defining FSS in the many basins of the region, where
+basin-fill sediments obscure the subsurface architecture and primary
+basin-bounding and/or intrabasinal faults."</blockquote>
+<p>The expert inventory itself located fault tips and intersections
+<em>from gravity gradients</em>, specifically in basins where nothing shows at
+the surface. A playa floor has no scarp and no lineament — which is exactly why
+such a fault is absent from a scarp-compiled catalogue — but its density
+contrast still bends the gravity field. The signal is therefore orthogonal to
+the catalogue's information source by construction.</p>
+
+<p><strong>How it differs from the repo.</strong> H1 computes relay corridors
+<em>between catalogue tips</em> (it needs the catalogue). H2 runs a generic
+structure tensor but never extracts gradient ridges, never isolates
+<strong>edge terminations</strong>, and never makes the <em>end</em> of an edge
+the target. H5 uses relief only as a density predictor. Nothing in the repo
+computes a gravity-gradient ridge, its skeleton, or its endpoints.</p>
+
+<h2 id="n2">N2 · Seismicity-density and strain-invariant lineaments</h2>
+<p><strong>Layers.</strong> Earthquake density; dilatation rate; shear strain
+rate; second invariant of the strain rate tensor — all in-stack.</p>
+<p><strong>Physical signature.</strong> Structure-tensor orientation + coherence
+on the earthquake-density field and on the strain invariant, plus a
+maximum-filter ridge of the density itself.</p>
+<p><strong>Why it catches a missing fault.</strong> Same Faulds et al. 2026
+passage: basin-fill sediments obscure the subsurface architecture. A fault that
+has not ruptured in the Holocene and is buried under Lake Lahontan/Bonneville
+sediments will never be picked from imagery or lidar — so it is not in the
+catalogue — but it is still slipping and still producing earthquakes. The
+competition ships the earthquake-density band precisely because INGENIOUS
+considers it diagnostic.</p>
+<p><strong>How it differs.</strong> No hypothesis or feature in this repo uses
+seismicity or kinematics at all. H1–H5 are entirely static structure. This is
+the only arm whose information source is <em>present-day motion</em>.</p>
+
+<h2 id="n3">N3 · Hydrothermal alteration-cap margin</h2>
+<p><strong>Layers.</strong> Surface conductivity; depth to conductive base
+surface; reduced-to-pole magnetic anomaly / total magnetic intensity — all
+in-stack. Optional upgrade: INGENIOUS
+<a href="https://doi.org/10.5066/P9TWT2LU" target="_blank" rel="noopener">electrical conductance maps (10.5066/P9TWT2LU)</a>
+and
+<a href="https://doi.org/10.5066/P9BZPVUC" target="_blank" rel="noopener">heat-flow maps (10.5066/P9BZPVUC)</a>.</p>
+<p><strong>Physical signature.</strong> Boolean conjunction
+<code>cap = (conductance high OR conductive base shallow) AND (magnetic low)</code>,
+then the level-set boundary of that mask, decaying both inward and outward. The
+fault that feeds a clay cap lies at the cap's margin.</p>
+<p><strong>Why it catches a missing fault.</strong> Verbatim, Faulds et al. 2026:
+<em>"magnetic lows and low resistivity anomalies may respectively indicate
+altered rocks and clay caps at depth induced by geothermal activity."</em> A
+hydrothermal clay cap is produced by fluid upflow <em>along a fault</em>; the
+fault must exist at or beside the cap. Alteration is invisible to scarp-based
+catalogue compilation, so this is a target class the catalogue cannot produce by
+construction. This is the most contrarian of the five: it targets the
+<em>geothermal</em> signal rather than the structural one.</p>
+<p><strong>How it differs.</strong> H3 uses <strong>point</strong> features
+(springs, sinter/tufa, vents) from the INGENIOUS release — a surface-expression
+approach needing new external data. N3 is a 2-D mask-margin transform on bands
+already in the stack, and its physical target (clay cap) is a different object
+from a spring.</p>
+
+<h2 id="n4">N4 · 1 m lidar scarp lineaments + paleo-shoreline negative mask</h2>
+<p><strong>Layers.</strong> 1 m lidar DEM from the USGS 3D Elevation Program
+(3DEP), via the <code>1m_DEM_links.csv</code> the sponsor ships on the data tab,
+or directly from 3DEP. Fallback: in-stack detrended elevation and its slope at
+100 m.</p>
+<p><strong>Physical signature.</strong> Multi-azimuth hillshade + sky-view-factor
+/ local relief model, then a <strong>profile-curvature</strong> (second
+derivative along the slope-normal) ridge detector — the transform that isolates a
+scarp's break of slope from a general slope. Plus a <strong>negative mask</strong>:
+long, quasi-straight, low-curvature benches following ancient lake shorelines are
+removed.</p>
+<p><strong>Why it catches a missing fault.</strong> Two verified statements.</p>
+<ol>
+<li>The sponsor's own
+  <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/968/" target="_blank" rel="noopener">About page</a>
+  records that airborne lidar was collected through 3DEP "over a similar extent
+  spanned by the geophysical surveys". At 1 m, scarps invisible at the 100 m
+  competition resolution become detectable.</li>
+<li><a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2025/Hermant.pdf" target="_blank" rel="noopener">Hermant et al., SGW 2025</a>
+  (cited by the sponsor) documents, for the same region: USGS Qfault positions
+  differing from lidar-derived ground truth by <strong>up to 400 m</strong>;
+  <strong>new faults detected by their CNN and confirmed by experts on
+  lidar</strong>; and that both of their models <strong>also detect
+  paleo-shorelines as false positives</strong>.</li>
+</ol>
+<p>The 400 m figure matters directly: the competition's kernel radius is 300 m,
+and the problem description itself says <em>"portions of the existing fault data
+may be misaligned from the true location of the surface fault, which is the
+prediction target"</em>. Lidar lets us put the prediction on the <em>true</em>
+trace rather than the catalogue's displaced one.</p>
+<p><strong>Why the shoreline mask is the key idea.</strong> Faulds et al. 2026:
+<em>"much of the GBR was inundated by late Pleistocene lakes, and thus faults that
+have not ruptured in the Holocene are obscured by lake sediments and shoreline
+features."</em> Lake shorelines are long, straight and scarp-like — the single
+largest false-positive class for any topographic lineament detector in this
+region.</p>
+<p><strong>How it differs.</strong> No DEM-based scarp or curvature feature exists
+anywhere in this repo. H5 uses relief only as a density predictor, never as a
+detector, and there is <strong>no negative-evidence / FP-suppression mask of any
+kind</strong> in the repo.</p>
+<p><strong>External data obtainability.</strong></p>
+<table>
+<tr><th>Need</th><th>Source</th><th>Status</th></tr>
+<tr><td>1 m lidar DEM over the GeoDAWN footprint</td>
+    <td><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/data/" target="_blank" rel="noopener">competition data tab</a> <code>1m_DEM_links.csv</code> (login-gated — VERIFIED redirect to <code>/accounts/login/</code>)</td>
+    <td>obtainable once, needs a DrivenData account</td></tr>
+<tr><td>Same DEM without the login</td>
+    <td>USGS 3D Elevation Program (3DEP), 1 m lidar-derived DEM, public domain</td>
+    <td>VERIFIED obtainable: the sponsor's About page states the lidar was collected through 3DEP</td></tr>
+<tr><td>Paleo-shoreline geometry (Lake Lahontan / Lake Bonneville)</td>
+    <td><strong>not yet sourced</strong> — FLAG #1b</td>
+    <td><strong>blocked</strong>: candidates to check are USGS ScienceBase <a href="https://www.sciencebase.gov/catalog/item/657e1d85d34e23d3533209f7" target="_blank" rel="noopener">GeoDAWN item</a> (DOI 10.5066/P93LGLVQ) and NBMG lake-level publications. <strong>N4 must not be promoted until a verified source exists.</strong></td></tr>
+</table>
+
+<h2 id="n5">N5 · Range-front topographic step and interbasinal high</h2>
+<p><strong>Layers.</strong> Detrended elevation and the slope of detrended
+elevation — in-stack.</p>
+<p><strong>Physical signature.</strong> Slope magnitude + structure-tensor
+coherence of the detrended elevation, plus a distance transform to the
+top-decile slope (the "front"). A range front is a long, coherent, high-slope
+lineation; a <em>step</em> along it is the step-over proxy; an interbasinal high
+is a locally elevated block between oppositely dipping systems.</p>
+<p><strong>Why it catches a missing fault.</strong> Verbatim, Faulds et al. 2026:
+<em>"Topographic steps along the fronts of mountain ranges/fault blocks may
+delineate step-overs or relay ramps. Interbasinal highs commonly correspond to
+accommodation zones between oppositely dipping Quaternary fault systems."</em>
+The same paper reports that fault terminations, intersections, step-overs and
+accommodation zones are <em>"characterized by closely-spaced, relatively minor
+faults with minimal recent surface ruptures"</em> — precisely the structures a
+regional catalogue omits. Quantitative prior from the same source: step-overs
+occupy <strong>33.3 %</strong> of all FSS area, terminations 20.3 %,
+accommodation zones 19.3 %, intersections 17.4 %, median FSS polygon
+<strong>~13.4 km²</strong>.</p>
+<p><strong>How it differs.</strong> H5's completeness residual compares
+<em>catalogue density</em> with strain/relief expectations — a regional density
+statistic. This is a <em>local geometric detector</em> on the range front with no
+catalogue input. H1's relay corridors are built from catalogue tip pairs; these
+are built from the topographic front.</p>
+
+<h2>What the blocked holdout decided</h2>
+<p>Protocol: 4 spatial folds of 48-px blocks with a 3-px purge buffer;
+hide-and-recover logistic regression with a fresh random component-hiding plan
+every epoch and the anti-leak assertion run every epoch; identical model, seeds
+and protocol across arms; three region seeds. Two targets, because staff declined
+to disclose the provenance of the hidden test faults
+(<a href="https://community.drivendata.org/t/how-were-the-new-test-faults-identified-data-sources-and-fault-types/11527" target="_blank" rel="noopener">forum 11527</a>):</p>
+<ul>
+<li><strong>recovery</strong> — catalogue traces held out of the visible context (the standard hide-and-recover proxy);</li>
+<li><strong>discovery</strong> — faults present in the synthetic geophysics but absent from the catalogue by construction (≥ 22 px from every catalogue trace) and <strong>never used as training labels</strong> — the local analogue of the private test set;</li>
+<li><strong>combined</strong> — the union, the best available guess at the population the prize scores.</li>
+</ul>
+
+<table>
+<tr><th>Arm</th><th>#feat</th><th>recovery</th><th>discovery</th><th>combined</th><th>Δ combined</th><th>Gate</th></tr>
+<tr><td>baseline</td><td>13</td><td>0.3073</td><td>0.0081</td><td>0.2863</td><td>—</td><td>incumbent</td></tr>
+<tr><td>N1 gravity-gradient edges</td><td>17</td><td>0.3003</td><td>0.0087</td><td>0.2804</td><td>−0.0059</td><td><span class="pill bad">FAIL — killed</span></td></tr>
+<tr><td>N2 seismicity / strain</td><td>18</td><td>0.3218</td><td>0.0569</td><td>0.3352</td><td>+0.0489</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td>N3 alteration-cap margin</td><td>15</td><td>0.3086</td><td>0.0057</td><td>0.2855</td><td>−0.0008</td><td><span class="pill bad">fail</span></td></tr>
+<tr><td>N5 range-front step</td><td>17</td><td>0.3214</td><td>0.0050</td><td>0.2961</td><td>+0.0097</td><td><span class="pill ok">PASS</span></td></tr>
+<tr><td>GEO-ONLY</td><td>0</td><td>0.0822</td><td>0.0156</td><td>0.0961</td><td>−0.1903</td><td><span class="pill bad">fail</span></td></tr>
+<tr><td>BLEND (max)</td><td>28</td><td>0.0822</td><td>0.0156</td><td>0.0961</td><td>−0.1902</td><td><span class="pill bad">fail</span></td></tr>
+<tr><td>BLEND-ADD (+0.25·prior)</td><td>28</td><td>0.1849</td><td>0.0289</td><td>0.2029</td><td>−0.0834</td><td><span class="pill bad">fail</span></td></tr>
+<tr><td><strong>BLEND-MUL ×(1+0.5·prior)</strong></td><td>28</td><td><strong>0.3673</strong></td><td><strong>0.0612</strong></td><td><strong>0.3842</strong></td><td><strong>+0.0979</strong></td><td><span class="pill ok">PASS — best</span></td></tr>
+</table>
+<p>Weight sweep for BLEND-MUL (2 seeds): w=0.25 → 0.3785, <strong>w=0.50 →
+0.3851</strong>, w=1.00 → 0.3746, w=2.00 → 0.3394. w=0.5 is an interior optimum,
+not an edge.</p>
+
+<div class="note"><strong>Honesty statement.</strong> These numbers come from a
+synthetic forward model, not from the competition rasters (which sit behind a
+DrivenData login — VERIFIED: the data tab redirects to <code>/accounts/login/</code>).
+They validate the machinery, the sign and rough magnitude of each arm's effect,
+and that the gate refuses bad ideas. They do <strong>not</strong> predict a
+leaderboard score. <code>scripts/validate_round2.py</code> runs unchanged on the
+real rasters once <code>data/processed/</code> exists.</div>
+
+<h2>The three findings that change the strategy</h2>
+<ol>
+<li><strong>The literature-ranked top candidate was killed by the gate — and that
+is the gate working.</strong> N1 had the strongest published support (a verbatim
+statement from the INGENIOUS authors) and the lowest implementation cost, and as a
+classifier feature it made the blocked holdout slightly <em>worse</em>. Its
+information is real — the raw <code>n1_term_field</code> alone scores DTI
+0.08–0.15 against blind faults, ~20× the catalogue-distance feature — but feeding
+it to a model trained on catalogue labels dilutes the catalogue signal. <strong>No
+submission slot was spent on it.</strong></li>
+<li><strong>The multiplicative blend is the winner, and it wins on both
+populations.</strong> It improves recovery (0.3073 → 0.3673) <em>and</em>
+discovery (0.0081 → 0.0612, 7.5×). The additive and max blends both destroy the
+classifier's localisation: they smear probability mass over the prior's support,
+which costs FP everywhere without lifting the per-ground-truth-pixel maximum. The
+multiplicative form keeps the classifier's thin traces and only <em>boosts</em>
+them where the geophysics independently agrees.</li>
+<li><strong>A catalogue-trained model is structurally bad at discovery — and
+discovery is the entire competition.</strong> The baseline's discovery DTI is
+0.0081 because it has never been shown a fault absent from the catalogue. Since
+the prize masks known-fault pixels and scores only off-catalogue faults, the
+baseline is optimising a population that contributes nothing to the score.</li>
+</ol>
+
+<h2>Promotion decision</h2>
+<ul>
+<li><strong>Slot-eligible (pending the real-raster re-run):</strong> BLEND-MUL, then N2, then N5.</li>
+<li><strong>Killed by the holdout gate:</strong> N1 (as a classifier feature), N3, GEO-ONLY, BLEND, BLEND-ADD.</li>
+<li><strong>Not yet viable:</strong> N4 — needs a verified free official paleo-shoreline source (FLAG #1b).</li>
+</ul>
+<p>Reproduce everything:</p>
+<pre class="mono">python3 scripts/validate_round2.py            # writes artifacts/holdout_round2.json
+python3 scripts/check_submission_uniqueness.py   # must exit 0 before any upload
+python3 -m unittest discover -s tests            # 86 tests</pre>
+</main>
+</body>
+</html>

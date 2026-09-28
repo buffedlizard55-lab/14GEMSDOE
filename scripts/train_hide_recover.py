@@ -67,7 +67,16 @@ def predict_proba(beta: np.ndarray, X: np.ndarray) -> np.ndarray:
 
 
 def build_feature_matrix(region: dict, context_mask: np.ndarray,
-                         extra_keys: tuple[str, ...] = ("f_elev", "f_mag", "strain")):
+                         extra_keys: tuple[str, ...] = ("f_elev", "f_mag", "strain"),
+                         arm: str = "baseline"):
+    """Assemble the design matrix.
+
+    ``arm`` selects the round-2 hypothesis feature block (gems/hypotheses.py).
+    Arms are additive and catalogue-independent, so the A/B is a pure feature
+    comparison under an identical hide-and-recover protocol.
+    """
+    from gems.hypotheses import build_arm_features
+
     feats = build_catalogue_feature_stack(context_mask)
     names = []
     cols = []
@@ -80,13 +89,18 @@ def build_feature_matrix(region: dict, context_mask: np.ndarray,
         if k in region and isinstance(region[k], np.ndarray):
             names.append(k)
             cols.append(region[k].astype(np.float32).ravel())
+    if arm and arm.lower() != "baseline":
+        for k, v in build_arm_features(region, arm).items():
+            if isinstance(v, np.ndarray) and v.ndim == 2:
+                names.append(k)
+                cols.append(np.asarray(v, dtype=np.float32).ravel())
     X = np.stack(cols, axis=1)
     return X, names, feats
 
 
 def train(region: dict, *, hide_fraction: float = 0.35, epochs: int = 8,
           seed: int = 7, n_pos_cap: int = 40000, n_neg_cap: int = 40000,
-          verbose: bool = True) -> dict:
+          arm: str = "baseline", verbose: bool = True) -> dict:
     rng = np.random.default_rng(seed)
     traces = region["traces"]
     labels = traces.ravel().astype(np.float64)
@@ -99,7 +113,7 @@ def train(region: dict, *, hide_fraction: float = 0.35, epochs: int = 8,
         context, hidden = hr.apply_plan(traces, plan)
         leak = hr.assert_no_leak(context, hidden)
 
-        X, names, _feats = build_feature_matrix(region, context)
+        X, names, _feats = build_feature_matrix(region, context, arm=arm)
 
         # class-balanced sample of pixel rows
         pos = np.nonzero(labels > 0)[0]
@@ -135,7 +149,7 @@ def train(region: dict, *, hide_fraction: float = 0.35, epochs: int = 8,
                   f"fp={rec['fp']:.1f})  leaks={leak['leaks']}")
 
     # final ensemble prediction = mean of epoch probabilities
-    full_X, names, _ = build_feature_matrix(region, traces)  # inference: full catalogue
+    full_X, names, _ = build_feature_matrix(region, traces, arm=arm)  # inference
     probs = np.zeros(traces.size, dtype=np.float64)
     for beta, mu, sd, _n in betas[-3:]:
         probs += predict_proba(beta, (full_X - mu) / sd)

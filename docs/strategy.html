@@ -12,7 +12,8 @@
   <a href="index.html">Executive summary</a>
   <a href="how-to-submit.html">How to submit</a>
   <a href="strategy.html" class="active">Strategy</a>
-  <a href="hypotheses.html">Hypotheses</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -119,6 +120,36 @@ k(d) = max(1 − d/300m, 0)</pre>
     <td>tendency-weighted emission vs flat emission on holdout</td></tr>
 </table>
 
+<h2>§3b Round 2 — what the gate changed (2026-09-28)</h2>
+<div class="card">
+<p>The round-2 hypotheses are listed on the
+<a href="hypotheses-round2.html">round-2 page</a>. What the blocked holdout
+decided, and what it means for strategy:</p>
+<table>
+<tr><th>Finding</th><th>Consequence for how we build a submission</th></tr>
+<tr><td><strong>A multiplicative blend of classifier and geophysics is the only
+    blend that helps.</strong> <code>classifier × (1 + 0.5·prior)</code> scored
+    +0.0979 combined DTI and improved recovery <em>and</em> discovery. Max and
+    additive blends were strongly negative.</td>
+    <td>Never smear probability mass to buy recall. The metric credits each
+        ground-truth pixel by its <em>single best</em> prediction within 300 m, so
+        breadth costs FP without lifting that maximum. Keep traces thin and
+        <em>boost</em> them where independent evidence agrees.</td></tr>
+<tr><td><strong>A catalogue-trained model is structurally bad at discovery</strong>
+    (baseline discovery DTI 0.0081), and discovery is the entire competition
+    because known-fault pixels are masked.</td>
+    <td>Training labels drawn only from the catalogue optimise a population that
+        contributes nothing to the score. Every gain came from injecting
+        information from <em>outside</em> the catalogue (geophysics, seismicity,
+        topography).</td></tr>
+<tr><td><strong>The best-supported hypothesis lost.</strong> Gravity-gradient edge
+    terminations had a verbatim statement from the INGENIOUS authors behind them
+    and still scored −0.0059 as a classifier feature.</td>
+    <td>Literature support is not evidence about <em>our</em> feature set. The gate
+        is the only arbiter, and it must be allowed to kill favourites.</td></tr>
+</table>
+</div>
+
 <h2>§4 Slot discipline (the 3-per-week budget)</h2>
 <div class="card">
 <ol>
@@ -131,9 +162,12 @@ k(d) = max(1 − d/300m, 0)</pre>
         interpretation is written before it is uploaded.</li>
   <li><strong>Final selection:</strong> the single file for both rounds is chosen
         for Phase-2 upside (genuine novel structure), not just public LB noise.</li>
-  <li><strong>Never again identical by accident:</strong> the build manifest's
-        content hash is compared across the ledger before any upload
-        (<a href="leaderboard.html">Leaderboard</a> tracks them).</li>
+  <li><strong>Never again identical by accident:</strong>
+        <code>scripts/check_submission_uniqueness.py</code> compares content
+        hashes, filenames, NOTE/MANIFEST provenance, manifest integrity and the
+        ledger's duplicate scores/artifacts, and <strong>must exit 0 before any
+        upload</strong>. The historical GEMSDOE1/5GEMSDOE duplicate is reproduced
+        and caught in <code>tests/test_submission_uniqueness.py</code>.</li>
 </ol>
 </div>
 
@@ -147,6 +181,12 @@ k(d) = max(1 − d/300m, 0)</pre>
       answers those).</li>
   <li>Chase the public leaderboard's private-test variance; the one file that
       matters is selected at the deadline, blind to private scores (rules §3.6.2).</li>
+  <li>Promote hypothesis N4 (1 m lidar scarps + paleo-shoreline mask) before a
+      free, official, machine-readable paleo-shoreline dataset has been sourced
+      (irregularity #1b). Until then it is recorded as blocked, not as progress.</li>
+  <li>Report a round-2 holdout number as a leaderboard prediction. It is a
+      synthetic-forward-model result; it validates the machinery and the sign of
+      each arm's effect, nothing more.</li>
 </ul>
 </main>
 

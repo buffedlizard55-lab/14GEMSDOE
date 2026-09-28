@@ -9,8 +9,9 @@ data/demo/*
 !data/demo/.gitkeep
 
 # model artifacts and submissions (keep manifests out of git too; regenerate)
-artifacts/
-submissions/
+artifacts/*
+!artifacts/holdout_round2.json
+submissions/*
 *.npy
 *.pyc
 __pycache__/

@@ -1,0 +1,123 @@
+"""The uniqueness gate must catch the exact failure the group kept repeating.
+
+GEMSDOE1 / 5GEMSDOE / 8GEMSDOE all scored 0.1563 and GEMSDOE1 and 5GEMSDOE pin
+the same artifact hash (VERIFIED 2026-09-28 from the two published sites).  The
+public leaderboard shows three separate accounts tied at exactly 0.1563.  These
+tests reproduce that failure deliberately so it cannot recur silently.
+"""
+
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+from scripts.check_submission_uniqueness import check, parse_ledger  # noqa: E402
+
+import numpy as np  # noqa: E402
+
+
+def _write_fake_submission(directory: Path, stem: str, arr: np.ndarray) -> Path:
+    """Write a minimal .tif + NOTE + MANIFEST triple (no rasterio needed)."""
+    import struct
+    import zlib
+
+    raw = arr.astype(np.float32).tobytes()
+    path = directory / f"{stem}.tif"
+    path.write_bytes(b"FAKETIF" + raw)
+    (directory / f"{stem}.NOTE.txt").write_text(f"note for {stem}\n")
+    (directory / f"{stem}.MANIFEST.json").write_text(json.dumps(
+        {"file": path.name, "sha256": __import__("hashlib").sha256(path.read_bytes()).hexdigest()}))
+    return path
+
+
+LEDGER = """# Results ledger (test fixture)
+
+| # | Entry | Reported score | Description | Artifact id | Unique? | Evidence |
+|---|-------|----------------|-------------|-------------|---------|----------|
+| 1 | GEMSDOE1 | 0.1563 | ens12 skeleton | `7f00890a` | reference | site |
+| 2 | 6GEMSDOE | 0.0286 | divergent probe | - | yes | thread |
+| 3 | GEMSDOE3 | 0.1193 | pindrop nodes | f347b70daa | yes | thread |
+| 4 | 5GEMSDOE | 0.1563 | same payload as #1 | `7f00890a` | **NO** | site pins identical hash |
+| 5 | 12GEMSDOE | 0.1294 | dem10 scarp | 0c9199f14e62 | yes | thread |
+"""
+
+
+class TestLedgerParser(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.ledger = Path(self.tmp) / "ledger.md"
+        self.ledger.write_text(LEDGER)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_parses_rows(self):
+        rows = parse_ledger(self.ledger)
+        self.assertEqual([r["n"] for r in rows], [1, 2, 3, 4, 5])
+        self.assertEqual(rows[0]["score"], "0.1563")
+        self.assertEqual(rows[3]["artifact"], "`7f00890a`")
+
+    def test_flags_the_real_duplicate(self):
+        problems, warnings = check(Path(self.tmp), self.ledger,
+                                   Path(self.tmp) / "nope.js", strict_ledger=True)
+        joined = "\n".join(problems)
+        self.assertIn("rows 1 and 4", joined)
+        self.assertIn("0.1563", joined)
+
+    def test_clean_ledger_passes(self):
+        clean = self.ledger.read_text().replace(
+            "| 4 | 5GEMSDOE | 0.1563 | same payload as #1 | `7f00890a` | **NO** | site pins identical hash |",
+            "| 4 | 5GEMSDOE | 0.0712 | distinct run | `aa11bb22` | yes | site |")
+        self.ledger.write_text(clean)
+        problems, _w = check(Path(self.tmp), self.ledger,
+                             Path(self.tmp) / "nope.js", strict_ledger=True)
+        self.assertEqual(problems, [])
+
+
+class TestFileLevelGate(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.arr = np.arange(64, dtype=np.float32).reshape(8, 8) / 64.0
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_byte_identical_submissions_are_caught(self):
+        _write_fake_submission(self.tmp, "GEMS_a_20260928T000000Z_11111111", self.arr)
+        _write_fake_submission(self.tmp, "GEMS_b_20260928T000001Z_22222222", self.arr)
+        problems, _w = check(self.tmp, self.tmp / "nope.md", self.tmp / "nope.js")
+        self.assertTrue(any(p.startswith("F1:") for p in problems), problems)
+
+    def test_distinct_submissions_pass(self):
+        _write_fake_submission(self.tmp, "GEMS_a_20260928T000000Z_11111111", self.arr)
+        _write_fake_submission(self.tmp, "GEMS_b_20260928T000001Z_22222222",
+                               self.arr[::-1, :].copy())
+        problems, _w = check(self.tmp, self.tmp / "nope.md", self.tmp / "nope.js")
+        self.assertEqual(problems, [])
+
+    def test_missing_note_or_manifest_is_caught(self):
+        p = _write_fake_submission(self.tmp, "GEMS_a_20260928T000000Z_11111111", self.arr)
+        (self.tmp / (p.stem + ".NOTE.txt")).unlink()
+        problems, _w = check(self.tmp, self.tmp / "nope.md", self.tmp / "nope.js")
+        self.assertTrue(any(".NOTE.txt" in x for x in problems), problems)
+
+    def test_tampered_manifest_is_caught(self):
+        p = _write_fake_submission(self.tmp, "GEMS_a_20260928T000000Z_11111111", self.arr)
+        man = self.tmp / (p.stem + ".MANIFEST.json")
+        man.write_text(json.dumps({"sha256": "0" * 64}))
+        problems, _w = check(self.tmp, self.tmp / "nope.md", self.tmp / "nope.js")
+        self.assertTrue(any(x.startswith("F4:") for x in problems), problems)
+
+
+class TestScriptEntryPoint(unittest.TestCase):
+    def test_script_runs_on_the_real_repo(self):
+        r = subprocess.run([sys.executable, str(REPO / "scripts" / "check_submission_uniqueness.py")],
+                           capture_output=True, text=True, cwd=str(REPO), timeout=300)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("uniqueness gate: PASS", r.stdout)

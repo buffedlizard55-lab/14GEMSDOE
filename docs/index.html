@@ -13,7 +13,8 @@
   <a href="index.html" class="active">Executive summary</a>
   <a href="how-to-submit.html">How to submit</a>
   <a href="strategy.html">Strategy</a>
-  <a href="hypotheses.html">Hypotheses</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -99,7 +100,33 @@ submission slot without first beating the current best on the spatially-blocked
 holdout. Details: <a href="strategy.html">Strategy</a>.</p>
 </div>
 
-<h2>The five moves we are making (distinct ideas, not the same idea re-dressed)</h2>
+<h2>Round 2 — the blocked holdout has already decided (2026-09-28)</h2>
+<div class="card">
+<p>Nine feature arms, one model, one spatially-blocked holdout
+(<code>scripts/validate_round2.py</code>). <strong>No submission slot was
+spent.</strong> Two outcomes matter:</p>
+<div class="grid2">
+  <div class="stat"><div class="k">Winner</div><div class="v">classifier × (1 + 0.5·geophysics)</div>
+    <div class="s">+0.0979 combined holdout DTI over the baseline, and the only
+    blend form that improves <em>both</em> recovery (0.3073 → 0.3673) and
+    discovery (0.0081 → 0.0612, 7.5×). Additive and max blends smear probability
+    mass and pay false positives without lifting the per-truth-pixel maximum.</div></div>
+  <div class="stat"><div class="k">Killed by the gate</div><div class="v">gravity-gradient edge terminations</div>
+    <div class="s">the literature-ranked top candidate — a verbatim statement from
+    the INGENIOUS authors that gravity-gradient terminations <em>defined</em>
+    fault tips and crossings — still made the holdout worse (−0.0059). This is
+    the gate doing its job: an idea with the best published support and the
+    lowest cost was rejected on evidence.</div></div>
+</div>
+<p class="src">The structural insight behind both results: the baseline is a
+<em>catalogue-trained</em> model, so its discovery DTI is 0.0081 — it has never
+been shown a fault absent from the catalogue, and the prize scores
+<strong>only</strong> off-catalogue faults (known-fault pixels are masked, forum
+11516). Full table, sources, layer names and transforms:
+<a href="hypotheses-round2.html">round-2 hypotheses</a>.</p>
+</div>
+
+<h2>The round-1 moves (distinct ideas, not the same idea re-dressed)</h2>
 <div class="grid2">
   <div class="stat"><div class="k">Move 1 · structural completion</div><div class="v">relay ramps &amp; tips</div>
     <div class="s">emit the small connecting faults the catalogue omits at step-overs,
@@ -118,8 +145,12 @@ holdout. Details: <a href="strategy.html">Strategy</a>.</p>
     “distance to known fault = 0” is never the answer</div></div>
 </div>
 <p class="src">Each move names its layers, its physical signature, and its
-evidence on the <a href="hypotheses.html">Hypotheses</a> page, ranked by expected
-DTI gain and implementation cost, with the free official data source that backs it.</p>
+evidence on the <a href="hypotheses.html">round-1 hypotheses</a> page, ranked by
+expected DTI gain and implementation cost, with the free official data source
+that backs it. The five round-2 moves — gravity-gradient edge terminations,
+seismicity lineaments, alteration-cap margins, 1&nbsp;m lidar scarps with a
+paleo-shoreline mask, and range-front topographic steps — are on the
+<a href="hypotheses-round2.html">round-2 hypotheses</a> page.</p>
 
 <h2>What the score actually rewards</h2>
 <div class="card">
@@ -154,7 +185,15 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
         <code>scripts/download_competition_data.sh</code> and follow its steps</td></tr>
 <tr><td>Pipeline (features → hide-and-recover → holdout → submission)</td>
     <td><span class="pill ok">TESTED</span></td>
-    <td class="src">51/51 tests green + end-to-end synthetic demo run</td></tr>
+    <td class="src">86/86 tests green + end-to-end synthetic demo run</td></tr>
+<tr><td>Round-2 hypothesis gate (9 arms, blocked holdout)</td>
+    <td><span class="pill ok">RUN</span></td>
+    <td class="src"><code>artifacts/holdout_round2.json</code> — BLEND-MUL promoted,
+        N1/N3/GEO-ONLY/BLEND/BLEND-ADD killed; synthetic forward model only</td></tr>
+<tr><td>Uniqueness gate (no repeated 0.1563)</td>
+    <td><span class="pill ok">ENFORCED</span></td>
+    <td class="src"><code>scripts/check_submission_uniqueness.py</code> — byte-identity,
+        manifest integrity, NOTE/MANIFEST provenance, ledger duplicates</td></tr>
 <tr><td>Submission builder + format gate</td>
     <td><span class="pill ok">TESTED</span></td>
     <td class="src">reproduces and catches the exact “[0, 1]” rejection causes</td></tr>

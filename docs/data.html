@@ -12,7 +12,8 @@
   <a href="index.html">Executive summary</a>
   <a href="how-to-submit.html">How to submit</a>
   <a href="strategy.html">Strategy</a>
-  <a href="hypotheses.html">Hypotheses</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
   <a href="data.html" class="active">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -136,6 +137,51 @@ sandbox — TLS blocked, <span class="pill bad">IRREGULARITY</span> #1):
     <td><span class="pill ok">VERIFIED</span></td></tr>
 </table>
 
+<h2>C2 · Round-2 sources (opened 2026-09-28)</h2>
+<table>
+<tr><th>Claim used in the round-2 hypotheses</th><th>Where verified</th><th>Status</th></tr>
+<tr><td><strong>&gt;1,430 favourable structural settings mapped in the INGENIOUS study area; FSS polygons cover ~7.7% of the area; median polygon ~13.4 km². By count: step-overs 39.6%, intersections 26.1%, terminations 16.7%, accommodation zones 6.8%, pull-aparts 2.3%, displacement transfer 1.4%, bends 0.9%, major normal faults 0.6%. By AREA: step-overs 33.3%, terminations 20.3%, accommodation zones 19.3%, intersections 17.4%.</strong></td>
+    <td class="src"><a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2026/Faulds.pdf" target="_blank" rel="noopener">Faulds et al., Stanford Geothermal Workshop 2026</a> (full PDF read)</td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>403 known geothermal systems (≥37 °C): step-overs 27.54%, intersections 22.08%, terminations 16.63%, accommodation 5.71%, displacement transfer 3.23%, pull-aparts 2.73%, major normal faults 2.23%, <strong>undetermined 17.12%</strong>. 120 training sites (≥120 °C): step-overs 34.2%, intersections 26.7%, terminations 14.2%.</td>
+    <td class="src">same</td><td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td><strong>&ldquo;Isostatic residual and horizontal gradient gravity data were the most useful. For example, terminating and intersecting gravity gradients respectively defined many of the fault terminations and fault intersections. This was especially important in defining FSS in the many basins of the region, where basin-fill sediments obscure the subsurface architecture…&rdquo;</strong> → the direct basis for hypothesis N1</td>
+    <td class="src">same</td><td><span class="pill ok">VERIFIED</span> (quoted verbatim)</td></tr>
+<tr><td><strong>&ldquo;magnetic lows and low resistivity anomalies may respectively indicate altered rocks and clay caps at depth induced by geothermal activity&rdquo;</strong> → the direct basis for hypothesis N3</td>
+    <td class="src">same</td><td><span class="pill ok">VERIFIED</span> (quoted verbatim)</td></tr>
+<tr><td><strong>&ldquo;Topographic steps along the fronts of mountain ranges/fault blocks may delineate step-overs or relay ramps. Interbasinal highs commonly correspond to accommodation zones between oppositely dipping Quaternary fault systems.&rdquo;</strong> → the direct basis for hypothesis N5</td>
+    <td class="src">same</td><td><span class="pill ok">VERIFIED</span> (quoted verbatim)</td></tr>
+<tr><td><strong>&ldquo;much of the GBR was inundated by late Pleistocene lakes, and thus faults that have not ruptured in the Holocene are obscured by lake sediments and shoreline features&rdquo;; &ldquo;some FSS (e.g., fault tips) are characterized by minor faults with minimal surface ruptures, making them difficult to recognize even with high-resolution lidar&rdquo;</strong> → the physical reason the catalogue is incomplete, and the basis for the paleo-shoreline mask in N4</td>
+    <td class="src">same</td><td><span class="pill ok">VERIFIED</span> (quoted verbatim)</td></tr>
+<tr><td><strong>&ldquo;New fault&rdquo; = &ldquo;any fault pixel not already captured by USGS/INGENIOUS&rdquo;, and it CAN include newly mapped geometry of an existing fault system (a continuation past a mapped tip, a splay, a parallel strand).</strong> DrivenData staff.</td>
+    <td class="src"><a href="https://community.drivendata.org/t/where-do-you-draw-the-line/11536" target="_blank" rel="noopener">forum 11536</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>USGS Qfault positions differ from lidar-derived ground truth by <strong>up to 400 m</strong> in N-central Nevada; <strong>new faults detected by the CNN were confirmed by experts on lidar</strong>; both models <strong>also detect paleo-shorelines as false positives</strong>; 1,100 manually mapped faults / 264 km; labels rasterised with a 50 m buffer; FaultSEG test PR-AUC 0.595, siUNET 0.449</td>
+    <td class="src"><a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2025/Hermant.pdf" target="_blank" rel="noopener">Hermant et al., SGW 2025</a> (full PDF read)</td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>Reference solution: U-Net resnet18 (ImageNet weights), MC = 5 splits, patch 128, test_proportion 0.5, batch 32, 5 epochs, AdamW lr 1e-4, TverskyLoss α=0.2/β=0.8; trains on the <strong>known-fault labels</strong> with no masking and no off-catalogue target</td>
+    <td class="src"><a href="https://github.com/drivendataorg/gems-prize-reference-solution" target="_blank" rel="noopener">reference solution repo</a> (cloned 2026-09-28, notebook read cell by cell)</td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>The 19-band order is <strong>not</strong> unpublished: <code>training_features.tif</code> carries per-band <code>description</code> and <code>data_category</code> tags, which the reference notebook reads with <code>src.tags(i)</code>. The &ldquo;single band / Band 19&rdquo; confusion is a print bug (leftover loop variable), per staff.</td>
+    <td class="src"><a href="https://community.drivendata.org/t/why-does-the-training-fault-labels-file-in-the-data-tab-have-a-single-band-while-the-labels-in-the-reference-solution-repo-have-19-bands/11529" target="_blank" rel="noopener">forum 11529</a></td>
+    <td><span class="pill ok">VERIFIED</span> — supersedes irregularity #6</td></tr>
+<tr><td>15 feature layers are named officially (surface conductivity; depth to conductive base; detrended elevation + slope; dilatation rate; shear strain rate; 2nd strain invariant; isostatic gravity anomaly + slope; RTP magnetic anomaly; TMI; vertical and horizontal slope of TMI; top-of-crustal magnetic source depth; earthquake density). <strong>4 of the 19 are not named in any public document.</strong></td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#provided-features" target="_blank" rel="noopener">provided features</a></td>
+    <td><span class="pill ok">VERIFIED</span> (15 named) + <span class="pill bad">IRREGULARITY</span> #1c (4 unnamed)</td></tr>
+<tr><td>GeoDAWN lidar was collected through the USGS 3D Elevation Program (3DEP) over a similar extent to the geophysical surveys; survey area 51,857 km², 149,030 line-km; Area 1 (Clayton Valley) rank-1 specs, Area 2 (geothermal focus) between rank 1 and 2</td>
+    <td class="src"><a href="https://www.sciencebase.gov/catalog/item/657e1d85d34e23d3533209f7" target="_blank" rel="noopener">ScienceBase GeoDAWN item</a> · <a href="https://doi.org/10.5066/P93LGLVQ" target="_blank" rel="noopener">DOI 10.5066/P93LGLVQ</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>Slip-tendency / dilation-tendency database for Great Basin Quaternary faults, free USGS release (Siler): <code>Shapefile_INGENIOUS area.zip</code> 27.35 MB, <code>Shapefile_Full Study.zip</code> 34.25 MB, KMZ versions; purpose: identify fault segments &ldquo;appropriately oriented to be stress-loaded for slip or to dilate&rdquo; that &ldquo;may make such faults likely to host as-yet-undiscovered hydrothermal processes&rdquo;</td>
+    <td class="src"><a href="https://doi.org/10.5066/P9YL58W6" target="_blank" rel="noopener">DOI 10.5066/P9YL58W6</a></td>
+    <td><span class="pill ok">VERIFIED</span> — page reachable, files listed with sizes; binary not downloaded in-sandbox (irregularity #1)</td></tr>
+<tr><td>Three separate leaderboard accounts are tied at exactly 0.1563 (extradr19 #26, SDCF9 #27, smashi34 #28); live top 5 = DARD 0.3168, alexoktaba 0.2993, HardcoreTechGod 0.2854, mzoorob 0.2843, joeyfezster 0.2806</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/" target="_blank" rel="noopener">live leaderboard</a></td>
+    <td><span class="pill ok">VERIFIED</span> (rows read directly)</td></tr>
+<tr><td>Submission allowance resets on a <strong>rolling window</strong>, not a calendar week; staff will not disclose the data sources, fault types or coverage behind the test faults</td>
+    <td class="src"><a href="https://community.drivendata.org/t/weekly-submissions/11524" target="_blank" rel="noopener">forum 11524</a> · <a href="https://community.drivendata.org/t/how-were-the-new-test-faults-identified-data-sources-and-fault-types/11527" target="_blank" rel="noopener">forum 11527</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+</table>
+
 <h2>D · Method references cited by the sponsor</h2>
 <table>
 <tr><td>Automatic fault mapping with deep learning (optical + topography)</td>
@@ -175,10 +221,36 @@ sandbox — TLS blocked, <span class="pill bad">IRREGULARITY</span> #1):
       masked pixels from both sides (the only reading under which
       “it should not matter” is exactly true) and keeps the alternative as a
       documented sensitivity switch.</li>
-  <li><span class="pill bad">#6</span> <strong>19-band order</strong>: the problem
-      description lists 19 named layers but not the band order;
-      <code>scripts/prepare_data.py</code> reads the data dictionary shipped with
-      the download when present and refuses to guess otherwise.</li>
+  <li><span class="pill bad">#6</span> <strong>19-band order</strong>:
+      <strong>RESOLVED</strong> — the order is in the GeoTIFF band tags
+      (<code>description</code>, <code>data_category</code>); staff confirmed the
+      notebook's &ldquo;Band 19&rdquo; print is a bug (forum 11529). Read
+      <code>src.tags(i)</code> for all 19 bands on arrival.</li>
+  <li><span class="pill bad">#1b</span> <strong>No free official paleo-shoreline
+      dataset sourced yet.</strong> Hypothesis N4 (1 m lidar scarp lineaments with
+      a shoreline negative mask) cannot be promoted until one is. Candidates to
+      check: USGS ScienceBase GeoDAWN item
+      <a href="https://www.sciencebase.gov/catalog/item/657e1d85d34e23d3533209f7" target="_blank" rel="noopener">657e1d85d34e23d3533209f7</a>
+      and Nevada Bureau of Mines &amp; Geology lake-level publications.
+      <strong>Do not claim this is sourced until it is.</strong></li>
+  <li><span class="pill bad">#1c</span> <strong>4 of the 19 feature bands are not
+      named in any public document</strong> (15 are named officially; the figure
+      caption additionally mentions total radiometric counts, so radiometrics are
+      in the stack).</li>
+  <li><span class="pill bad">#8</span> <strong>Identical-score submissions across
+      accounts</strong>: three leaderboard accounts tie at exactly 0.1563, and the
+      group's own GEMSDOE1 and 5GEMSDOE publish the same artifact hash. A
+      four-decimal tie in this metric means equal TP_w/FP_w/FN_w, i.e.
+      effectively equal prediction fields. Mechanical prevention is now in place:
+      <code>scripts/check_submission_uniqueness.py</code> must exit 0 before any
+      upload.</li>
+  <li><span class="pill bad">#9</span> <strong>Masking semantics still
+      ambiguous</strong> after the staff ruling: &ldquo;excluded from
+      evaluation, so they do not count towards penalty terms&rdquo; plus
+      &ldquo;it should not matter&rdquo; is satisfied by FP-side-only masking as
+      well as by both-sides masking. Both implementations are kept
+      (<code>gems/dti.py</code>: <code>eval_mask</code> / <code>fp_mask</code>);
+      a catalogue-hedge diagnostic slot would settle it.</li>
 </ol>
 </main>
 
