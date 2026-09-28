@@ -14,6 +14,7 @@
   <a href="strategy.html">Strategy</a>
   <a href="hypotheses.html">Hypotheses (round 1)</a>
   <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -105,8 +106,8 @@ hidden new faults.
 </ul>
 
 <h2 id="rejection">§6 “Predicted values must be in range [0, 1]” — what it means and how to fix it</h2>
-<p>The form's range check reads your raster's values. It trips on exactly two
-mechanical causes (both reproduced and caught by
+<p>The form's range check reads your raster's values. <strong>Three</strong>
+mechanical causes trip it (all reproduced and caught by
 <code>tests/test_submission_gate.py</code>):</p>
 <table>
 <tr><th>Cause</th><th>Symptom</th><th>Fix</th></tr>
@@ -114,15 +115,24 @@ mechanical causes (both reproduced and caught by
     <td>min &lt; 0 or max &gt; 1 in the manifest</td>
     <td><code>build_submission.py</code> clamps to [0, 1] and reports how many
         pixels were clipped; better: pass calibrated probabilities</td></tr>
+<tr><td>NaN anywhere in the raster — <em>including the nodata outside the
+        footprint</em>. The format page permits “null or NaN” outside, but a
+        real upload attempt on 2026-09-28 with a NaN-outside file was rejected
+        with exactly this error, so the checker tests all pixels, not just the
+        footprint (TEAM-REPORTED evidence; recorded as FLAG #10)</td>
+    <td>your file has <code>GDAL_NODATA=nan</code> and NaN pixels</td>
+    <td>use the site's <strong>default</strong> download (finite: 0.0 outside,
+        no NaN) — or <code>build_submission.py</code>'s finite output. 0.0
+        outside cannot change the score: no labels exist there and 0.0 is
+        below any threshold</td></tr>
 <tr><td>NaN <em>inside</em> the scored region (holes in the prediction)</td>
     <td>“NaN in: n filled” after <code>--fix-nan</code></td>
     <td>run with <code>--fix-nan</code> (fills holes with 0.0), or use the
-        max-compat button (<code>0.0</code> outside, no NaN at all)</td></tr>
+        site's default finite download</td></tr>
 </table>
-<p>Nothing else about the container (deflate compression, GDAL_NODATA=nan, EPSG
-tag form) has ever triggered a rejection in our runs; if a new message appears,
-record it verbatim in <code>research/limitations_and_next.md</code> before
-changing anything.</p>
+<p>Nothing else about the container (deflate compression, EPSG tag form) has
+triggered a rejection in our runs; if a new message appears, record it verbatim
+in <code>research/limitations_and_next.md</code> before changing anything.</p>
 
 <h2>§7 Pre-flight checklist</h2>
 <ul>

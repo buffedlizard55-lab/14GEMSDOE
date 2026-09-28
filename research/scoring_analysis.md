@@ -65,11 +65,17 @@ first probes show the headroom below and above.
   run it as a *diagnostic* slot only.
 * **ε = 1e-9.** Irrelevant at region scale; kept for division safety and pinned
   in tests.
-* **NaN policy.** Scorer treatment of NaN is not spelled out in the docs; the
-  prior team's empirical statement ("NaN is read as 0.0" outside the footprint)
-  is TEAM-REPORTED. The gate nonetheless forbids NaN inside the footprint
-  because the form's range check demonstrably rejects it (T4, reproduced in
-  `tests/test_submission_gate.py`).
+* **NaN policy (updated 2026-09-28, T9/FLAG #10).** The form's range check
+  demonstrably rejects NaN *anywhere in the raster* — a real upload of the
+  site's NaN-outside download was bounced with exactly "Predicted values must
+  be in range [0, 1]" (the earlier note that "NaN is read as 0.0 outside" is
+  superseded by this observation). Default emission is therefore **finite
+  everywhere**: 0.0 outside the footprint. That choice is score-neutral in the
+  DTI arithmetic — no ground-truth pixels exist outside the footprint, and 0.0
+  is below any threshold, so it adds no FP_w — while guaranteeing the range
+  check passes. Enforced in `build_submission.py` (clamp + `--fix-nan`) and in
+  the site builder's value gate (a build refuses to download if any payload
+  value leaves [0, 1]).
 
 ## 5. Holdout protocol (the only slot currency)
 

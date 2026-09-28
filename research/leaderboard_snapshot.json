@@ -1,9 +1,9 @@
 [
   {
-    "fetched_utc": "2026-09-28T00:00:00Z",
+    "fetched_utc": "2026-09-28T09:22:54Z",
     "source_url": "https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/",
     "fetched_live": true,
-    "note": "Seed snapshot: top-50 rows read from the live public leaderboard page on 2026-09-28 (UTC) via the Arena fetch tool. Refresh with scripts/refresh_leaderboard.py.",
+    "note": "Top-50 rows read from the live public leaderboard on 2026-09-28T09:22Z via the Arena fetch tool (session 14 re-verification; rows 1-50 read directly in two chunks). Supersedes the 00:00Z snapshot. Refresh with scripts/refresh_leaderboard.py.",
     "n_rows": 50,
     "top": [
       {
@@ -73,18 +73,19 @@
       {
         "rank": 9,
         "users": [
-          "ndavis7"
+          "rariwa",
+          "masterozone0617"
         ],
-        "display": "ndavis7",
-        "score": 0.2316
+        "display": "Batik Shirt Brothers",
+        "score": 0.2321
       },
       {
         "rank": 10,
         "users": [
-          "hiii12345"
+          "ndavis7"
         ],
-        "display": "hiii12345",
-        "score": 0.2262
+        "display": "ndavis7",
+        "score": 0.2316
       },
       {
         "rank": 11,
@@ -92,10 +93,18 @@
           "ad3002"
         ],
         "display": "ad3002",
-        "score": 0.2235
+        "score": 0.2297
       },
       {
         "rank": 12,
+        "users": [
+          "hiii12345"
+        ],
+        "display": "hiii12345",
+        "score": 0.2262
+      },
+      {
+        "rank": 13,
         "users": [
           "tchu"
         ],
@@ -103,7 +112,7 @@
         "score": 0.222
       },
       {
-        "rank": 13,
+        "rank": 14,
         "users": [
           "oshbocker"
         ],
@@ -111,20 +120,12 @@
         "score": 0.2185
       },
       {
-        "rank": 14,
+        "rank": 15,
         "users": [
           "moongrega"
         ],
         "display": "moongrega",
         "score": 0.218
-      },
-      {
-        "rank": 15,
-        "users": [
-          "Batik Shirt Brothers"
-        ],
-        "display": "Batik Shirt Brothers",
-        "score": 0.1956
       },
       {
         "rank": 16,
@@ -321,7 +322,8 @@
       {
         "rank": 40,
         "users": [
-          "zeaal"
+          "vladee",
+          "ahome"
         ],
         "display": "zeaal",
         "score": 0.135
@@ -448,8 +450,6 @@
         "display": "smrtdoog5",
         "score": 0.1193
       }
-    ],
-    "reverified_utc": "2026-09-28",
-    "reverified_note": "Top 50 re-read from the live public leaderboard on 2026-09-28 via the Arena fetch tool: all 50 rows identical to the seed snapshot (ranks, names, scores). bash cannot reach www.drivendata.org from this sandbox (FLAG #1)."
+    ]
   }
 ]

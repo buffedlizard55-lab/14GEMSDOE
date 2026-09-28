@@ -15,6 +15,7 @@
   <a href="strategy.html">Strategy</a>
   <a href="hypotheses.html">Hypotheses (round 1)</a>
   <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -37,11 +38,16 @@ four times harder than false alarms. Competition closes
   <p>
   The DrivenData <em>File to submit</em> dialog takes a single-band GeoTIFF
   (or a <code>.zip</code> containing one) on the competition grid:
-  <strong>float32, probabilities in [0, 1], NaN outside the footprint</strong>.
-  This page assembles that file in <em>your browser</em> from the pixel payload
-  shipped with it — no install, no GPU, nothing uploaded. The download name is
-  unique per build, and the suggested <strong>Note</strong> below tells your
-  team's submissions apart later.</p>
+  <strong>float32, every value finite in [0, 1]</strong>. The official format
+  page also permits NaN outside the footprint, but a real upload attempt
+  (2026-09-28) shows the form's checker <em>rejects</em> NaN files with
+  “Predicted values must be in range [0, 1]” — so the
+  <strong>default download below is the finite variant</strong> (0.0 outside
+  the footprint, which cannot change the score: no labels exist there and 0.0
+  is below any threshold). This page assembles the file in <em>your browser</em>
+  from the pixel payload shipped with it — no install, no GPU, nothing
+  uploaded. The download name is unique per build, and the suggested
+  <strong>Note</strong> below tells your team's submissions apart later.</p>
 
   <div id="demoBanner" class="note" style="display:none">
     <strong>DEMO payload loaded.</strong> The competition data sits behind a
@@ -180,16 +186,23 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
     <td><span class="pill ok">VERIFIED</span></td>
     <td class="src">16 files/DOIs with working links — <a href="data.html">source table</a></td></tr>
 <tr><td>Competition rasters in <code>data/raw/</code></td>
-    <td><span class="pill warn">NEEDS LOGIN</span></td>
-    <td class="src">DrivenData auth required — run
-        <code>scripts/download_competition_data.sh</code> and follow its steps</td></tr>
+    <td><span class="pill warn">ONE COMMAND</span></td>
+    <td class="src">official no-login mirrors wired into
+        <code>scripts/download_competition_data.sh</code> — run it on any
+        unrestricted machine, then <code>prepare_data.py</code></td></tr>
 <tr><td>Pipeline (features → hide-and-recover → holdout → submission)</td>
     <td><span class="pill ok">TESTED</span></td>
-    <td class="src">86/86 tests green + end-to-end synthetic demo run</td></tr>
+    <td class="src">101/101 tests green + end-to-end synthetic demo run</td></tr>
 <tr><td>Round-2 hypothesis gate (9 arms, blocked holdout)</td>
     <td><span class="pill ok">RUN</span></td>
     <td class="src"><code>artifacts/holdout_round2.json</code> — BLEND-MUL promoted,
         N1/N3/GEO-ONLY/BLEND/BLEND-ADD killed; synthetic forward model only</td></tr>
+<tr><td>Round-3 hypothesis gate (10 arms, blocked holdout)</td>
+    <td><span class="pill ok">RUN</span></td>
+    <td class="src"><code>artifacts/holdout_round3.json</code> + follow-up —
+        <strong>incumbent BLEND-MUL stands; all five R3 candidates and both
+        incumbent-stacks killed</strong>; prior-support mechanism measured —
+        <a href="hypotheses-round3.html">round-3 page</a></td></tr>
 <tr><td>Uniqueness gate (no repeated 0.1563)</td>
     <td><span class="pill ok">ENFORCED</span></td>
     <td class="src"><code>scripts/check_submission_uniqueness.py</code> — byte-identity,

@@ -79,11 +79,39 @@
         throw new Error("pixel hash mismatch: got " + sha + ", pinned " + payload.pixels_sha256);
       }
       log("pixel field sha256 OK  " + sha.slice(0, 16) + "...");
+      // PRIMARY build: finite everywhere (0.0 outside the footprint, no NaN).
+      // The platform's range checker rejected the NaN-nodata variant with
+      // "Predicted values must be in range [0, 1]" (observed 2026-09-28 on a
+      // real upload attempt), so the default download is the finite one and
+      // the literal NaN-nodata build is demoted to the secondary button.
+      var finite = new Float32Array(field.length);
+      var vmin = Infinity, vmax = -Infinity, nBad = 0;
+      for (var i = 0; i < field.length; i++) {
+        var v = field[i];
+        finite[i] = isNaN(v) ? 0.0 : v;
+        if (!isNaN(v)) {
+          if (v < vmin) vmin = v;
+          if (v > vmax) vmax = v;
+        }
+        if (finite[i] < 0.0 || finite[i] > 1.0) nBad++;
+      }
+      if (nBad > 0) {
+        throw new Error(nBad + " payload value(s) outside [0,1] - refusing to build " +
+                        "(payload bug; report it)");
+      }
+      log("value gate: all finite, min=" + (vmin === Infinity ? "n/a" : vmin.toFixed(6)) +
+          " max=" + (vmax === -Infinity ? "n/a" : vmax.toFixed(6)) + " (within [0,1])");
       tifBytes = GemsTiff.writeGeoTiffFloat32({
+        rows: payload.rows, cols: payload.cols, values: finite,
+        transform: payload.transform, epsg: payload.epsg, nodata: null
+      });
+      // SECONDARY build: literal official format (NaN outside, GDAL_NODATA=nan).
+      tifBytesNan = GemsTiff.writeGeoTiffFloat32({
         rows: payload.rows, cols: payload.cols, values: field,
         transform: payload.transform, epsg: payload.epsg, nodata: "nan"
       });
-      log("GeoTIFF container written: " + fmtBytes(tifBytes.length));
+      log("GeoTIFF containers written: primary " + fmtBytes(tifBytes.length) +
+          " (finite), secondary " + fmtBytes(tifBytesNan.length) + " (NaN-nodata)");
       return GemsTiff.sha256Hex(tifBytes);
     }).then(function (fileSha) {
       // self re-read: parse the header we just wrote and verify it agrees
@@ -102,8 +130,13 @@
       [256, 257, 258, 273, 33550, 33922, 34735].forEach(function (t) {
         if (!seen[t]) throw new Error("missing TIFF tag " + t);
       });
-      if (!seen[42113]) throw new Error("missing GDAL_NODATA tag");
-      log("self-check: required tags present (incl. GeoKeyDirectory + GDAL_NODATA)");
+      // the PRIMARY build is finite everywhere and intentionally carries NO
+      // GDAL_NODATA tag; the NaN-nodata secondary build must carry it.
+      if (seen[42113]) {
+        throw new Error("primary build unexpectedly carries GDAL_NODATA");
+      }
+      log("self-check: required tags present (GeoKeyDirectory + georeferencing; " +
+          "no GDAL_NODATA on the finite primary build)");
       window._gemsBuild = {
         fileSha: fileSha, fieldSha: fieldSha,
         rows: payload.rows, cols: payload.cols, epsg: payload.epsg
@@ -149,18 +182,11 @@
       log("downloaded zip wrapper (" + fmtBytes(zip.length) + ")");
     });
     el("btnCompat").addEventListener("click", function () {
-      if (!field) return;
-      var vals = new Float32Array(field.length);
-      for (var i = 0; i < field.length; i++) {
-        vals[i] = isNaN(field[i]) ? 0.0 : field[i];
-      }
-      var bytes = GemsTiff.writeGeoTiffFloat32({
-        rows: payload.rows, cols: payload.cols, values: vals,
-        transform: payload.transform, epsg: payload.epsg, nodata: null
-      });
-      download(bytes, buildName().replace(/\.tif$/, "-zero-outside.tif"));
-      log("downloaded max-compatibility variant (0.0 outside, no NaN) — use only if the " +
-          "form rejected the NaN variant with 'Predicted values must be in range [0, 1]'");
+      if (!tifBytesNan) return;
+      download(tifBytesNan, buildName().replace(/\.tif$/, "-nan-nodata.tif"));
+      log("downloaded literal-format variant (NaN outside) — WARNING: a file like " +
+          "this was rejected by the form with 'Predicted values must be in range [0, 1]' " +
+          "(observed 2026-09-28); use only if the platform confirms NaN-nodata support");
     });
     decodeAll();
   }

@@ -84,6 +84,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 }
 .note.ok { border-color: var(--ok); background: rgba(63,185,80,0.07); }
 .note.bad { border-color: var(--bad); background: rgba(248,81,73,0.07); }
+td.ok   { color: var(--ok);   font-weight: 600; }
+td.warn { color: var(--warn); font-weight: 600; }
+td.bad  { color: var(--bad);  font-weight: 600; }
 footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px;
   padding: 22px 20px 40px; max-width: 1080px; margin: 0 auto; }
 .src { font-size: 12.5px; color: var(--muted); }

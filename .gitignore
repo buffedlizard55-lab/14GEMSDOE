@@ -11,11 +11,14 @@ data/demo/*
 # model artifacts and submissions (keep manifests out of git too; regenerate)
 artifacts/*
 !artifacts/holdout_round2.json
+!artifacts/holdout_round3.json
+!artifacts/holdout_round3_followup.json
 submissions/*
 *.npy
 *.pyc
 __pycache__/
 .pytest_cache/
+.venv/
 .DS_Store
 
 # note: docs/js/payload.js and docs/js/leaderboard.js ARE tracked (site inputs);

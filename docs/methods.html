@@ -14,6 +14,7 @@
   <a href="strategy.html">Strategy</a>
   <a href="hypotheses.html">Hypotheses (round 1)</a>
   <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html" class="active">Methods</a>
@@ -79,7 +80,7 @@ runs anywhere); the reference U-Net is the drop-in upgrade once GPU + the real
 418 MB feature stack are present — the protocol does not change.</p>
 
 <h2>Reproducing everything on this page</h2>
-<pre>python3 -m unittest discover -s tests              # 86 tests
+<pre>python3 -m unittest discover -s tests              # 101 tests
 python3 scripts/make_demo.py                       # end-to-end synthetic run → validated demo .tif
 python3 scripts/build_site_payload.py --demo
 python3 scripts/validate_round2.py                 # the 9-arm hypothesis gate
