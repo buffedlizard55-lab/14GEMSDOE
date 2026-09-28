@@ -36,8 +36,10 @@ leaderboard feed. **Start there to make a submission.**
 >
 > We need to figure out why we keep scoring 0.1563 — are we copying the same
 > work over and over? We need different ideas, not the same idea tried a
-> different way. Submissions must all be unique; never generate the same score
-> submissions twice.
+> different way. Never re-upload byte-identical prediction artifacts. A repeated
+> leaderboard score rounded to four decimals is an audit trigger, not proof that
+> two prediction rasters are identical; compare the pixel-array hash and platform
+> submission records where available.
 >
 > Generate 3–5 candidate geological hypotheses we haven't tried yet, each
 > naming: the specific layer(s) involved, the physical signature being targeted,
@@ -87,17 +89,17 @@ leaderboard feed. **Start there to make a submission.**
 > already in it, and how it differs from anything already in the repo. Rank by
 > expected DTI gain and implementation cost. Validate the top candidate on the
 > spatially-blocked holdout BEFORE touching a weekly submission slot — never
-> spend a slot on an idea that has not beaten the current holdout best. If a
-> candidate needs new external data, name the specific free official source and
-> check it is obtainable before calling the idea viable. Figure out why we keep
-> scoring 0.1563 and why 5GEMSDOE equals GEMSDOE1; never generate the same score
-> submission twice. Do heavy, deep research into the scientific discovery of
-> geothermal resources; store everything from official verified sources as a
-> starting point for other projects. Think outside the box but stay grounded in
-> proper scientific research. Find data others overlook. Be contrarian but
-> smart. Target: beat the live top score (0.3168) and place top of the
-> leaderboard. Keep the Core Values (Maximize P(Win), Own the Outcome) as the
-> focal point of every decision.
+> spend a slot on an idea that has not beaten the current real-data holdout best.
+> If a candidate needs new external data, name the specific free official source
+> and verify availability. Figure out why we keep scoring 0.1563 and whether
+> 5GEMSDOE and GEMSDOE1 reused an artifact; never re-upload a byte-identical
+> prediction raster. A four-decimal score tie is not proof of identical work.
+> Do deep research into geothermal systems; store official-source evidence and
+> limitations. Think outside the box but stay grounded in science. Find data
+> others overlook. Be contrarian but smart. Track the live public leaderboard
+> (checked 2026-09-28: DARD 0.3168; not directly comparable to local synthetic
+> or blocked-holdout scores). Keep the Core Values (Maximize P(Win), Own the
+> Outcome) focal to every decision.
 >
 > **Core values: Maximize P(Win)** — in every decision weigh tradeoffs, assess
 > risk, choose the path that maximizes the probability of winning. **Own the
@@ -176,17 +178,54 @@ Two findings:
 Full record: **[`research/hypotheses_round3.md`](research/hypotheses_round3.md)**,
 site page **`docs/hypotheses-round3.html`**.
 
+## Round-4 research — pre-registered, not slot-eligible (2026-09-28)
+
+A new review produced four candidate mechanisms that are not duplicate feature
+arms: (1) multi-physics edge topology across gravity, magnetics and conductivity;
+(2) channel deflection/offset from USGS 3DEP elevation plus 3DHP hydrography;
+(3) geologic-contact offset graphs from USGS/Nevada map data; and (4) signed,
+alternating scarp-polarity sequences from high-resolution elevation. Each entry
+names its layers, signature, missing-fault rationale, repo-difference, qualitative
+upside/cost, source and unresolved availability checks in
+[`research/hypotheses_round4.md`](research/hypotheses_round4.md).
+
+**No real-data validation was possible and no slot was spent.** `data/raw/`,
+`data/processed/`, and `data/external/` contain only placeholders. The top
+candidate is therefore a research hypothesis, not an implemented or validated
+improvement. Existing round-2/3 scores are explicitly synthetic and must not be
+compared with the public leaderboard score. This review installed test
+requirements into the ignored `.venv/` and verified **102 tests passed**; that
+checks software behavior, not geology or competition performance. Slot decision:
+**HOLD** until a real, spatially-blocked hide-and-recover result beats the
+real-data incumbent.
+
+### Audit correction: repeated scores are not duplicate-file evidence
+
+The GEMSDOE1 and 5GEMSDOE Pages currently publish the same pinned artifact SHA
+prefix (`7f00890a…`) and the same run-length payload description. That is strong
+evidence their *published builders* encode the same prediction field. The repo
+does not contain the original upload binaries or DrivenData submission IDs, so
+it cannot independently prove which exact file was uploaded. The reported
+0.1563 leaderboard ties for 8GEMSDOE or other accounts do **not** prove identical
+rasters: scores are rounded to four decimals and different fields can yield the
+same displayed score. Hash each actual pixel array and retain submission IDs;
+use score collisions only to trigger a provenance audit. The ledger also has
+repeated shortened artifact IDs (`6452ae1d00`, `0c9199f14e62`) for separate
+entries; the uniqueness script flags them for review, but the missing original
+files prevent proving whether those uploads duplicated predictions.
+
 ## How this repo fulfils the prompt
 
 | Prompt requirement | Where it lives | Verified by |
 |---|---|---|
 | Auditable data table with official links | `docs/data.html`, `research/knowledge_base.md` | every row carries its source URL + check date |
 | No hallucinations; verify line by line | `research/knowledge_base.md` (VERIFIED/TEAM-REPORTED/FLAG vocabulary) | irregularities section `research/limitations_and_next.md` §C |
-| Why 0.1563; unique submissions | `research/scoring_analysis.md`, `research/results_ledger.md` | identical-artifact autopsy (hash evidence) |
+| Why 0.1563; unique submissions | `research/scoring_analysis.md`, `research/results_ledger.md` | matching published builder metadata; upload binaries/IDs unavailable; exact prediction hashes are the only duplicate proof |
 | 3–5 ranked geological hypotheses + layers/signatures/why-missing/differences | `docs/hypotheses.html`, `research/hypotheses.md` | sources verified; ranking decision log |
 | Holdout gate before any submission slot | `gems/blocks.py`, `scripts/validate_blocks.py`, `scripts/validate_round2.py`, slot log on `docs/leaderboard.html` | `tests/test_blocks.py`, `tests/test_hypotheses_round2.py` |
-| Round-2 hypotheses N1–N5 (layers, signature, why-missing, differences, ranking, gate outcome) | `research/hypotheses_round2.md`, `gems/hypotheses.py`, `gems/geoedges.py`, `docs/hypotheses-round2.html` | holdout table in the doc; arm tests |
-| Unique submissions / no repeated 0.1563 | `scripts/check_submission_uniqueness.py`, `scripts/build_submission.py` (sha8 naming) | `tests/test_submission_uniqueness.py` (byte-identity, manifest integrity, ledger duplicates) |
+| Round-2 hypotheses N1–N5 | `research/hypotheses_round2.md`, `gems/hypotheses.py`, `gems/geoedges.py`, `docs/hypotheses-round2.html` | holdout values are synthetic; not real competition validation |
+| Round-4 novel hypotheses and validation status | `research/hypotheses_round4.md`, `docs/hypotheses-round4.html` | four ranked candidates; real holdout blocked; no slot spent |
+| Unique prediction artifacts | `scripts/check_submission_uniqueness.py`, `scripts/build_submission.py` (prediction-array + TIFF hashes) | exact hash collision is hard failure; rounded scores are review warnings only |
 | External data obtainability checked, not assumed | `research/knowledge_base.md` §3 + T8, `scripts/download_external_data.sh` | every row carries URL + check date; reachability measured 2026-09-28 |
 | External data: named free official sources, obtainability checked | `research/knowledge_base.md` §3, `scripts/download_external_data.sh` | GDR 1391 + ScienceBase DOIs opened 2026-09-28 |
 | Catalogue-geometry features + corridors | `gems/features.py` | `tests/test_features.py` |
@@ -199,12 +238,14 @@ site page **`docs/hypotheses-round3.html`**.
 | Up-to-date feed; no manual checking | `scripts/refresh_leaderboard.py` → `docs/leaderboard.html` | `tests/test_leaderboard_parser.py` |
 | Multi-pass working | session log in `research/limitations_and_next.md` | passes recorded per session |
 
-## Current verified scoreboard (2026-09-28, re-verified 09:22Z)
+## Public leaderboard check (2026-09-28)
 
 * Leaderboard #1 **DARD 0.3168** (the brief's "0.3049" figure is stale — FLAG #3;
   top-5 re-verified live, T11).
-* This group's best public scores: 0.1563 / 0.1461 / 0.1193 — the 0.1563 family
-  is one artifact shipped repeatedly (hash-proven; `research/results_ledger.md`).
+* Team-thread reported scores include 0.1563 / 0.1461 / 0.1193; they are not
+  independently tied to submission IDs in this checkout. GEMSDOE1 and 5GEMSDOE
+  pages show matching artifact metadata, but their upload binaries/IDs are absent.
+  Other 0.1563 ties are not proof of duplicate predictions.
 * Deadline **Dec 3, 2026 23:59 UTC**; 3 submissions/week (rolling window, C22);
   one file scored in both rounds; Phase 2 ($250k) re-scores against
   expert-expanded labels.
@@ -235,11 +276,11 @@ gems/
 scripts/
   validate_round2.py       ← round-2 hypothesis A/B gate (the slot currency)
   validate_round3.py       ← NEW: round-3 gate (R3 arms vs the true incumbent)
-  check_submission_uniqueness.py ← NEW: blocks byte-identical / duplicate uploads
+  check_submission_uniqueness.py ← exact TIFF/prediction-hash gate; rounded scores warn
   build_submission.py      ← unique sha8 name + NOTE + MANIFEST + format gate
                              (clamps to [0,1], fixes NaN — T9)
   train_hide_recover.py    ← hide-and-recover training (arm-aware, R3 context-safe)
-  download_competition_data.sh ← NEW: official no-login mirror fetch + sha256
+  download_competition_data.sh ← team-provided Dropbox shares (unverified) + sha256
   build_features.py, build_site_payload.py, refresh_leaderboard.py,
   download_external_data.sh, prepare_data.py,
   make_demo.py, validate_blocks.py, validate_submission.py
@@ -264,9 +305,10 @@ artifacts/                 ← holdout JSON + model runs; git-ignored EXCEPT the
 python3 -m venv .venv
 ./.venv/bin/pip install numpy scipy rasterio scikit-image pytest
 
-# 1. place the competition data — ONE command on any unrestricted machine.
-#    The official no-login Dropbox mirrors are wired in (sha256 recorded on
-#    arrival); inside a TLS-restricted sandbox it prints the manual path:
+# 1. attempt data placement. The Dropbox links supplied in the project brief
+#    are team-provided shares, not verified official mirrors. Hashes record
+#    downloaded bytes but do not authenticate them. Confirm files against the
+#    official login-gated data tab before training; use its download if unsure.
 bash scripts/download_competition_data.sh
 python3 scripts/prepare_data.py
 
@@ -290,18 +332,21 @@ python3 scripts/build_submission.py artifacts/pred.npy --policy "bmul w0.5 holdo
 # 5. ship it to the site's one-click builder:
 python3 scripts/build_site_payload.py submissions/GEMS_*.tif
 
-# tests (101) and the synthetic end-to-end demo:
+# tests (102 passed in this review) and the synthetic end-to-end demo:
 ./.venv/bin/python -m pytest tests -q
 ./.venv/bin/python scripts/make_demo.py
 ```
 
 ## Limitations in the way (full queue: `research/limitations_and_next.md`)
 
-1. **Competition data placement is one command on any unrestricted machine**
-   (`bash scripts/download_competition_data.sh` — official no-login Dropbox
-   mirrors wired in, sha256 provenance recorded). The DrivenData data tab itself
-   stays login-gated (verified). Until the files land in `data/raw/`, every
-   number in this repo is synthetic-model (marked as such everywhere).
+1. **Competition data is not present.** `bash scripts/download_competition_data.sh`
+   can fetch team-provided Dropbox shares on machines with network access, but
+   those links are not independently authenticated as official competition
+   mirrors. SHA256 records file integrity only, not source identity. The official
+   DrivenData data tab is login-gated. Verify the downloaded rasters and source
+   metadata against the official files before training. Until actual labels and
+   features are present, all holdout numbers in this repo are synthetic-model
+   results and cannot establish leaderboard improvement.
 2. **This sandbox TLS-allowlists {pypi, pythonhosted, github, api.github,
    codeload, npmjs}** (re-measured 2026-09-28, T8) — Dropbox/GDR/ScienceBase
    downloads and the DEM tiles must be fetched elsewhere; the Arena page-fetch

@@ -161,7 +161,14 @@ class TestBuildSubmissionCLI(unittest.TestCase):
             outs = sorted((wdir / "submissions").glob("GEMS_gate-test_*.tif"))
             self.assertEqual(len(outs), 1)
             self.assertTrue((wdir / "submissions" / (outs[0].stem + ".NOTE.txt")).exists())
-            self.assertTrue((wdir / "submissions" / (outs[0].stem + ".MANIFEST.json")).exists())
+            manifest_path = wdir / "submissions" / (outs[0].stem + ".MANIFEST.json")
+            self.assertTrue(manifest_path.exists())
+            manifest = json.loads(manifest_path.read_text())
+            self.assertEqual(len(manifest["prediction_sha256"]), 64)
+            self.assertEqual(
+                manifest["prediction_hash_scope"],
+                "full float32 array in C order after output/nodata policy",
+            )
 
             # validate the produced file with the CLI gate too
             rc = subprocess.call(

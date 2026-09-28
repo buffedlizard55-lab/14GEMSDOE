@@ -15,6 +15,7 @@
   <a href="hypotheses.html">Hypotheses (round 1)</a>
   <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
   <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -36,26 +37,30 @@ Stale numbers are treated as flags here, never as facts.</div>
 <h2>§1 Why 0.1563 kept happening</h2>
 <div class="card">
 <ol>
-  <li><strong>Identical artifacts.</strong> The published GEMSDOE1 and 5GEMSDOE
-      sites pin the same artifact hash <code>7f00890a62878d61…</code>, the same
-      259,495-run payload, and the same histogram (172,974 px at 1.0). Same pixels
-      → same DTI → same score. GEMSDOE1 = 0.1563, 5GEMSDOE = 0.1563, 8GEMSDOE = 0.1563.</li>
-  <li><strong>The field is catalogue-centric.</strong> Under the staff masking
-      ruling, catalogue pixels are worth exactly 0 — neither credit nor penalty.
-      The whole score rides on the thin off-catalogue emission of that one
-      ensemble, which is why everyone shipping it ties.</li>
-  <li><strong>Surrogate scores validated the wrong population.</strong> The prior
-      sites computed DTI against the <em>training catalogue</em> — a monitor of
-      the wrong labels. The prize scores the private <em>new-fault</em> set.
-      Optimizing the surrogate converges to “be the catalogue”.</li>
-  <li><strong>No slot discipline.</strong> Weekly slots were spent on variants of
-      the same field, so identical scores were inevitable rather than diagnostic.</li>
+  <li><strong>Published builders show matching metadata.</strong> GEMSDOE1 and
+      5GEMSDOE pages display the same truncated artifact-hash prefix, encoded-run
+      count and histogram. This is evidence their site builders present the same
+      field, not proof of which file was uploaded; original files and platform
+      submission IDs are unavailable in this repo.</li>
+  <li><strong>Rounded score ties do not prove duplicate predictions.</strong>
+      The public scores are shown to four decimals. Different rasters can produce
+      the same displayed DTI; cross-account ties must not be called shared work
+      without pixel-array hashes.</li>
+  <li><strong>Historical artifacts are missing.</strong> The ledger contains
+      repeated shortened artifact IDs, including entries with blank scores.
+      These are flagged for review, not classified as duplicates without full
+      hashes or upload records.</li>
+  <li><strong>Real-data model comparison is blocked.</strong> Synthetic holdouts
+      and leaderboard scores are different evidence and are not directly
+      comparable. Competition rasters/labels are absent, so no new feature arm
+      can be promoted for a slot yet.</li>
 </ol>
-<p><strong>New rules in this repo:</strong> every artifact is uniquely named and
-hashed at build time; the only number that may spend a slot is
-spatially-blocked <em>hide-and-recover</em> DTI (honest local analogue of the
-private test); and the idea list below is diversified by construction — no two
-moves share a physical signature.</p>
+<p><strong>Current safeguards:</strong> submission manifests record both TIFF
+and prediction-array hashes. Exact pixel-array repeats are blocked; rounded
+score collisions are warnings only. A candidate may be considered for a slot
+only after spatially-blocked hide-and-recover evaluation on authorized real
+competition data beats the real-data incumbent. Synthetic validation is
+machinery-only and cannot qualify a submission.</p>
 </div>
 
 <h2>§2 The metric arithmetic (official equations, transcribed)</h2>

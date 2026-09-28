@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round-4 research — GEMS catalogue gaps</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html" class="active">Hypotheses (round 4)</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+<main>
+<h1>Round 4: distinct research candidates</h1>
+<p class="lede">These are pre-registered hypotheses, not proven predictors. Each
+uses a physical signature not implemented in the current feature arms, and each
+is ranked qualitatively. No model change or submission is authorized without a
+real, spatially-blocked holdout win.</p>
+<div class="note"><strong>Decision: HOLD — no candidate is slot-eligible.</strong>
+This checkout contains no competition rasters/labels/template or DEM links; its
+Python runtime lacks NumPy, SciPy, rasterio and pytest. Round-2/3 measurements
+are synthetic and cannot be interpreted as leaderboard scores.</div>
+<h2>Ranked hypotheses</h2>
+<table>
+<tr><th>Rank</th><th>Candidate, named layers and target signature</th><th>Missing-fault rationale and difference from repo</th><th>Upside / cost / data readiness</th></tr>
+<tr><td>1</td><td><strong>R4A — joint geophysical boundary topology.</strong><br>Competition stack: isostatic gravity anomaly/slope; RTP/TMI and magnetic slopes; surface conductivity and depth to conductive base. Target multi-field edge co-location, compatible strike, and edge termination/gap continuity.</td><td>Subsurface basin-fill faults can lack scarps while juxtaposing physical contrasts. A joint edge topology may retain a candidate where one field is weak. Existing N1 is gravity-only endpoints; R3C is magnetic-only fabric; N3 is a thresholded conductivity/magnetic cap mask. R4A combines these sources at the edge/topology level. Coincident anomalies are not automatically faults.</td><td>Medium, high uncertainty / medium cost / no new external source. Real stack absent.</td></tr>
+<tr><td>2</td><td><strong>R4B — hydrographic deflection/offset.</strong><br>USGS 3DEP bare-earth DEM where available plus USGS 3DHP flowlines. Target channel bends, abrupt offsets and aligned knickpoints with shared strike.</td><td>Fault displacement can deform channels even when a coherent scarp is absent. A peer-reviewed mapping study documents fault-related deflected streams (<a href="https://pubs.geoscienceworld.org/gsa/geosphere/article/8/3/581/132511/Map-of-the-late-Quaternary-active-Kern-Canyon-and">Geosphere 2012</a>); a <a href="https://pubs.usgs.gov/publication/ofr20151122">USGS trench study</a> documents a stream deflection with a nontectonic cause, so this is not diagnostic alone. Unlike existing slope/range-front (N5) or curvature-scarplet (R3D) features, this models network geometry. Screen lithology, drainage capture, infrastructure and raster artefacts.</td><td>Medium, high uncertainty / high cost / 3DEP and 3DHP are official sources, but exact GeoDAWN coverage not verified.</td></tr>
+<tr><td>3</td><td><strong>R4C — geologic-contact offset graph.</strong><br>USGS/Nevada geologic-map contacts and unit polygons. Target repeated contact truncation/offset on a shared lineament.</td><td>A concealed fault may offset units without being in the fault catalogue. No current feature uses geologic unit polygons/contact networks. Map scale, date, and existing fault overlays are major leakage and accuracy risks.</td><td>Medium, high uncertainty / high cost / regional USGS Data Series 249 exists at 1:250,000; adequacy for 100 m fault placement is unproven.</td></tr>
+<tr><td>4</td><td><strong>R4D — signed alternating scarp polarity.</strong><br>Competition 1 m DEM / 3DEP. Target aligned uphill- and downhill-facing small scarps in a repeated sequence, not an unsigned curvature ridge.</td><td>Could represent discontinuous strike-slip microtopography missed by a catalogue. Distinct from N5 slope threshold and R3D negative-curvature linkage, but shares the broader terrain evidence family and is vulnerable to nontectonic scarps.</td><td>Low-to-medium, high uncertainty / medium-high cost / local DEM coverage not verified.</td></tr>
+</table>
+<h2>Source checks for manual review</h2>
+<ul>
+<li><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#provided-features">DrivenData provided-feature list</a> — official layer names; actual TIFF band tags remain unavailable here.</li>
+<li><a href="https://pubs.usgs.gov/publication/70221765">USGS Great Basin integrated play-fairway report</a> — multiple geologic/geophysical observations at blind geothermal systems; this supports integration, not a predicted DTI gain.</li>
+<li><a href="https://pubs.usgs.gov/publication/70271418">USGS Argenta Rise study</a> — basin-fill-obscured structures and joint gravity/magnetic/MT interpretation.</li>
+<li><a href="https://www.usgs.gov/3d-elevation-program">USGS 3DEP</a> and <a href="https://www.usgs.gov/the-national-map-data-delivery/gis-data-download">National Map downloads</a> — official elevation/data access routes.</li>
+<li><a href="https://www.usgs.gov/3d-hydrography-program">USGS 3DHP</a> — official hydrography program; region-specific product coverage still must be checked.</li>
+<li><a href="https://ngmdb.usgs.gov/mapview/">USGS/AASG NGMDB MapView</a> and <a href="https://pubs.usgs.gov/ds/2007/249/">USGS Data Series 249</a> — map discovery/download source and regional map description. DS249 documents 1:250,000 scale, not 100 m local accuracy.</li>
+<li><a href="https://data.usgs.gov/datacatalog/data/USGS:60be89e3d34e86b938912329">USGS Nevada geothermal data release</a> — public record for regional geophysics, heat-flow, slip and dilation products; a heat-flow-gradient candidate was not ranked because earlier H3 already proposed heat-flow evidence.</li>
+<li><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/">Live public leaderboard</a> — fetched 2026-09-28; DARD was at 0.3168 at that check. Public leaderboard values are not comparable with this repo's synthetic holdout values.</li>
+</ul>
+<h2>Gate protocol</h2>
+<ol>
+<li>Acquire authorized competition data and record file hashes, CRS, shape, transforms, no-data mask, and all band tags. The DrivenData data tab is login-gated. Dropbox links supplied in the project brief are <strong>team-provided shares, not authenticated official mirrors</strong>; SHA256 only records bytes, not provenance.</li>
+<li>Use the same geographic block folds, purge buffer, and hide-and-recover process for the incumbent and candidate. No label-derived transforms may see held-out labels.</li>
+<li>Report discovery/recovery/combined DTI by fold and seed with uncertainty; compare against a real-data incumbent. Literature and synthetic tests do not qualify a candidate for a submission slot.</li>
+<li>Only after a real holdout win: validate the generated TIFF against the official template, compare full prediction-array hashes with every prior artifact, then decide whether a competition slot is justified.</li>
+</ol>
+<p>Full research record, feature details, uncertainties, and the blocked validation
+status: <a href="../research/hypotheses_round4.md">research/hypotheses_round4.md</a>.</p>
+</main>
+<footer>Research update 2026-09-28 · pre-registration only · no slot spent.</footer>
+</body>
+</html>

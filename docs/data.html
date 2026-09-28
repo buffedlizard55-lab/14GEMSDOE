@@ -238,13 +238,14 @@ sandbox — TLS blocked, <span class="pill bad">IRREGULARITY</span> #1):
       named in any public document</strong> (15 are named officially; the figure
       caption additionally mentions total radiometric counts, so radiometrics are
       in the stack).</li>
-  <li><span class="pill bad">#8</span> <strong>Identical-score submissions across
-      accounts</strong>: three leaderboard accounts tie at exactly 0.1563, and the
-      group's own GEMSDOE1 and 5GEMSDOE publish the same artifact hash. A
-      four-decimal tie in this metric means equal TP_w/FP_w/FN_w, i.e.
-      effectively equal prediction fields. Mechanical prevention is now in place:
-      <code>scripts/check_submission_uniqueness.py</code> must exit 0 before any
-      upload.</li>
+  <li><span class="pill warn">#8</span> <strong>Repeated scores and abbreviated artifact IDs need an audit, not an assumption.</strong>
+      The leaderboard has displayed several accounts at 0.1563, but a four-decimal
+      tie does not establish equal TP/FP/FN components or identical rasters. The
+      GEMSDOE1 and 5GEMSDOE pages display matching truncated artifact/payload
+      metadata; original uploads and DrivenData IDs are unavailable here. The
+      ledger also has repeated shortened IDs for other runs. The current
+      <code>scripts/check_submission_uniqueness.py</code> flags those as warnings
+      and blocks exact TIFF/prediction-array hash matches.</li>
   <li><span class="pill bad">#9</span> <strong>Masking semantics still
       ambiguous</strong> after the staff ruling: &ldquo;excluded from
       evaluation, so they do not count towards penalty terms&rdquo; plus

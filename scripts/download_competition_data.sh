@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 # Download the GEMS Prize competition data into data/raw/.
 #
-# TWO paths, tried in order:
-#   1. OFFICIAL NO-LOGIN MIRRORS (Dropbox) — the competition's own mirror
-#      links for the data-tab files, captured verbatim from the project
-#      thread (status TEAM-REPORTED-OFFICIAL-MIRROR; the DrivenData data tab
-#      itself is login-gated, verified).  No DrivenData account needed.
-#   2. MANUAL PLACEMENT from the data tab (needs a DrivenData login) —
-#      printed as instructions if the mirrors are unreachable.
+# TWO possible paths, tried in order:
+#   1. TEAM-PROVIDED DROPBOX SHARES — links were supplied in the project brief.
+#      The share pages and filenames are reachable, but their provenance as
+#      official competition mirrors and the binary contents have NOT been
+#      independently verified. A successful download is not authorization or
+#      proof of official identity. Verify TIFF metadata/grid against the
+#      official DrivenData data tab before using these files for training.
+#   2. OFFICIAL DATA-TAB DOWNLOAD — requires a DrivenData account with access;
+#      instructions are printed if the shares fail or are not trusted.
 #
-# Every downloaded file's sha256 is appended to data/raw/SHA256SUMS with its
-# source URL, so provenance is auditable and re-runs are no-ops.
+# SHA256SUMS records the bytes and source URL after download; it proves local
+#      integrity from that point forward, not that a shared file is official.
 #
-# VERIFIED 2026-09-28 (research/knowledge_base.md):
-#   * the data tab redirects to /accounts/login/ for anonymous clients (C18);
-#   * the Arena sandbox TLS-allowlist blocks dropbox.com from bash (FLAG #1,
-#     re-measured), so inside the sandbox path 1 fails and path 2 prints.
-#     On any unrestricted machine path 1 completes the whole placement.
+# Checked 2026-09-28: anonymous access to the DrivenData data tab is login-gated;
+# binary Dropbox downloads are blocked from this sandbox by its TLS policy. The
+# file-share pages can be reached by the research fetch tool, but no binary file
+# has been downloaded or verified in this checkout.
 #
 # Usage:  bash scripts/download_competition_data.sh
 set -uo pipefail
@@ -36,12 +37,17 @@ MIRRORS=(
 )
 
 record_sha() { # file url
-  local h
+  local h base
   h=$(sha256sum "$1" | cut -d' ' -f1)
-  grep -v "  $2$" "$SUMS" 2>/dev/null > "$SUMS.tmp" || true
-  echo "$h  $(basename "$1")  $2" >> "$SUMS"
-  rm -f "$SUMS.tmp"
-  echo "  sha256=$h  (recorded in SHA256SUMS)"
+  base=$(basename "$1")
+  if [[ -f "$SUMS" ]]; then
+    awk -v name="$base" '$2 != name' "$SUMS" > "$SUMS.tmp"
+  else
+    : > "$SUMS.tmp"
+  fi
+  printf '%s  %s  %s\n' "$h" "$base" "$2" >> "$SUMS.tmp"
+  mv "$SUMS.tmp" "$SUMS"
+  echo "  sha256=$h  (recorded in SHA256SUMS; source identity still unverified)"
 }
 
 fetch_mirror() { # url out
@@ -56,7 +62,7 @@ for row in "${MIRRORS[@]}"; do
     echo "PRESENT $name  bytes=$(stat -c %s "$RAW/$name")  sha256=$h"
     continue
   fi
-  echo "FETCH   $name  <- official mirror"
+  echo "FETCH   $name  <- team-provided Dropbox share (unverified source)"
   if fetch_mirror "$url" "$RAW/$name"; then
     record_sha "$RAW/$name" "$url"
   else

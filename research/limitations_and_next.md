@@ -12,17 +12,20 @@ one prior-channel follow-up against the TRUE round-2 incumbent (BMUL 0.3842,
 reproduced exactly): **the incumbent stands; all R3 arms were killed; the
 prior-extensibility test was exactly null, establishing that the multiplicative
 prior cannot extend the classifier's support.** No submission slot was spent.
-Full record: `research/hypotheses_round3.md`. Also this session: the
-submission-form NaN rejection (T9/FLAG #10) mitigated with a finite default
-download; the official no-login data mirrors wired into
-`scripts/download_competition_data.sh`; leaderboard re-verified live (T11);
-101/101 tests green.
+Full record: `research/hypotheses_round3.md`. This session's corrections:
+team-reported submission-form NaN rejection (T9/FLAG #10) remains unverified
+end-to-end here; Dropbox data links are reclassified as team-provided, unverified
+shares, not official mirrors; four Round-4 candidates were pre-registered without
+claiming holdout validation. Leaderboard checked live 2026-09-28. Dependencies
+were installed into ignored `.venv/`; current suite result is 102 passed. No
+real competition data was present, so these tests do not validate leaderboard
+performance.
 
 ## A. Blockers
 
 | # | Blocker | Why it blocks | Action | Status |
 |---|---------|---------------|--------|--------|
-| B1 | Competition data not in `data/raw/` | no real features/labels/template ⇒ no real holdout numbers | **one command on any unrestricted machine**: `bash scripts/download_competition_data.sh` (official no-login Dropbox mirrors wired in this session, sha256 recorded; T10), then `python3 scripts/prepare_data.py` | scripted; mirrors TLS-blocked only inside this sandbox (T8) |
+| B1 | Competition data not in `data/raw/` | no real features/labels/template ⇒ no real holdout numbers | The Dropbox links supplied in the brief can be attempted with `bash scripts/download_competition_data.sh`, but their official provenance and binary contents are unverified. Confirm all downloaded files against the authenticated DrivenData data tab and official grid/band metadata before `prepare_data.py` or any training. | blocker; requires authorized source files (official data tab login-gated); sandbox cannot fetch Dropbox binaries |
 | B2 | Sandbox TLS policy blocks binary downloads (FLAG #1, re-measured 2026-09-28T09:1xZ: allowlist unchanged) | external INGENIOUS/ScienceBase layers and DEM tiles must be fetched elsewhere | run `scripts/download_external_data.sh` + the `1m_DEM_links.csv` fetch on an unrestricted machine | scripted; needs unrestricted machine |
 | B3 | No GPU in this environment | U-Net (reference-solution class) training is slow to impossible | train logistic baseline for protocol work; port U-Net on GPU box; protocol unchanged | environmental — **now the binding constraint after the round-3 support-extensibility null** |
 | B4 | ~~Band order unpublished~~ **RESOLVED (C23)**: per-band `description`/`data_category` tags; 15 of 19 named officially, 4 not (FLAG #6b) | feature naming for the real stack | read `src.tags(i)` for all 19 bands on arrival; `prepare_data.py` still refuses to guess | waits on B1 |
@@ -105,11 +108,14 @@ download; the official no-login data mirrors wired into
 10. **FLAG #7 — thread scores without values**: h20-dem10-scarp-thin,
     H25-ctx-ridge, h28-dotted-ridge, r7-nms3 entries have no reported score in
     the project thread; ledger leaves them blank rather than guessing.
-11. **FLAG #8 — identical-score submissions across accounts** (three LB accounts
-    at 0.1563, VERIFIED T6, re-verified T11 09:22Z): if those are ours, note
-    that multiple identical uploads waste slots and produce no information. The
-    mechanical prevention is in place: `scripts/check_submission_uniqueness.py`
-    must exit 0 before any upload.
+11. **FLAG #8 — score ties are not artifact proof.** The public leaderboard's
+    three-way displayed 0.1563 tie was observed, but four-decimal scores cannot
+    establish identical prediction arrays. The ledger also contains repeated
+    abbreviated artifact IDs (#1/#8, #14/#15, #18/#19); these are flagged for
+    reconciliation, not called duplicates without full hashes. The audit now
+    blocks exact TIFF or manifest prediction-array hash repeats and reports
+    rounded score/fingerprint collisions as warnings. This checkout has no
+    historic submission TIFFs or DrivenData submission IDs.
 12. **FLAG #9 — staff will not disclose the provenance of the hidden test
     faults** (C12, forum 11527). Every hypothesis about *which* fault types are
     in the test set is therefore inference. This is why the gates score three
@@ -138,9 +144,12 @@ download; the official no-login data mirrors wired into
   real flank spacing (5×5 closing bridged nothing: flanks 7 px apart → 9×9);
   (d) a URL typo in the knowledge base fixed on proofread; (e) nav link missing
   on the round-2 page.
-* **Pass 3 (re-check against the original request).** Full suite 101/101;
-  end-to-end demo re-run; uniqueness gate exit 0; every standing-prompt line
-  re-checked against deliverables (traceability table in README).
+* **Pass 3 (round-3 session historical record).** That session reported 101/101
+  tests and a synthetic end-to-end demo. For this review, the dependency
+  environment was recreated in ignored `.venv/`; the current full suite passed
+  **102/102**, including exact prediction-hash and score-tie-warning tests.
+  This does not validate competition performance because real rasters/labels are
+  still absent.
 
 ## D. Standing decisions (do not relitigate without new evidence)
 

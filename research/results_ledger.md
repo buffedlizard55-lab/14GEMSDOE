@@ -6,16 +6,16 @@ This ledger exists so no two entries can silently be the same work again.
 
 | # | Entry / run id | Reported score | Description (per thread/site) | Artifact id | Unique? | Evidence |
 |---|----------------|----------------|-------------------------------|-------------|---------|----------|
-| 1 | GEMSDOE1 | 0.1563 | ens12-adopted-floor0.1-w0 skeleton; in-browser builder | `7f00890a…` | reference | site pins hash (VERIFIED 2026-09-28) |
+| 1 | GEMSDOE1 | 0.1563 | ens12-adopted-floor0.1-w0 skeleton; in-browser builder | `7f00890a…` | reference | published site metadata (prefix/payload histogram); original upload binary/ID unavailable |
 | 2 | (6GEMSDOE site) | 0.0286 | divergent probe | — | yes | thread |
 | 3 | GEMSDOE3 "Pindrop nodes" | 0.1193 | SUBMIT FIRST | f347b70daa | yes | thread (matches LB smrtdoog5 0.1193) |
 | 4 | GEMSDOE2 | 0.1560 | near-duplicate family of #1 | — | near-dup | thread |
 | 5 | GEMSDOE3 "catalogue-gap target" | 0.0830 | SECOND SYSTEM | 37f9d5b855 | yes | thread |
 | 6 | GEMSDOE4 | 0.0343 | divergent probe | — | yes | thread |
 | 7 | GEMSDOE3 "dense ridge control" | 0.1152 | CONTROL · UPLOAD LAST | 4e03fc9705 | yes | thread |
-| 8 | 5GEMSDOE | 0.1563 | **same payload as #1** | `7f00890a…` | **NO** | site pins identical hash (VERIFIED) |
+| 8 | 5GEMSDOE | 0.1563 | **published builder displays matching artifact-hash prefix and payload metadata as #1** | `7f00890a…` | probable duplicate builder field; upload identity unverified | both live pages fetched; no original upload binary/ID available |
 | 9 | 7GEMSDOE | 0.1461 | (matches LB wbg1) | — | yes | thread |
-| 10 | 8GEMSDOE | 0.1563 | score-identical to #1 family | — | **likely NO** | thread |
+| 10 | 8GEMSDOE | 0.1563 | same rounded score reported | — | unknown | team thread only; score tie does not prove artifact identity |
 | 11 | 9GEMSDOE | 0.0107 | divergent probe | — | yes | thread |
 | 12 | 10GEMSDOE h16-continuation | 0.0461 | continuation probe | 3431b83c7c | yes | thread |
 | 13 | 10GEMSDOE h20-dem10-scarp-thin | (none reported) | DEM-10 scarp thinning | ffc91a1686 | yes | thread |
@@ -27,13 +27,26 @@ This ledger exists so no two entries can silently be the same work again.
 | 19 | 12GEMSDOE _allfinite | (none reported) | NaN-finite variant of #18 | 0c9199f14e62 | variant | thread |
 | 20 | SDCF9 | 0.1563 (LB) | identity appears in thread; LB row #27 | — | — | LB snapshot |
 
+## Artifact-fingerprint irregularities
+
+The audit script found repeated short artifact IDs: #1/#8 (`7f00890a…`),
+#14/#15 (`6452ae1d00`), and #18/#19 (`0c9199f14e62`). The first pair also has
+matching published site metadata. Reuse is **suspected, not proven** for all
+three pairs because the ledger stores abbreviated IDs, does not contain the TIFFs,
+and lacks the original upload IDs. In particular, the #14/#15 scores are blank
+and #18/#19 describe a finite/NaN variant; do not infer they are duplicates from
+these records alone. Recover full artifact and prediction-array hashes before
+classifying them. Current gate warns on these historical collisions and blocks
+only exact hash matches in local files/manifests.
+
 ## Cross-checks against the public leaderboard (2026-09-28 snapshot)
 
-* #26 extradr19 = 0.1563, #27 SDCF9 = 0.1563, #28 smashi34 = 0.1563 —
-  three-way exact tie; ties to 4 decimals mean equal TP_w/FP_w/FN_w, i.e.
-  effectively equal prediction fields (VERIFIED rows, inference recorded).
-* #33 wbg1 = 0.1461 matches entry 9 (VERIFIED row).
-* #48 smrtdoog5 = 0.1193 matches entry 3 (VERIFIED row).
+* The dated leaderboard snapshot records #26 extradr19 = 0.1563, #27 SDCF9 =
+  0.1563, and #28 smashi34 = 0.1563. A four-decimal tie verifies only equal
+  displayed scores; it does not establish equal TP/FP/FN components or identical
+  rasters. Submission files/IDs for these accounts are not available here.
+* #33 wbg1 = 0.1461 and #48 smrtdoog5 = 0.1193 are score matches to team-thread
+  entries, not artifact-identity evidence.
 
 ## Round-2 gate record (2026-09-28) — no submission slot was spent
 
@@ -86,28 +99,33 @@ support-extensibility constraint on every future prior idea.
 
 ## Reading
 
-Scores ≥ 0.14 in this ledger are all the catalogue-skeleton family (#1/#4/#8/#10
-and their thin variants). The divergent ideas (#2, #6, #11, #12, #17, and the
-0.03–0.05 probes) were never developed past a first upload — each is an idea
-that could have been validated off-line first. Going forward: entries are only
-created by `scripts/build_submission.py` (unique name + sha8 + note), the slot
-log on `docs/leaderboard.html` must show a holdout delta before upload, and
-`scripts/check_submission_uniqueness.py` must exit 0.
+Most ≥0.14 scores in this ledger are reported for catalogue-oriented approaches,
+but scores alone cannot establish one shared artifact family. The published
+GEMSDOE1/5GEMSDOE builders appear to encode the same field; other repeated scores
+remain unresolved without artifact hashes or DrivenData IDs. Going forward,
+record each generated file's full prediction-array hash, TIFF hash, policy,
+validation result and (after upload) platform submission ID. Filenames alone are
+not uniqueness evidence; run `scripts/check_submission_uniqueness.py` before
+upload and require the real blocked-holdout gate to beat its incumbent.
 
 ### Answering the two questions the brief asks directly
 
-**"Why do 5GEMSDOE and GEMSDOE1 have the same score (0.1563)?"** Because they
-are the same file. Both published sites pin artifact hash `7f00890a…` and the
-same 259,495-run payload with the same histogram (T1, VERIFIED). Identical
-prediction fields ⇒ identical TP_w/FP_w/FN_w ⇒ identical DTI to four decimals.
-8GEMSDOE also reports 0.1563 and is very likely the same family. The live
-leaderboard independently shows three *separate* accounts tied at exactly 0.1563
-(T6, VERIFIED) — the signature of a shared or equivalently-derived emission.
+**"Why do 5GEMSDOE and GEMSDOE1 have the same score (0.1563)?"** The repo
+cannot prove the cause of their uploaded scores. Their published pages display
+the same artifact-hash prefix (`7f00890a…`), run-length payload count (259,495),
+and histogram. That is strong evidence their *site builders* present the same
+prediction field, but the original upload binaries and DrivenData submission IDs
+are absent, so upload-level identity remains unverified. If those published
+fields were uploaded, identical predictions would necessarily produce identical
+scores. 8GEMSDOE's 0.1563 is a rounded-score match only; its artifact is unknown.
+Other leaderboard accounts' four-decimal ties likewise do not prove a shared
+field.
 
-**"Are we copying the same work over and over?"** For the ≥0.14 tier, yes — one
-catalogue-skeleton artifact shipped three times. For the 0.01–0.05 tier, no:
-those are genuinely different probes, but each was abandoned after a single
-upload without an offline holdout. The fix is mechanical and now implemented:
-`scripts/check_submission_uniqueness.py` blocks byte-identical uploads and
-unexplained duplicate scores, and `scripts/validate_round2.py` is the only
-number allowed to spend a slot.
+**"Are we copying the same work over and over?"** The available evidence is
+mixed. GEMSDOE1/5GEMSDOE published builders appear to encode the same field;
+short IDs also repeat for #14/#15 and #18/#19. We cannot prove which fields were
+uploaded without the original artifacts and platform IDs, and rounded scores
+alone do not establish reuse. The audit now blocks exact TIFF and prediction-array
+hash duplicates among local artifacts, while reporting rounded-score and
+truncated-ID collisions for review. Keep a full prediction hash and submission
+ID for every future upload; do not use leaderboard scores as uniqueness keys.

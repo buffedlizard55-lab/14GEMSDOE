@@ -1,9 +1,8 @@
-"""The uniqueness gate must catch the exact failure the group kept repeating.
+"""Test exact artifact-identity gates separately from rounded-score warnings.
 
-GEMSDOE1 / 5GEMSDOE / 8GEMSDOE all scored 0.1563 and GEMSDOE1 and 5GEMSDOE pin
-the same artifact hash (VERIFIED 2026-09-28 from the two published sites).  The
-public leaderboard shows three separate accounts tied at exactly 0.1563.  These
-tests reproduce that failure deliberately so it cannot recur silently.
+Published GEMSDOE1 and 5GEMSDOE pages display matching truncated artifact
+metadata, while the original uploads are unavailable. Rounded score ties alone
+must never be treated as proof of identical predictions.
 """
 
 import json
@@ -31,8 +30,11 @@ def _write_fake_submission(directory: Path, stem: str, arr: np.ndarray) -> Path:
     path = directory / f"{stem}.tif"
     path.write_bytes(b"FAKETIF" + raw)
     (directory / f"{stem}.NOTE.txt").write_text(f"note for {stem}\n")
-    (directory / f"{stem}.MANIFEST.json").write_text(json.dumps(
-        {"file": path.name, "sha256": __import__("hashlib").sha256(path.read_bytes()).hexdigest()}))
+    (directory / f"{stem}.MANIFEST.json").write_text(json.dumps({
+        "file": path.name,
+        "sha256": __import__("hashlib").sha256(path.read_bytes()).hexdigest(),
+        "prediction_sha256": __import__("hashlib").sha256(raw).hexdigest(),
+    }))
     return path
 
 
@@ -63,12 +65,14 @@ class TestLedgerParser(unittest.TestCase):
         self.assertEqual(rows[0]["score"], "0.1563")
         self.assertEqual(rows[3]["artifact"], "`7f00890a`")
 
-    def test_flags_the_real_duplicate(self):
+    def test_rounded_score_and_truncated_artifact_are_warning_only(self):
         problems, warnings = check(Path(self.tmp), self.ledger,
                                    Path(self.tmp) / "nope.js", strict_ledger=True)
-        joined = "\n".join(problems)
-        self.assertIn("rows 1 and 4", joined)
+        self.assertEqual(problems, [])
+        joined = "\n".join(warnings)
         self.assertIn("0.1563", joined)
+        self.assertIn("before claiming identity", joined)
+        self.assertIn("cannot establish artifact identity", joined)
 
     def test_clean_ledger_passes(self):
         clean = self.ledger.read_text().replace(
@@ -93,6 +97,19 @@ class TestFileLevelGate(unittest.TestCase):
         _write_fake_submission(self.tmp, "GEMS_b_20260928T000001Z_22222222", self.arr)
         problems, _w = check(self.tmp, self.tmp / "nope.md", self.tmp / "nope.js")
         self.assertTrue(any(p.startswith("F1:") for p in problems), problems)
+
+    def test_same_prediction_hash_is_caught_even_if_tiff_bytes_differ(self):
+        _write_fake_submission(self.tmp, "GEMS_a_20260928T000000Z_11111111", self.arr)
+        second = _write_fake_submission(self.tmp, "GEMS_b_20260928T000001Z_22222222", self.arr)
+        with second.open("ab") as f:
+            f.write(b"different-container-metadata")
+        manifest_path = self.tmp / f"{second.stem}.MANIFEST.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["sha256"] = __import__("hashlib").sha256(second.read_bytes()).hexdigest()
+        manifest_path.write_text(json.dumps(manifest))
+        problems, _warnings = check(self.tmp, self.tmp / "nope.md", self.tmp / "nope.js")
+        self.assertTrue(any(p.startswith("F8:") for p in problems), problems)
+        self.assertFalse(any(p.startswith("F1:") for p in problems), problems)
 
     def test_distinct_submissions_pass(self):
         _write_fake_submission(self.tmp, "GEMS_a_20260928T000000Z_11111111", self.arr)
@@ -120,4 +137,4 @@ class TestScriptEntryPoint(unittest.TestCase):
         r = subprocess.run([sys.executable, str(REPO / "scripts" / "check_submission_uniqueness.py")],
                            capture_output=True, text=True, cwd=str(REPO), timeout=300)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("uniqueness gate: PASS", r.stdout)
+        self.assertIn("uniqueness audit: PASS", r.stdout)
