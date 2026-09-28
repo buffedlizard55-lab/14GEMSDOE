@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hypotheses — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html" class="active">Hypotheses</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Candidate hypotheses — ranked, sourced, and testable</h1>
+<p class="lede">Five hypotheses we have <em>not</em> tried in the form described
+here. Each names its layers, its physical signature, why it recovers faults
+<em>missing from the catalogue</em> rather than faults already in it, how it
+differs from every run on the team's ledger, its free official data source (with
+obtainability checked), and its validation gate. Ranked by expected DTI gain over
+the current 0.1563-class emission. Per standing policy, the top candidate must
+beat the current best on the spatially-blocked hide-and-recover holdout before it
+may touch a weekly submission slot.</p>
+
+<div class="note"><strong>Validation status.</strong> The competition rasters sit
+behind a DrivenData login (verified: the data tab redirects to
+<code>/accounts/login/</code>). All five hypotheses are implemented with
+synthetic end-to-end proof in this repo; their <em>numeric</em> holdout ranks
+activate as soon as <code>data/raw/</code> is populated
+(<code>scripts/download_competition_data.sh</code>). External datasets listed
+below are free and confirmed present on official servers today.</div>
+
+<h2>Ranking table</h2>
+<table>
+<tr><th>Rank</th><th>Hypothesis</th><th>Expected DTI gain</th><th>Cost</th><th>Needs external data?</th><th>Gate before any slot</th></tr>
+<tr><td>1</td><td><a href="#h1">H1 · Structural completion at step-overs, tips, intersections</a></td>
+    <td><span class="pill ok">high</span></td><td>low — computed from the catalogue alone</td>
+    <td>no</td><td>hide-and-recover on hidden <em>connector</em> traces</td></tr>
+<tr><td>2</td><td><a href="#h3">H2 · Magnetic lineaments of concealed faults</a></td>
+    <td><span class="pill ok">high</span></td><td>medium — structure-tensor stack + thinning</td>
+    <td>no (GeoDAWN magnetics are in the feature stack)</td><td>lineament-prediction DTI on held-out blocks</td></tr>
+<tr><td>3</td><td><a href="#h2">H3 · Hydrothermal-expression gaps</a></td>
+    <td><span class="pill warn">medium-high</span></td><td>medium — point/polygon layers + rasterization</td>
+    <td>yes — INGENIOUS release (verified free)</td><td>expression-conditioned enrichment on holdout</td></tr>
+<tr><td>4</td><td><a href="#h5">H4 · Slip/dilation-tendency corridors</a></td>
+    <td><span class="pill warn">medium</span></td><td>low-medium — one external raster + geometry</td>
+    <td>yes — ScienceBase DOI product (verified free)</td><td>tendency-weighted vs flat emission A/B on holdout</td></tr>
+<tr><td>5</td><td><a href="#h4">H5 · Catalogue-completeness residuals</a></td>
+    <td><span class="pill warn">medium</span></td><td>low — in-stack strain + DEM relief</td>
+    <td>no (1 m DEM via provided links)</td><td>residual-gap recovery on systematically hidden blocks</td></tr>
+</table>
+
+<h2 id="h1">H1 · Structural completion: the small connecting faults the catalogue omits</h2>
+<div class="card">
+<p><strong>Layers.</strong> The USGS/INGENIOUS catalogue geometry itself
+(training labels raster + INGENIOUS quaternary fault shapefiles v2) and the
+1 m DEM (scarp texture inside corridors only). Features: distance/azimuth to
+nearest trace, along- vs across-strike position, endpoint (tip) distance,
+overlapping-tip detection with bridging-corridor rasters, intersection/junction
+density, local lineament-vs-catalogue strike angle
+(<code>gems/features.py</code> — all seven catalogue-geometry features of the
+standing prompt).</p>
+<p><strong>Physical signature.</strong> Relay ramps and step-overs: two
+sub-parallel strands, overlapping or underlapping tips 0.5–6 km apart, strikes
+within ±35°. Horsetail splays: splay corridors radiating from tip points.
+Intersections: junction clusters with connecting minor faults. In the Great
+Basin inventory these settings host ~32% (step-overs), ~22% (terminations),
+~22% (intersections) and ~8% (accommodation zones) of geothermal systems
+(Faulds et al. 2012 NZ Geothermal Workshop —
+<a href="https://gdr.openei.org/files/383/Faulds%20et%20al%202012%20GeoNZ%20Paper.pdf" target="_blank" rel="noopener">paper</a>,
+<a href="https://gdr.openei.org/submissions/383" target="_blank" rel="noopener">GDR 383</a>;
+figures refine to 25/20/18/7% in the later 313-system catalogue of
+Faulds &amp; Hinz 2015 as summarized in
+<a href="https://www.lyellcollection.org/doi/full/10.1144/geoenergy2023-009" target="_blank" rel="noopener">Geoenergy 2023</a>).
+Those connecting structures are dominated by small faults — precisely the class
+regional catalogues omit.</p>
+<p><strong>Why it catches <em>missing</em> faults.</strong> The catalogue
+records the major strands. The hypothesis is geometric: the omitted faults are
+the connectors and splays the strand geometry <em>predicts</em>. Every emission
+is by construction at distance &gt; 0 from the visible catalogue (the model's
+context excludes them), so the feature “distance to known fault = 0” cannot be
+the answer — the hide-and-recover protocol enforces it
+(<code>gems/hide_recover.py</code>, leak assertion every epoch).</p>
+<p><strong>Differs from prior work.</strong> The team's ledger (run names
+reported in the project thread) shows DEM-scarp thinning (h20),
+context-ridge (H25), dotted-ridge (h28) and NMS-thinned catalogue emissions
+(r7-nms3) — all <em>single-feature emission or thinning of catalogue-adjacent
+fields</em>. None constructed relay/bridge geometry from the catalogue itself,
+and none trained through whole-component hiding. This repo's H1 is the first
+geometry-completion model in the family.</p>
+<p><strong>External data.</strong> None required. Optional enrichment:
+INGENIOUS Quaternary faults v2
+(<a href="https://gdr.openei.org/files/1391/qfaults_ingenious_nad83conus117_2023-06-27.zip" target="_blank" rel="noopener">direct download</a>,
+5.85 MB, free, CC BY 4.0) — <em>obtainability confirmed on the official GDR page
+2026-09-28</em>.</p>
+<p><strong>Validation gate.</strong> Hide-and-recover where the hidden set is
+biased to <em>connector components</em> (components whose endpoints neighbour two
+other components); pass = beats the flat/catalogue-emission baseline on
+spatially-blocked mean DTI. Only then may it use slot #1.</p>
+</div>
+
+<h2 id="h3">H2 · Magnetic lineaments: concealed faults under basin fill</h2>
+<div class="card">
+<p><strong>Layers.</strong> GeoDAWN reduced-to-pole magnetic anomaly, TMI slopes
+(vertical/horizontal), top-of-crustal magnetic-source depth (all in the
+19-band stack); 1 m DEM detrended elevation where it exists.</p>
+<p><strong>Physical signature.</strong> Structure-tensor / edge transforms
+(<code>structure_tensor_orientation</code>): linear ridges of gradient magnitude
+and coherent orientation, source-depth discontinuities, and truncations of
+magnetic textures — the classic geophysical expression of a fault contact
+offsetting magnetic lithologies. Target transform: coherence-weighted edge
+magnitude plus orientation continuity (Hough-like line support along strike).</p>
+<p><strong>Why it catches <em>missing</em> faults.</strong> A concealed fault
+under basin fill has no scarp and no catalogue expression — but it still offsets
+magnetic sources. Lineaments with strong magnetic coherence that lie
+<em>away</em> from catalogue traces are fault candidates that only the
+geophysical expression supports; the experts' own survey (GeoDAWN, sponsored for
+exactly this purpose) is the likely evidence base for the hidden test faults,
+which staff have declined to detail
+(<a href="https://community.drivendata.org/t/how-were-the-new-test-faults-identified-data-sources-and-fault-types/11527" target="_blank" rel="noopener">forum 11527</a>).</p>
+<p><strong>Differs from prior work.</strong> The r7/h20/H25/h28 runs used DEM
+topography (scarps, ridges) and catalogue thinning. No ledger run applied
+structure-tensor lineament extraction to the <em>magnetic</em> bands, and none
+scored strike-mismatch against the catalogue strike field.</p>
+<p><strong>External data.</strong> None (bands are provided). The raw GeoDAWN
+release is also public: <a href="https://doi.org/10.5066/P93LGLVQ" target="_blank" rel="noopener">10.5066/P93LGLVQ</a>.</p>
+<p><strong>Validation gate.</strong> Lineament fields built from training-region
+magnetics must recover held-out block traces at higher DTI than the H1 geometry
+features alone; the delta is the gate number.</p>
+</div>
+
+<h2 id="h2">H3 · Hydrothermal-expression gaps: where hot water escapes without a mapped fault</h2>
+<div class="card">
+<p><strong>Layers (all free, official — verified obtainable 2026-09-28).</strong>
+INGENIOUS regional compilation
+(<a href="https://gdr.openei.org/submissions/1391" target="_blank" rel="noopener">GDR 1391</a>,
+DOI <a href="https://doi.org/10.15121/1881483" target="_blank" rel="noopener">10.15121/1881483</a>, CC BY 4.0):
+<em>paleo-geothermal features</em> (sinter/tufa;
+<a href="https://gdr.openei.org/files/1391/paleo_geothermal_regional.zip" target="_blank" rel="noopener">82 KB</a>),
+<em>well &amp; spring temperature/chemistry</em>
+(<a href="https://gdr.openei.org/files/1391/wellspringdata.gdb.zip" target="_blank" rel="noopener">19.9 MB</a>),
+<em>2 m temperature probes</em>
+(<a href="https://gdr.openei.org/files/1391/2m_temperature_probe_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">1.0 MB</a>);
+heat-flow maps
+(<a href="https://doi.org/10.5066/P9BZPVUC" target="_blank" rel="noopener">10.5066/P9BZPVUC</a>);
+Quaternary volcanic vents
+(<a href="https://gdr.openei.org/files/1391/great_basin_q_volcanics.zip" target="_blank" rel="noopener">9.4 MB</a>).</p>
+<p><strong>Physical signature.</strong> Spring/sinter alignments (springs and
+sinter mounds localize on permeable fractures), warm-well anomalies, shallow
+temperature anomalies, vent alignments (dike-fed vents mark crustal structure).
+The targeted transform is <em>expression-without-explanation</em>: thermal and
+hydrogeochemical anomalies whose upslope/back-azimuth corridor contains no
+catalogue trace.</p>
+<p><strong>Why it catches <em>missing</em> faults.</strong> A hot spring or
+sinter deposit needs a permeable pathway; ~39% of Great Basin systems are blind
+with no surface expression at all
+(<a href="https://gbcge.org/recent-projects/characterizing-structural-controls/" target="_blank" rel="noopener">GBCGE structural-controls project</a>,
+<a href="https://gdr.openei.org/files/354/Final%20Report-DE-EE0002748.pdf" target="_blank" rel="noopener">DE-EE0002748 final report</a>),
+so every visible expression is precious evidence of structure — and where the
+catalogue shows none, the structure is unmapped by definition.</p>
+<p><strong>Differs from prior work.</strong> No ledger run used any hydrothermal
+expression layer; the competition stack contains none of these layers (its
+conductivity, strain and seismicity bands overlap other INGENIOUS products but
+not heat flow / springs / sinter / vents).</p>
+<p><strong>External data / obtainability.</strong> All listed above are direct
+downloads or DOI releases confirmed present today; run
+<code>scripts/download_external_data.sh thermal</code> on an unrestricted machine
+(the Arena sandbox blocks binary downloads at TLS level — flagged, not silently
+skipped).</p>
+<p><strong>Validation gate.</strong> Enrichment statistic: hidden-trace pixels
+within 300 m of expression points vs. their share of the valid area, computed on
+held-out blocks; pass = enrichment ≥ 2× at p&lt;0.01 <em>and</em> positive DTI
+delta when the expression prior is added to H1.</p>
+</div>
+
+<h2 id="h5">H4 · Slip/dilation-tendency corridors</h2>
+<div class="card">
+<p><strong>Layers.</strong> “Quaternary Faulting Slip and Dilation Tendency”
+(<a href="https://doi.org/10.5066/P9YL58W6" target="_blank" rel="noopener">10.5066/P9YL58W6</a>,
+official ScienceBase release linked from GDR 1391; free) + catalogue strike
+field; optionally the INGENIOUS geodetic shear/dilation grids
+(<a href="https://gdr.openei.org/files/1391/geodetics_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">52 MB</a>).</p>
+<p><strong>Physical signature.</strong> Slip tendency (τ/σₙ) and dilation
+tendency under the regional stress field: orientations that are frictionally
+favoured to slip or to open. Physical modelling of Great Basin settings shows
+step-overs and horsetails concentrate dilatation and Coulomb shear traction
+(<a href="https://www.lyellcollection.org/doi/full/10.1144/geoenergy2023-009" target="_blank" rel="noopener">Geoenergy 2023</a>
+conclusions) — the same settings H1 targets, now with a stress prior.</p>
+<p><strong>Why it catches <em>missing</em> faults.</strong> The tendency field is
+computed from stress + <em>assumed</em> geometry; where the prescribed
+favourable corridor has no catalogue strand, either the geometry is incomplete
+or a strand is missing — and the catalogue is the known-incomplete side of that
+comparison.</p>
+<p><strong>Differs from prior work.</strong> No ledger run used the tendency
+product; prior ensembles were purely geomorphic/geomagnetic.</p>
+<p><strong>External data / obtainability.</strong> Verified DOI exists and is
+free; download via the ScienceBase item page (binary download must run outside
+the sandbox — flagged).</p>
+<p><strong>Validation gate.</strong> A/B on holdout: identical H1 emission with
+and without tendency weighting; pass = mean DTI delta &gt; 0 across folds.</p>
+</div>
+
+<h2 id="h4">H5 · Catalogue-completeness residuals</h2>
+<div class="card">
+<p><strong>Layers.</strong> Strain-rate tensors (dilatation, shear, second
+invariant — in-stack), isostatic gravity + slope (in-stack), detrended elevation
++ slope (in-stack), range-front geometry from the 1 m DEM
+(<a href="https://www.usgs.gov/3d-elevation-program" target="_blank" rel="noopener">USGS 3DEP</a>
+tiles via the provided <code>1m_DEM_links.csv</code>).</p>
+<p><strong>Physical signature.</strong> The completeness angle of the standing
+prompt: predict expected fault density from strain rate, relief and range-front
+geometry; compute residual = observed catalogue density − predicted; strongly
+negative residuals that coincide with independent geophysical/topographic
+evidence (magnetic lineaments, scarp texture) are gap candidates.</p>
+<p><strong>Why it catches <em>missing</em> faults.</strong> Catalogue density
+records where mapping effort went, not where deformation is; strain and relief
+are mapping-effort-free. Their disagreement is the signature of omission.</p>
+<p><strong>Differs from prior work.</strong> Prior runs used DEM texture
+directly as emission evidence; none modelled <em>expected vs. observed</em>
+catalogue density or emitted from residual gaps.</p>
+<p><strong>External data.</strong> None beyond the provided DEM links.</p>
+<p><strong>Validation gate.</strong> Hide-and-recover at block scale with whole
+regions masked as “unknown catalogue”; residual-gap emission must beat uniform
+corridor emission inside the masked regions.</p>
+</div>
+
+<h2>Protocol common to all five — hide-and-recover (enforced in code)</h2>
+<div class="card">
+<p>Every epoch hides a random share of <em>whole catalogue traces</em>
+(connected components, never pixels), recomputes all context features from the
+visible remainder, asserts the anti-leak invariant (no hidden pixel may touch the
+context — <code>assert_no_leak</code>), trains against the full catalogue, and
+scores DTI on the hidden traces only. Model and hyperparameter selection uses
+that hidden-recovery DTI; submission decisions use the spatially-blocked
+variant. This is exactly what the standing prompt requires, and it is why
+“distance to a known fault = 0” can never be the learned answer.</p>
+</div>
+</main>
+
+<footer>
+  Structural-setting percentages: Faulds, Hinz, Coolbaugh, et al. (2011/2012)
+  Great Basin inventory — primary sources linked inline ·
+  every external link on this page was opened and verified on 2026-09-28 ·
+  discrepancies between catalogue vintages (32% vs 25% etc.) are recorded in
+  <a href="data.html">Data &amp; sources</a>, not smoothed over
+</footer>
+</body>
+</html>

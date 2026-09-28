@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data &amp; sources — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses</a>
+  <a href="data.html" class="active">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Data &amp; sources — the auditable table</h1>
+<p class="lede">Every fact this project rests on, with its official link and the
+date it was checked (2026-09-28). Status vocabulary:
+<span class="pill ok">VERIFIED</span> = the linked source was opened and the
+claim found there; <span class="pill warn">CHECKED-PENDING</span> = link
+resolved and description confirmed, binary not yet downloaded (sandbox network
+policy); <span class="pill bad">IRREGULARITY</span> = a conflict or gap that a
+human should look at.</p>
+
+<h2>A · Competition facts (all VERIFIED today)</h2>
+<table>
+<tr><th>Fact</th><th>Value</th><th>Official source</th></tr>
+<tr><td>Competition</td><td>Geologic Enhanced Mapping System (GEMS) Prize Challenge, US DOE Office of Geothermal, administered by National Lab of the Rockies</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">home</a> · <a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">official rules PDF</a></td></tr>
+<tr><td>Task</td><td>predict geological faults (surface traces) in the GeoDAWN region as pixel-wise probabilities</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/" target="_blank" rel="noopener">problem description</a></td></tr>
+<tr><td>Scoring metric</td><td>distance-weighted Tversky index, α=0.2 (FP), β=0.8 (FN), triangular kernel R=300 m</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#performance-metric" target="_blank" rel="noopener">metric section</a></td></tr>
+<tr><td>Submission format</td><td>single-band float32 GeoTIFF, values in [0,1], EPSG:32611, 100 m, same bounds (NaN/null outside)</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#submission-format" target="_blank" rel="noopener">submission format</a></td></tr>
+<tr><td>Grid (team-measured)</td><td>3,292 × 3,730 px</td>
+    <td class="src">measured with rasterio from <code>example_submission.tif</code> on the GEMSDOE run machine; re-measured automatically by <code>scripts/prepare_data.py</code></td></tr>
+<tr><td>Feature stack</td><td>19 bands: conductivity + conductive-base depth; detrended elevation + slope; dilatation rate, shear strain rate, 2nd strain-rate invariant; isostatic gravity + slope; RTP magnetics, TMI, TMI slopes, magnetic source depth; earthquake density. Plus <code>1m_DEM_links.csv</code></td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#provided-features" target="_blank" rel="noopener">provided features</a></td></tr>
+<tr><td>Labels</td><td>USGS Quaternary Fault and Fold Database + new faults labelled by NLR &amp; USGS experts; training labels come from the INGENIOUS compilation (rules §3.3 fn.4)</td>
+    <td class="src"><a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">rules PDF §3.3</a></td></tr>
+<tr><td>Test set</td><td>privately withheld new faults absent from the USGS database; public test drives the leaderboard, private test the Phase 1 prizes</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#competition-structure" target="_blank" rel="noopener">competition structure</a></td></tr>
+<tr><td>Known-fault masking</td><td>known USGS/INGENIOUS fault pixels are masked/excluded from evaluation in BOTH rounds; including or omitting them in predictions does not change the score</td>
+    <td class="src"><a href="https://community.drivendata.org/t/scoring-clarification-are-known-usgs-ingenious-faults-masked-when-scoring-and-are-they-in-the-final-round-label-set/11516" target="_blank" rel="noopener">forum 11516 (staff, 2026-09-16)</a></td></tr>
+<tr><td>Prizes</td><td>Phase 1 $50,000 (5 × $10,000); Phase 2 $250,000 ($100k/$70k/$40k/$25k/$15k); one submission scored in both rounds, chosen blind to private scores</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#competition-structure" target="_blank" rel="noopener">structure</a> · <a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">rules §3.5–3.6</a></td></tr>
+<tr><td>Deadline</td><td>Dec. 3, 2026, 11:59 p.m. UTC</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">competition home</a></td></tr>
+<tr><td>Submission rate</td><td>3 per week per entity; final selection before the deadline</td>
+    <td class="src"><a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">rules §3.2, §3.4</a></td></tr>
+<tr><td>External data</td><td>allowed and encouraged with proper licensing</td>
+    <td class="src"><a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">rules highlight</a></td></tr>
+<tr><td>Test-fault provenance</td><td>staff decline to disclose which data/fault types/coverage produced the hidden labels; Phase 2 labels expand by expert review of all submissions</td>
+    <td class="src"><a href="https://community.drivendata.org/t/how-were-the-new-test-faults-identified-data-sources-and-fault-types/11527" target="_blank" rel="noopener">forum 11527 (staff)</a></td></tr>
+<tr><td>Reference solution</td><td>U-Net + Monte-Carlo CV notebook by Prof. John Lipor (PSU)</td>
+    <td class="src"><a href="https://github.com/drivendataorg/gems-prize-reference-solution" target="_blank" rel="noopener">GitHub repo</a></td></tr>
+<tr><td>GeoDAWN provenance</td><td>Glen, J.M.G. &amp; Earney, T.E. (2024) USGS airborne magnetic/radiometric surveys, NW Great Basin</td>
+    <td class="src"><a href="https://doi.org/10.5066/P93LGLVQ" target="_blank" rel="noopener">10.5066/P93LGLVQ</a></td></tr>
+<tr><td>Eligibility</td><td>US citizens/permanent residents (individuals); US-captained teams; FFRDC/federal restrictions apply</td>
+    <td class="src"><a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">rules §1.3</a></td></tr>
+<tr><td>Generative AI</td><td>allowed; extent of use must be indicated in the narrative</td>
+    <td class="src"><a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">rules §3.2</a></td></tr>
+</table>
+
+<h2>B · External datasets — the INGENIOUS release (free, official)</h2>
+<p>The INGENIOUS Great Basin Regional Dataset Compilation
+(<a href="https://gdr.openei.org/submissions/1391" target="_blank" rel="noopener">GDR 1391</a>,
+DOI <a href="https://doi.org/10.15121/1881483" target="_blank" rel="noopener">10.15121/1881483</a>,
+CC BY 4.0, 9 files / 116.98 MB) is both the source of the competition's training
+labels (rules §3.3 fn.4: Ayling, <strong>Faulds</strong>, Morales Rivera, … 2022)
+and our main external-data well. All rows <span class="pill warn">CHECKED-PENDING</span>
+(page + descriptions verified today; binary downloads must run outside the Arena
+sandbox — TLS blocked, <span class="pill bad">IRREGULARITY</span> #1):
+<code>bash scripts/download_external_data.sh</code>.</p>
+<table>
+<tr><th>Dataset</th><th>What it gives the hypotheses</th><th>Link</th></tr>
+<tr><td>Quaternary Faults v2 (2023-06-27)</td><td>updated fault traces/ages/slip rates — supersedes v1</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/qfaults_ingenious_nad83conus117_2023-06-27.zip" target="_blank" rel="noopener">5.85 MB zip</a></td></tr>
+<tr><td>Quaternary Faults v1</td><td>original compilation (kept for provenance diffing)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/faults_quaternary_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">5.76 MB zip</a></td></tr>
+<tr><td>Quaternary Volcanics (vents &amp; flows)</td><td>vent alignments → dikes/faults (H3)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/great_basin_q_volcanics.zip" target="_blank" rel="noopener">9.44 MB zip</a></td></tr>
+<tr><td>Paleo-geothermal features (sinter/tufa)</td><td>fossil hydrothermal upflow sites (H3)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/paleo_geothermal_regional.zip" target="_blank" rel="noopener">82 KB zip</a></td></tr>
+<tr><td>Well &amp; spring temperature + chemistry</td><td>warm springs/wells and geothermometer temperatures (H3)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/wellspringdata.gdb.zip" target="_blank" rel="noopener">19.85 MB zip</a></td></tr>
+<tr><td>2 m temperature probes</td><td>shallow thermal anomalies (H3)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/2m_temperature_probe_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">1.03 MB zip</a></td></tr>
+<tr><td>Geodetic shear &amp; dilation models</td><td>strain-rate products (cross-check vs in-stack bands)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/geodetics_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">51.99 MB zip</a></td></tr>
+<tr><td>Earthquake density models</td><td>seismicity density (cross-check vs in-stack band)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/seismicity_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">22.98 MB zip</a></td></tr>
+<tr><td>Study area boundary</td><td>INGENIOUS extent polygon</td>
+    <td class="src"><a href="https://gdr.openei.org/files/1391/study_area_boundary_INGENIOUS_regional_data.zip" target="_blank" rel="noopener">6.68 KB zip</a></td></tr>
+<tr><td>Slip &amp; dilation tendency (Quaternary faults)</td><td>the stress prior of H4</td>
+    <td class="src"><a href="https://doi.org/10.5066/P9YL58W6" target="_blank" rel="noopener">10.5066/P9YL58W6</a></td></tr>
+<tr><td>Heat flow maps (Great Basin)</td><td>conductive heat-flow anomalies (H3)</td>
+    <td class="src"><a href="https://doi.org/10.5066/P9BZPVUC" target="_blank" rel="noopener">10.5066/P9BZPVUC</a></td></tr>
+<tr><td>MT electrical conductance</td><td>independent of the in-stack conductivity product</td>
+    <td class="src"><a href="https://doi.org/10.5066/P9TWT2LU" target="_blank" rel="noopener">10.5066/P9TWT2LU</a></td></tr>
+<tr><td>Gravity &amp; magnetics regional maps</td><td>regional context beyond GeoDAWN footprint</td>
+    <td class="src"><a href="https://doi.org/10.5066/P9Z6SA1Z" target="_blank" rel="noopener">10.5066/P9Z6SA1Z</a></td></tr>
+<tr><td>Elevation trend &amp; detrended elevation</td><td>the detrended-elevation product of the in-stack bands</td>
+    <td class="src"><a href="https://doi.org/10.5066/P9MQRCBY" target="_blank" rel="noopener">10.5066/P9MQRCBY</a></td></tr>
+<tr><td>Thermal conductivity (SMU abridged)</td><td>well thermal conductivity</td>
+    <td class="src"><a href="https://gdr.openei.org/submissions/1390" target="_blank" rel="noopener">GDR 1390</a></td></tr>
+</table>
+
+<h2>C · Structural-geology sources (the Faulds inventory)</h2>
+<table>
+<tr><th>Claim used</th><th>Where verified</th><th>Status</th></tr>
+<tr><td>Step-overs/relay ramps host ~32% of catalogued Great Basin geothermal systems; normal/strike-slip intersections ~22%; normal-fault terminations ~22%; accommodation zones ~8% (inventory of 250+ fields)</td>
+    <td class="src"><a href="https://gdr.openei.org/files/383/Faulds%20et%20al%202012%20GeoNZ%20Paper.pdf" target="_blank" rel="noopener">Faulds et al. 2012, NZ Geothermal Workshop</a> · <a href="https://gdr.openei.org/submissions/383" target="_blank" rel="noopener">GDR 383</a> · <a href="https://gdr.openei.org/files/354/Final%20Report-DE-EE0002748.pdf" target="_blank" rel="noopener">DE-EE0002748 report</a></td>
+    <td><span class="pill ok">VERIFIED</span> — matches the brief exactly</td></tr>
+<tr><td>Later/larger catalogues refine the split (313 classified systems: 25/20/18/7% …; 2014 GSA: tips 25%, accommodation 9%)</td>
+    <td class="src"><a href="https://www.lyellcollection.org/doi/full/10.1144/geoenergy2023-009" target="_blank" rel="noopener">Geoenergy 2023</a> · <a href="https://gsa.confex.com/gsa/2014AM/webprogram/Paper248671.html" target="_blank" rel="noopener">GSA 2014 abstract</a></td>
+    <td><span class="pill bad">IRREGULARITY</span> #2 — catalogue-vintage drift; both recorded, brief numbers kept as primary</td></tr>
+<tr><td>~39% of known systems are blind/hidden (no springs/fumaroles); ~25% have undetermined structural setting</td>
+    <td class="src"><a href="https://gbcge.org/recent-projects/characterizing-structural-controls/" target="_blank" rel="noopener">GBCGE project page</a> · <a href="https://gdr.openei.org/files/354/Final%20Report-DE-EE0002748.pdf" target="_blank" rel="noopener">DE-EE0002748</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>Step-overs &amp; horsetails concentrate dilatation / Coulomb shear traction (physical modelling)</td>
+    <td class="src"><a href="https://www.lyellcollection.org/doi/full/10.1144/geoenergy2023-009" target="_blank" rel="noopener">Geoenergy 2023 conclusions</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>J. Faulds is a co-author of the INGENIOUS compilation (the label source)</td>
+    <td class="src"><a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">rules §3.3 fn.4</a> · <a href="https://gdr.openei.org/submissions/1391" target="_blank" rel="noopener">GDR 1391 citation</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+<tr><td>Step-over attributes for high-T systems (right-stepping ~56%, hard-linked ~70%, overlapping ~56%; relay widths 0.1–14.6 km, mean 2.8 km)</td>
+    <td class="src"><a href="https://pangea.stanford.edu/ERE/pdf/IGAstandard/SGW/2025/Giddens.pdf" target="_blank" rel="noopener">Giddens &amp; Faulds, SGW 2025</a></td>
+    <td><span class="pill ok">VERIFIED</span></td></tr>
+</table>
+
+<h2>D · Method references cited by the sponsor</h2>
+<table>
+<tr><td>Automatic fault mapping with deep learning (optical + topography)</td>
+    <td class="src"><a href="https://doi.org/10.1029/2020JB021269" target="_blank" rel="noopener">Mattéo et al. 2021, JGR Solid Earth</a> (cited on the competition About page)</td></tr>
+<tr><td>Deep learning to map Quaternary faults, western USA</td>
+    <td class="src"><a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2025/Hermant.pdf" target="_blank" rel="noopener">Hermant, Kiersnowski &amp; Bellanger, SGW 2025</a> (cited on the About page)</td></tr>
+</table>
+
+<h2>E · Irregularities flagged for review</h2>
+<ol>
+  <li><span class="pill bad">#1</span> <strong>Sandbox network policy</strong>:
+      direct TLS downloads from dropbox.com, gdr.openei.org files,
+      sciencebase.gov and docs.nlr.gov are blocked in the Arena sandbox
+      (handshake closed). Page content is reachable and was used for all
+      verification. Binary acquisition is scripted
+      (<code>scripts/download_*.sh</code>) for an unrestricted machine.
+      Team-shared Dropbox mirrors were therefore <em>not</em> re-hashed here —
+      the scripts hash whatever is downloaded and record it.</li>
+  <li><span class="pill bad">#2</span> <strong>Structural-setting percentages
+      drift across vintages</strong> (32/22/22/8 in the 2012 catalogue vs
+      25/20/18/7 in the later 313-system classification). The brief's numbers
+      are the 2012 catalogue and are correct for that source; hypotheses are
+      robust to the drift (the same four settings dominate every vintage).</li>
+  <li><span class="pill bad">#3</span> <strong>Stale leaderboard figure in the
+      working brief</strong> (“0.3049 is the highest score right now”): the
+      verified live top score on 2026-09-28 is <strong>0.3168</strong>; 0.3049 is
+      not in the top 50.</li>
+  <li><span class="pill bad">#4</span> <strong>“Geothermal vents” vs the actual
+      target</strong>: the brief sometimes frames the goal as “discovery of
+      geothermal vents”; the competition's scored target is <em>faults</em>
+      (structures indicative of geothermal resources). Volcanic vents are used
+      here only as an independent structure proxy (H3), never as labels.</li>
+  <li><span class="pill bad">#5</span> <strong>Masking semantics ambiguity</strong>:
+      the staff ruling says known-fault pixels are “excluded from evaluation”;
+      whether a prediction <em>on</em> a masked pixel can still earn kernel credit
+      for a nearby hidden pixel is not spelled out. The implementation excludes
+      masked pixels from both sides (the only reading under which
+      “it should not matter” is exactly true) and keeps the alternative as a
+      documented sensitivity switch.</li>
+  <li><span class="pill bad">#6</span> <strong>19-band order</strong>: the problem
+      description lists 19 named layers but not the band order;
+      <code>scripts/prepare_data.py</code> reads the data dictionary shipped with
+      the download when present and refuses to guess otherwise.</li>
+</ol>
+</main>
+
+<footer>
+  Table generated from sources opened 2026-09-28 · machine-readable copy of the
+  leaderboard state: <code>research/leaderboard_snapshot.json</code> ·
+  knowledge base with per-claim notes: <code>research/knowledge_base.md</code>
+</footer>
+</body>
+</html>

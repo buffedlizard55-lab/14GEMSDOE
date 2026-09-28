@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Strategy — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html" class="active">Strategy</a>
+  <a href="hypotheses.html">Hypotheses</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Strategy — autopsy first, then the plan</h1>
+<p class="lede">Scoreboard context (public leaderboard, verified 2026-09-28):
+leader <strong>DARD 0.3168</strong>, then alexoktaba 0.2993, HardcoreTechGod 0.2854.
+Our group's best public numbers sit at 0.1563 / 0.1461 / 0.1193. This page
+explains the gap in terms of the metric's exact arithmetic and lays out five
+<em>different</em> ideas — each with its own validation gate.</p>
+
+<div class="note bad"><strong>Correction to the working brief.</strong> The brief
+said “0.3049 is the highest score right now”. The live leaderboard on 2026-09-28
+shows <strong>0.3168</strong> at #1 (0.3049 does not appear in the top 50).
+Stale numbers are treated as flags here, never as facts.</div>
+
+<h2>§1 Why 0.1563 kept happening</h2>
+<div class="card">
+<ol>
+  <li><strong>Identical artifacts.</strong> The published GEMSDOE1 and 5GEMSDOE
+      sites pin the same artifact hash <code>7f00890a62878d61…</code>, the same
+      259,495-run payload, and the same histogram (172,974 px at 1.0). Same pixels
+      → same DTI → same score. GEMSDOE1 = 0.1563, 5GEMSDOE = 0.1563, 8GEMSDOE = 0.1563.</li>
+  <li><strong>The field is catalogue-centric.</strong> Under the staff masking
+      ruling, catalogue pixels are worth exactly 0 — neither credit nor penalty.
+      The whole score rides on the thin off-catalogue emission of that one
+      ensemble, which is why everyone shipping it ties.</li>
+  <li><strong>Surrogate scores validated the wrong population.</strong> The prior
+      sites computed DTI against the <em>training catalogue</em> — a monitor of
+      the wrong labels. The prize scores the private <em>new-fault</em> set.
+      Optimizing the surrogate converges to “be the catalogue”.</li>
+  <li><strong>No slot discipline.</strong> Weekly slots were spent on variants of
+      the same field, so identical scores were inevitable rather than diagnostic.</li>
+</ol>
+<p><strong>New rules in this repo:</strong> every artifact is uniquely named and
+hashed at build time; the only number that may spend a slot is
+spatially-blocked <em>hide-and-recover</em> DTI (honest local analogue of the
+private test); and the idea list below is diversified by construction — no two
+moves share a physical signature.</p>
+</div>
+
+<h2>§2 The metric arithmetic (official equations, transcribed)</h2>
+<div class="card">
+<pre>DTI = TP_w / (TP_w + 0.2·FP_w + 0.8·FN_w + ε)
+
+TP_w = Σ_{g∈GT}  max_{x : d(x,g)≤300m}  p(x)·k(d(x,g))
+FN_w = Σ_{g∈GT}  1 − max_{x : d(x,g)≤300m}  p(x)·k(d(x,g))
+FP_w = Σ_{x : p(x)&gt;0}  p(x)·[1 − max_{g∈GT} k(d(x,g))]
+k(d) = max(1 − d/300m, 0)</pre>
+<p>Consequences we design against:</p>
+<ul>
+  <li><strong>Recall is 4× precision.</strong> A missed hidden fault costs
+      β·(1−p·k); a stray pixel of equal magnitude costs α·p·(1−k). Emission
+      breadth on <em>geologically plausible</em> corridors is cheap; silence is expensive.</li>
+  <li><strong>Per-GT-pixel max.</strong> Credit for each ground-truth pixel is the
+      best single prediction near it — a thin line at p≈1 on the trace beats a
+      diffuse cloud at p≈0.3, which pays FP everywhere and still leaves FN high.</li>
+  <li><strong>300 m tolerance is small at 100 m pixels</strong> — 3 pixels.
+      Off-trace accuracy of ±1 px is worth 2× ±2 px. Line geometry matters.</li>
+  <li><strong>Catalogue pixels are free but worthless</strong> (masking ruling).
+      Emission should concentrate where the catalogue is <em>not</em>.</li>
+  <li><strong>Phase 2 rewards belief.</strong> Predictions experts verify become
+      labels and are re-scored as truth ($250k phase). Well-reasoned novel
+      corridors have option value beyond the public score.</li>
+</ul>
+</div>
+
+<h2>§3 The five distinct moves</h2>
+<table>
+<tr><th>#</th><th>Move</th><th>Physical signature</th><th>Why it finds <em>missing</em> faults</th><th>Validation gate</th></tr>
+<tr><td>1</td><td><a href="hypotheses.html#h1">Structural completion</a> — relay ramps, horsetails, intersections</td>
+    <td>overlapping strands, tip splay corridors, junction clusters</td>
+    <td>the catalogue maps major strands; the small connecting faults between
+        them are what regional compilations omit — and what hosts 32%+22%+22%+8%
+        of Great Basin systems (Faulds et al.)</td>
+    <td>hide-and-recover on hidden <em>connectors</em></td></tr>
+<tr><td>2</td><td><a href="hypotheses.html#h2">Hydrothermal expression gaps</a> — heat flow, springs, sinter/tufa</td>
+    <td>thermal/geochemical anomalies with no catalogue fault upslope of them</td>
+    <td>fluids need permeable pathways; expression without a mapped structure is
+        direct evidence of an unmapped one (39% of Great Basin systems are
+        blind — no surface spring at all, so where expression <em>is</em> visible
+        the pathway is usually real)</td>
+    <td>enrichment of hidden traces near expression, computed on holdout blocks</td></tr>
+<tr><td>3</td><td><a href="hypotheses.html#h3">Magnetic lineaments</a> — structure-tensor edges on GeoDAWN magnetics</td>
+    <td>linear gradients / source-depth breaks under basin fill</td>
+    <td>concealed faults have no scarp; they show as discontinuities in the
+        aeromagnetic field the experts also used (GeoDAWN is the sponsor's own
+        survey). Lineaments crossing <em>blank</em> catalogue areas are exactly
+        the blind-fault candidates</td>
+    <td>lineament-vs-catalogue strike mismatch score on holdout</td></tr>
+<tr><td>4</td><td><a href="hypotheses.html#h4">Completeness residuals</a> — strain rate &amp; relief vs catalogue density</td>
+    <td>high predicted deformation where the catalogue is thin</td>
+    <td>catalogue completeness is spatially biased (mapped where people looked);
+        strain rate + range-front relief predict where faults <em>must</em> exist;
+        negative residuals mark gaps</td>
+    <td>residual field must recover systematically-holdout blocks</td></tr>
+<tr><td>5</td><td><a href="hypotheses.html#h5">Slip/dilation tendency corridors</a> — INGENIOUS stress product</td>
+    <td>dilational jogs and high-slip-tendency orientations near known strands</td>
+    <td>tendency is computed <em>from</em> regional stress + fault geometry, so
+        favourable orientations that lack a mapped strand point at strands the
+        catalogue misses</td>
+    <td>tendency-weighted emission vs flat emission on holdout</td></tr>
+</table>
+
+<h2>§4 Slot discipline (the 3-per-week budget)</h2>
+<div class="card">
+<ol>
+  <li><strong>Slot rule:</strong> an idea may only use a slot after it beats the
+        current holdout best <em>and</em> its delta is written down (what changed,
+        expected mechanism, holdout before/after).</li>
+  <li><strong>Slot roles:</strong> #1 = current best believed field; #2 = the
+        strongest challenger; #3 = a deliberate <em>diagnostic</em> (e.g. the
+        catalogue-hedge probe that measures how masking is implemented) whose
+        interpretation is written before it is uploaded.</li>
+  <li><strong>Final selection:</strong> the single file for both rounds is chosen
+        for Phase-2 upside (genuine novel structure), not just public LB noise.</li>
+  <li><strong>Never again identical by accident:</strong> the build manifest's
+        content hash is compared across the ledger before any upload
+        (<a href="leaderboard.html">Leaderboard</a> tracks them).</li>
+</ol>
+</div>
+
+<h2>§5 What we explicitly will not do</h2>
+<ul>
+  <li>Re-ship the <code>7f00890a…</code> field or any direct derivative of it
+      under a new name — the hash check makes this mechanical.</li>
+  <li>Treat training-catalogue DTI as evidence of anything except sanity.</li>
+  <li>Spend slots on ablations whose outcome is predictable from the metric
+      (e.g. wider emission bands at fixed geometry — the FP/β arithmetic already
+      answers those).</li>
+  <li>Chase the public leaderboard's private-test variance; the one file that
+      matters is selected at the deadline, blind to private scores (rules §3.6.2).</li>
+</ul>
+</main>
+
+<footer>
+  Arithmetic on this page is implemented in <code>gems/dti.py</code> and pinned by
+  <code>tests/test_dti.py</code> · evidence for every claim is listed on
+  <a href="data.html">Data &amp; sources</a>
+</footer>
+</body>
+</html>

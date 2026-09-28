@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Methods — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html" class="active">Methods</a>
+</nav></header>
+
+<main>
+<h1>Methods — what runs, in what order, and how it is proven</h1>
+<p class="lede">The pipeline is deliberately small-auditable: every stage is a
+script, every quantity is recomputable from files in <code>data/</code>, and the
+test suite pins the metric and the format gate to the official equations and
+requirements. 51/51 tests pass; the synthetic end-to-end demo runs the whole
+chain without the login-gated data.</p>
+
+<h2>Pipeline</h2>
+<pre>bash scripts/download_competition_data.sh    # manual: DrivenData login → data/raw/
+bash scripts/download_external_data.sh       # free INGENIOUS + ScienceBase layers
+python3 scripts/prepare_data.py              # grid.json, valid_mask, known_faults
+python3 scripts/build_features.py            # catalogue-geometry + lineament stack
+python3 scripts/train_hide_recover.py        # hide-and-recover training (model + protocol)
+python3 scripts/validate_blocks.py           # spatially-blocked holdout DTI  ← gate for slots
+python3 scripts/build_submission.py artifacts/pred.npy --policy "&lt;run&gt;"
+python3 scripts/validate_submission.py submissions/GEMS_....tif
+python3 scripts/build_site_payload.py submissions/GEMS_....tif   # ship to the site button
+python3 scripts/refresh_leaderboard.py       # the current feed</pre>
+
+<h2>Modules</h2>
+<table>
+<tr><th>Module</th><th>Responsibility</th><th>Proven by</th></tr>
+<tr><td><code>gems/dti.py</code></td><td>distance-weighted Tversky exactly as printed on the official page; known-fault masking both-sides; NaN→0 policy</td>
+    <td><code>tests/test_dti.py</code> — 14 analytic vectors incl. the official worked example (3.00, 1.89, 2.00 → 0.60)</td></tr>
+<tr><td><code>gems/features.py</code></td><td>the 7 catalogue-geometry features: distance, azimuth, along/across-strike, endpoint distance, relay/bridge corridors, intersection density, strike mismatch; plus external-raster loading (slip/dilation tendency)</td>
+    <td><code>tests/test_features.py</code> — synthetic lines/pairs with known geometry</td></tr>
+<tr><td><code>gems/hide_recover.py</code></td><td>whole-component hide plans, anti-leak assertion, hidden-only recovery scoring</td>
+    <td><code>tests/test_hide_recover.py</code> — leak invariant, all-or-nothing hiding, recovery ordering</td></tr>
+<tr><td><code>gems/blocks.py</code></td><td>spatial block folds with purge-buffer policy</td>
+    <td><code>tests/test_blocks.py</code></td></tr>
+<tr><td><code>gems/raster.py</code></td><td>grid metadata, submission format gate (the “[0, 1]” rejection catch)</td>
+    <td><code>tests/test_submission_gate.py</code> — both observed failure modes reproduced and rejected</td></tr>
+<tr><td><code>docs/js/tif_writer.js</code></td><td>browser-side float32 GeoTIFF writer + payload decode + self-checks</td>
+    <td><code>tests/test_tif_writer.py</code> — node build vs rasterio read: identical pixels + grid</td></tr>
+<tr><td><code>scripts/refresh_leaderboard.py</code></td><td>standings snapshot feed (HTML + markdown parser)</td>
+    <td><code>tests/test_leaderboard_parser.py</code></td></tr>
+</table>
+
+<h2>Hide-and-recover in one paragraph</h2>
+<p>Each epoch hides a random fraction of <em>whole connected traces</em>
+(components, not pixels — pixel-hiding leaves distance-zero leakage), rebuilds
+all context features from the visible remainder, trains against the full
+catalogue, and scores DTI on the hidden traces only. The invariant
+<code>assert_no_leak</code> fails any epoch where a hidden pixel touches the
+context. Model selection uses hidden-recovery DTI; slot decisions use the
+spatially-blocked variant with a purge buffer across block edges. The model
+currently implemented is per-pixel logistic regression (dependency-light,
+runs anywhere); the reference U-Net is the drop-in upgrade once GPU + the real
+418 MB feature stack are present — the protocol does not change.</p>
+
+<h2>Reproducing everything on this page</h2>
+<pre>python3 -m unittest discover -s tests     # 51 tests
+python3 scripts/make_demo.py              # end-to-end synthetic run → validated demo .tif
+python3 scripts/build_site_payload.py --demo</pre>
+
+<h2>Honest limitations of the current implementation</h2>
+<ul>
+  <li>Feature approximations: trace endpoints are terminal pixels of 1-px-wide
+      rasterized polylines; local strike comes from a neighbourhood inertia
+      tensor. Both have measured error on synthetic geometry (tests) but have
+      not been measured against the real vector labels yet.</li>
+  <li><code>strike_field</code> uses box convolutions — fine at 320², needs a
+      tiled path for the full 3,292 × 3,730 grid (noted in code).</li>
+  <li>The site's payload currently ships the synthetic demo field; the real
+      field replaces it with one command after a real run.</li>
+  <li>No GPU training yet — logistic baseline only. U-Net port pending data + GPU.</li>
+</ul>
+</main>
+
+<footer>
+  every test named above exists in <code>tests/</code> and passes at this commit ·
+  failure modes are reproduced deliberately so they can never reach the form again
+</footer>
+</body>
+</html>
