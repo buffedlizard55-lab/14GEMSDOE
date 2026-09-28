@@ -448,6 +448,8 @@
         "display": "smrtdoog5",
         "score": 0.1193
       }
-    ]
+    ],
+    "reverified_utc": "2026-09-28",
+    "reverified_note": "Top 50 re-read from the live public leaderboard on 2026-09-28 via the Arena fetch tool: all 50 rows identical to the seed snapshot (ranks, names, scores). bash cannot reach www.drivendata.org from this sandbox (FLAG #1)."
   }
 ]

@@ -12,7 +12,8 @@
   <a href="index.html">Executive summary</a>
   <a href="how-to-submit.html">How to submit</a>
   <a href="strategy.html">Strategy</a>
-  <a href="hypotheses.html">Hypotheses</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html" class="active">Methods</a>
@@ -51,6 +52,14 @@ python3 scripts/refresh_leaderboard.py       # the current feed</pre>
     <td><code>tests/test_blocks.py</code></td></tr>
 <tr><td><code>gems/raster.py</code></td><td>grid metadata, submission format gate (the “[0, 1]” rejection catch)</td>
     <td><code>tests/test_submission_gate.py</code> — both observed failure modes reproduced and rejected</td></tr>
+<tr><td><code>gems/geoedges.py</code></td><td>round-2 geophysical detectors: horizontal-gradient magnitude, non-maximum suppression across the ridge, hysteresis, 1-px skeletonisation, <strong>edge terminations</strong> (skeleton pixels with exactly one skeleton neighbour) and <strong>edge junctions</strong> (≥3), the termination/junction candidate fields, and the alteration-cap level-set margin</td>
+    <td><code>tests/test_geoedges.py</code> — step fields with known ridge geometry, open/closed skeletons, NaN and constant-field robustness</td></tr>
+<tr><td><code>gems/hypotheses.py</code></td><td>the N1–N5 arm feature blocks (gravity-gradient edges, seismicity/strain lineaments, alteration-cap margin, range-front step) and their assembly</td>
+    <td><code>tests/test_hypotheses_round2.py</code> — arms are provably <em>invariant</em> to the catalogue (the leak test), deterministic, finite, and N1 localises blind faults far better than distance-to-catalogue</td></tr>
+<tr><td><code>scripts/validate_round2.py</code></td><td>the hypothesis A/B gate: spatial folds + purge buffer + hide-and-recover, identical across arms, scoring <strong>recovery</strong>, <strong>discovery</strong> (blind faults never used as labels) and <strong>combined</strong> DTI; prints a slot-eligibility verdict</td>
+    <td>writes <code>artifacts/holdout_round2.json</code>; verdicts reproduced in <code>tests/test_hypotheses_round2.py</code></td></tr>
+<tr><td><code>scripts/check_submission_uniqueness.py</code></td><td>the anti-0.1563 gate: byte-identity, filename collisions, NOTE/MANIFEST provenance, manifest-vs-file hash integrity, ledger duplicate scores and duplicate artifacts, site-payload hash collision</td>
+    <td><code>tests/test_submission_uniqueness.py</code> — the historical duplicate is reproduced and caught</td></tr>
 <tr><td><code>docs/js/tif_writer.js</code></td><td>browser-side float32 GeoTIFF writer + payload decode + self-checks</td>
     <td><code>tests/test_tif_writer.py</code> — node build vs rasterio read: identical pixels + grid</td></tr>
 <tr><td><code>scripts/refresh_leaderboard.py</code></td><td>standings snapshot feed (HTML + markdown parser)</td>
@@ -70,9 +79,35 @@ runs anywhere); the reference U-Net is the drop-in upgrade once GPU + the real
 418 MB feature stack are present — the protocol does not change.</p>
 
 <h2>Reproducing everything on this page</h2>
-<pre>python3 -m unittest discover -s tests     # 51 tests
-python3 scripts/make_demo.py              # end-to-end synthetic run → validated demo .tif
-python3 scripts/build_site_payload.py --demo</pre>
+<pre>python3 -m unittest discover -s tests              # 86 tests
+python3 scripts/make_demo.py                       # end-to-end synthetic run → validated demo .tif
+python3 scripts/build_site_payload.py --demo
+python3 scripts/validate_round2.py                 # the 9-arm hypothesis gate
+python3 scripts/check_submission_uniqueness.py     # must exit 0 before any upload</pre>
+
+<h2>The round-2 holdout protocol (what the gate actually measures)</h2>
+<p>Three targets, because staff declined to disclose the data sources, fault types
+or coverage behind the hidden test faults
+(<a href="https://community.drivendata.org/t/how-were-the-new-test-faults-identified-data-sources-and-fault-types/11527" target="_blank" rel="noopener">forum 11527</a>):</p>
+<ul>
+  <li><strong>recovery</strong> — catalogue traces held out of the visible context.
+      The standard hide-and-recover proxy; biased toward faults with a surface
+      expression, because that is how catalogue traces were found.</li>
+  <li><strong>discovery</strong> — <code>blind_traces</code>: faults present in the
+      synthetic geophysics but <em>absent from the catalogue by construction</em>
+      (≥ 22 px from every catalogue trace) and <strong>never used as training
+      labels</strong>. This is the local analogue of the private test set, which
+      staff confirmed is &ldquo;any fault pixel not already captured by
+      USGS/INGENIOUS&rdquo; (forum 11536).</li>
+  <li><strong>combined</strong> — the union: the best available guess at the
+      population the prize scores, and therefore the gate metric.</li>
+</ul>
+<p>The synthetic generator was extended for this: it now produces an explicit
+<em>catalogue</em> population and a separate <em>true-fault</em> population, and
+builds gravity / seismicity / conductance / magnetic-low analogues from the
+<strong>true</strong> network. That is what makes the discovery target measurable
+at all — a generator whose geophysics only knew about the catalogue would make the
+discovery test vacuous.</p>
 
 <h2>Honest limitations of the current implementation</h2>
 <ul>
@@ -85,6 +120,16 @@ python3 scripts/build_site_payload.py --demo</pre>
   <li>The site's payload currently ships the synthetic demo field; the real
       field replaces it with one command after a real run.</li>
   <li>No GPU training yet — logistic baseline only. U-Net port pending data + GPU.</li>
+  <li><strong>Round-2 numbers are from the synthetic forward model, not from the
+      competition rasters</strong> (which sit behind a DrivenData login — the data
+      tab redirects to <code>/accounts/login/</code>, verified). They validate the
+      machinery, the sign and rough magnitude of each arm's effect, and that the
+      gate refuses bad ideas. They do <em>not</em> predict a leaderboard score.
+      <code>scripts/validate_round2.py</code> runs unchanged once
+      <code>data/processed/</code> exists.</li>
+  <li>Hypothesis N4 (1 m lidar scarps + paleo-shoreline mask) is <strong>not yet
+      viable</strong>: no free official paleo-shoreline dataset has been sourced
+      (irregularity #1b). It is recorded as blocked, not as progress.</li>
 </ul>
 </main>
 

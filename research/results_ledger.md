@@ -35,11 +35,53 @@ This ledger exists so no two entries can silently be the same work again.
 * #33 wbg1 = 0.1461 matches entry 9 (VERIFIED row).
 * #48 smrtdoog5 = 0.1193 matches entry 3 (VERIFIED row).
 
+## Round-2 gate record (2026-09-28) — no submission slot was spent
+
+`scripts/validate_round2.py`, spatially-blocked holdout (4 folds × 48-px blocks,
+3-px purge buffer), 3 region seeds, identical model and protocol per arm.
+
+| Arm | recovery | discovery | combined | Δ combined | Decision |
+|---|---|---|---|---|---|
+| baseline | 0.3073 | 0.0081 | 0.2863 | — | incumbent |
+| N1 gravity-gradient edges | 0.3003 | 0.0087 | 0.2804 | −0.0059 | **killed by gate** |
+| N2 seismicity/strain lineaments | 0.3218 | 0.0569 | 0.3352 | +0.0489 | promoted (2nd) |
+| N3 alteration-cap margin | 0.3086 | 0.0057 | 0.2855 | −0.0008 | killed |
+| N5 range-front step | 0.3214 | 0.0050 | 0.2961 | +0.0097 | promoted (3rd) |
+| GEO-ONLY | 0.0822 | 0.0156 | 0.0961 | −0.1903 | killed |
+| BLEND (max) | 0.0822 | 0.0156 | 0.0961 | −0.1902 | killed |
+| BLEND-ADD | 0.1849 | 0.0289 | 0.2029 | −0.0834 | killed |
+| **BLEND-MUL w=0.5** | **0.3673** | **0.0612** | **0.3842** | **+0.0979** | **promoted (1st)** |
+
+Weight sweep (BLEND-MUL): 0.25 → 0.3785, **0.50 → 0.3851**, 1.00 → 0.3746,
+2.00 → 0.3394. Interior optimum.
+
+Synthetic forward model only — see `research/hypotheses_round2.md` §Honesty
+statement. No slot consumed, no file uploaded.
+
 ## Reading
 
 Scores ≥ 0.14 in this ledger are all the catalogue-skeleton family (#1/#4/#8/#10
 and their thin variants). The divergent ideas (#2, #6, #11, #12, #17, and the
 0.03–0.05 probes) were never developed past a first upload — each is an idea
 that could have been validated off-line first. Going forward: entries are only
-created by `scripts/build_submission.py` (unique name + sha8 + note), and the
-slot log on `docs/leaderboard.html` must show a holdout delta before upload.
+created by `scripts/build_submission.py` (unique name + sha8 + note), the slot
+log on `docs/leaderboard.html` must show a holdout delta before upload, and
+`scripts/check_submission_uniqueness.py` must exit 0.
+
+### Answering the two questions the brief asks directly
+
+**"Why do 5GEMSDOE and GEMSDOE1 have the same score (0.1563)?"** Because they
+are the same file. Both published sites pin artifact hash `7f00890a…` and the
+same 259,495-run payload with the same histogram (T1, VERIFIED). Identical
+prediction fields ⇒ identical TP_w/FP_w/FN_w ⇒ identical DTI to four decimals.
+8GEMSDOE also reports 0.1563 and is very likely the same family. The live
+leaderboard independently shows three *separate* accounts tied at exactly 0.1563
+(T6, VERIFIED) — the signature of a shared or equivalently-derived emission.
+
+**"Are we copying the same work over and over?"** For the ≥0.14 tier, yes — one
+catalogue-skeleton artifact shipped three times. For the 0.01–0.05 tier, no:
+those are genuinely different probes, but each was abandoned after a single
+upload without an offline holdout. The fix is mechanical and now implemented:
+`scripts/check_submission_uniqueness.py` blocks byte-identical uploads and
+unexplained duplicate scores, and `scripts/validate_round2.py` is the only
+number allowed to spend a slot.
