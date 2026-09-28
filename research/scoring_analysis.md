@@ -25,27 +25,34 @@ Decision consequences (each one is a design rule in the pipeline):
    from everyone's predictions. Genuine novel structures have direct option
    value: if experts adopt them, they become scoring truth.
 
-## 2. The 0.1563 attractor — autopsy (VERIFIED evidence, T1–T5)
+## 2. The 0.1563 recurrence — what the evidence does and does not establish
 
-* GEMSDOE1 and 5GEMSDOE publish the **same artifact hash** `7f00890a…` and the
-  same 259,495-run payload (their sites, fetched 2026-09-28). Byte-identical
-  fields ⇒ identical TP_w/FP_w/FN_w ⇒ identical DTI.
-* The public leaderboard has **three accounts tied at exactly 0.1563**
-  (extradr19 #26, SDCF9 #27, smashi34 #28) — the signature of a shared or
-  equivalently-derived emission, not of independent approaches converging.
-* The field is catalogue-skeleton-based (thinned `ens12` emission at floor 0.1).
-  Under masking, its score is produced entirely by its thin off-catalogue
-  fringe. Variants that thin or buffer the same skeleton change the score only
-  through that fringe — hence 0.1563 / 0.1560 clustering.
-* The surrogate DTI those runs optimized was computed against the **training
-  catalogue** — the wrong population (the prize scores hidden new faults, C1/C12).
-  Optimizing the surrogate selects "be the catalogue", which masking scores at
-  whatever the fringe earns.
+* **Observed:** the published GEMSDOE1 and 5GEMSDOE pages display the same
+  truncated artifact-hash prefix (`7f00890a…`), run-length payload count
+  (259,495), and histogram. This strongly suggests the two *published site
+  builders* encode the same field. **Not available:** original uploaded TIFFs,
+  full hashes, or DrivenData submission IDs. Therefore upload-level byte/pixel
+  identity remains unverified.
+* **Observed:** leaderboard snapshots show several different accounts at
+  0.1563 when scores are displayed to four decimal places. That is a tie in the
+  rounded metric only. It does not show equal confusion components, equal
+  rasters, or collaboration. Another artifact can have the same rounded DTI.
+* **Reported, not independently reproduced:** group run descriptions identify
+  some 0.156x approaches as catalogue-skeleton variants. The repo has no source
+  upload files to measure how much of the prediction lies off-catalogue or
+  re-score the historical runs against private labels.
+* **Audit flags:** abbreviated artifact IDs repeat for ledger rows #1/#8,
+  #14/#15, and #18/#19. The last two pairs lack score/upload evidence; the
+  repeated IDs can indicate reuse, but shortened IDs are not proof. See
+  `research/results_ledger.md`.
 
-**Conclusion:** the repeated score is self-plagiarism of one artifact family
-plus surrogate-metric misdirection — not a platform ceiling. The
-blanket-coverage floor of ~0.0956 (T3) and the 0.01–0.05 scores of divergent
-first probes show the headroom below and above.
+**Conclusion:** a repeated 0.1563 is not a platform ceiling and is not, by
+itself, evidence of duplicate submissions. The matching published builder
+metadata for GEMSDOE1/5GEMSDOE is the strongest reuse signal; retrieve full
+prediction-array hashes and upload IDs to close the question. Prevent exact
+prediction reuse mechanically; use rounded-score collisions only to trigger a
+provenance audit. Real holdout data is absent, so no historic explanation here
+is validated against competition labels.
 
 ## 3. What raises DTI (ordered by leverage)
 

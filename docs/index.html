@@ -16,6 +16,7 @@
   <a href="hypotheses.html">Hypotheses (round 1)</a>
   <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
   <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
   <a href="methods.html">Methods</a>
@@ -92,18 +93,17 @@ four times harder than false alarms. Competition closes
 
 <h2>Why the team kept scoring 0.1563 — and what changes now</h2>
 <div class="card">
-<p><strong>Verified autopsy (2026-09-28).</strong> The prior project sites
-GEMSDOE1 and 5GEMSDOE ship <em>byte-identical prediction fields</em> — the same
-artifact <code>sha256 7f00890a…</code>, same payload <code>259,495 runs</code>,
-same value histogram. Identical pixels score identical numbers, which is why
-GEMSDOE1, 5GEMSDOE, 8GEMSDOE and GEMSDOE2 all landed on
-<strong>0.1563 / 0.1560</strong> and why three unrelated leaderboard accounts
-(extradr19, SDCF9, smashi34) currently tie at exactly 0.1563. The score is not
-a mystery floor — it is the score of that one field. Every future run in this
-repo gets a unique name, its own content hash, and its own note
-(<code>scripts/build_submission.py</code> enforces it), and no idea reaches a
-submission slot without first beating the current best on the spatially-blocked
-holdout. Details: <a href="strategy.html">Strategy</a>.</p>
+<p><strong>Evidence check (2026-09-28).</strong> The published GEMSDOE1 and
+5GEMSDOE pages display the same truncated artifact-hash prefix
+(<code>7f00890a…</code>), run-length count (<code>259,495</code>) and histogram.
+That strongly suggests their public builders encode the same field, but the
+original uploads and DrivenData submission IDs are absent, so upload identity is
+not proven. A repeated four-decimal leaderboard score — including 0.1563 — does
+<strong>not</strong> prove identical predictions. We now hash prediction arrays
+separately from TIFF containers and treat score ties as provenance warnings.
+No candidate is eligible for a slot until it beats the real spatially-blocked
+holdout. <a href="strategy.html">Strategy</a> ·
+<a href="hypotheses-round4.html">Round-4 hypotheses and current hold decision</a>.</p>
 </div>
 
 <h2>Round 2 — the blocked holdout has already decided (2026-09-28)</h2>
@@ -186,13 +186,13 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
     <td><span class="pill ok">VERIFIED</span></td>
     <td class="src">16 files/DOIs with working links — <a href="data.html">source table</a></td></tr>
 <tr><td>Competition rasters in <code>data/raw/</code></td>
-    <td><span class="pill warn">ONE COMMAND</span></td>
-    <td class="src">official no-login mirrors wired into
-        <code>scripts/download_competition_data.sh</code> — run it on any
-        unrestricted machine, then <code>prepare_data.py</code></td></tr>
+    <td><span class="pill warn">NOT PRESENT</span></td>
+    <td class="src">team-provided Dropbox links wired into
+        <code>scripts/download_competition_data.sh</code>; not authenticated as
+        official source. Data tab requires login; verify metadata before training.</td></tr>
 <tr><td>Pipeline (features → hide-and-recover → holdout → submission)</td>
-    <td><span class="pill ok">TESTED</span></td>
-    <td class="src">101/101 tests green + end-to-end synthetic demo run</td></tr>
+    <td><span class="pill ok">102 TESTS PASS</span></td>
+    <td class="src">Suite run in this session with an ignored local <code>.venv/</code>; synthetic/demo tests only, not real-data validation.</td></tr>
 <tr><td>Round-2 hypothesis gate (9 arms, blocked holdout)</td>
     <td><span class="pill ok">RUN</span></td>
     <td class="src"><code>artifacts/holdout_round2.json</code> — BLEND-MUL promoted,
@@ -203,10 +203,12 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
         <strong>incumbent BLEND-MUL stands; all five R3 candidates and both
         incumbent-stacks killed</strong>; prior-support mechanism measured —
         <a href="hypotheses-round3.html">round-3 page</a></td></tr>
-<tr><td>Uniqueness gate (no repeated 0.1563)</td>
-    <td><span class="pill ok">ENFORCED</span></td>
-    <td class="src"><code>scripts/check_submission_uniqueness.py</code> — byte-identity,
-        manifest integrity, NOTE/MANIFEST provenance, ledger duplicates</td></tr>
+<tr><td>Round-4 candidates / real holdout gate</td>
+    <td><span class="pill warn">PRE-REGISTERED / BLOCKED</span></td>
+    <td class="src">Four distinct research hypotheses; no real data or validation in this checkout — <a href="hypotheses-round4.html">read candidate ranking and gate status</a></td></tr>
+<tr><td>Artifact uniqueness audit</td>
+    <td><span class="pill warn">AUDIT ONLY</span></td>
+    <td class="src"><code>scripts/check_submission_uniqueness.py</code> checks exact TIFF/prediction-array hashes and manifest integrity; rounded score ties are warnings, not proof of duplicates.</td></tr>
 <tr><td>Submission builder + format gate</td>
     <td><span class="pill ok">TESTED</span></td>
     <td class="src">reproduces and catches the exact “[0, 1]” rejection causes</td></tr>

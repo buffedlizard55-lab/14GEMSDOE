@@ -1,30 +1,26 @@
 #!/usr/bin/env python3
-"""Uniqueness gate: prove that no two submissions this group has made are the
-same work, and that no two are even the same score without an explanation.
+"""Audit submission artifacts and prevent exact prediction re-uploads.
 
-Why this exists
----------------
-The group's history contains GEMSDOE1, 5GEMSDOE and 8GEMSDOE all scoring exactly
-0.1563, and the public leaderboard contains three separate accounts tied at
-exactly 0.1563 (extradr19 #26, SDCF9 #27, smashi34 #28 - verified on the live
-leaderboard 2026-09-28).  A four-decimal tie in this metric means equal
-TP_w/FP_w/FN_w, i.e. effectively equal prediction fields.  The published sites
-pin the same artifact hash for GEMSDOE1 and 5GEMSDOE, so at least two of those
-uploads were byte-identical: a wasted submission slot that produced zero
-information.
+A leaderboard score rounded to four decimals does NOT prove identical
+predictions. The published GEMSDOE1 and 5GEMSDOE pages show matching truncated
+artifact/payload metadata, but this repo lacks their original upload files and
+DrivenData submission IDs. Treat score collisions as provenance-review prompts,
+not duplicate-file findings.
 
-This script is the mechanical prevention.  It checks, on every run:
+Checks:
+  F1  no byte-identical GeoTIFF files
+  F2  no filename collisions
+  F3  each GeoTIFF has its NOTE and MANIFEST
+  F4  manifest file sha256 matches actual bytes
+  F5  warns on repeated rounded scores / ledger fingerprints (not a hard error)
+  F6  warns on an unexplained ledger `NO` marker
+  F7  compares exact prediction-array hashes in manifests with the current site
+      payload hash (when both are present)
+  F8  no two manifests share the same prediction-array hash
 
-  F1  no two files in ``submissions/`` share a sha256          (byte-identity)
-  F2  no two filenames collide                                 (name-identity)
-  F3  every .tif has its sibling .NOTE.txt and .MANIFEST.json  (provenance)
-  F4  every MANIFEST's sha256 matches the file's actual hash   (integrity)
-  F5  no two ledger rows share BOTH a reported score and an artifact id
-  F6  no ledger row is marked Unique? = NO without an explanation in the row
-  F7  the site payload (docs/js/payload.js) does not pin the same pixel hash as
-      an already-uploaded submission unless it is explicitly the current one
-
-Exit code 0 = clean; 1 = a violation was found (the build must not be uploaded).
+Exit code 0 means no proven artifact duplication or integrity failure was
+found. Missing historical upload records remain an audit limitation.
+""
 
 Usage:
     python3 scripts/check_submission_uniqueness.py
@@ -65,9 +61,11 @@ def parse_ledger(path: Path) -> list[dict]:
         num, entry, score, desc, artifact, unique, evidence = (g.strip() for g in m.groups())
         if not num.isdigit():
             continue
+        if score.strip().lower() in {"none reported", "(none reported)", "n/a"}:
+            score = ""
         rows.append({
-            "n": int(num), "entry": entry, "score": score, "artifact": artifact,
-            "unique": unique, "evidence": evidence,
+            "n": int(num), "entry": entry, "score": score, "desc": desc,
+            "artifact": artifact, "unique": unique, "evidence": evidence,
         })
     return rows
 
@@ -81,6 +79,7 @@ def check(submissions: Path, ledger: Path, payload_js: Path,
     # ---- F1/F2/F3/F4: file-level ------------------------------------------
     tifs = sorted(submissions.glob("*.tif"))
     by_hash: dict[str, list[str]] = {}
+    by_prediction_hash: dict[str, list[str]] = {}
     names: dict[str, int] = {}
     for t in tifs:
         names[t.name] = names.get(t.name, 0) + 1
@@ -102,11 +101,19 @@ def check(submissions: Path, ledger: Path, payload_js: Path,
                 problems.append(
                     f"F4: {t.name} manifest sha256 {meta['sha256'][:12]}... != actual "
                     f"{actual[:12]}...")
+            prediction_hash = meta.get("prediction_sha256")
+            if prediction_hash:
+                by_prediction_hash.setdefault(str(prediction_hash), []).append(t.name)
     for h, group in by_hash.items():
         if len(group) > 1:
             problems.append(
                 f"F1: {len(group)} byte-identical submissions share sha256 {h[:12]}...: "
                 + ", ".join(group))
+    for h, group in by_prediction_hash.items():
+        if len(group) > 1:
+            problems.append(
+                f"F8: {len(group)} submissions share the same prediction-array hash "
+                f"{h[:12]}...: " + ", ".join(group))
     for name, count in names.items():
         if count > 1:
             problems.append(f"F2: filename {name!r} appears {count} times")
@@ -114,19 +121,19 @@ def check(submissions: Path, ledger: Path, payload_js: Path,
     # ---- F5/F6: ledger-level ----------------------------------------------
     if ledger.exists():
         rows = parse_ledger(ledger)
-        seen: dict[tuple[str, str], int] = {}
+        seen_artifacts: dict[str, int] = {}
         for r in rows:
-            score = r["score"]
-            art = r["artifact"]
-            if score in ("", "-", "none reported") or art in ("", "-", "\u2014"):
+            artifact = r["artifact"].strip().strip("`* ")
+            if artifact in ("", "-", "—", "–"):
                 continue
-            key = (score, art)
-            if key in seen:
-                msg = (f"F5: ledger rows {seen[key]} and {r['n']} share BOTH score "
-                       f"{score!r} and artifact {art!r} - identical work recorded twice")
-                (problems if strict_ledger else warnings).append(msg)
+            if artifact in seen_artifacts:
+                warnings.append(
+                    f"F5: ledger rows {seen_artifacts[artifact]} and {r['n']} share "
+                    f"artifact fingerprint {artifact!r}; it may be a truncated hash "
+                    "or a reused output ID. Compare full TIFF and prediction-array "
+                    "hashes before claiming identity.")
             else:
-                seen[key] = r["n"]
+                seen_artifacts[artifact] = r["n"]
         # a repeated score with a DIFFERENT (or absent) artifact is suspicious
         by_score: dict[str, list[int]] = {}
         for r in rows:
@@ -137,8 +144,9 @@ def check(submissions: Path, ledger: Path, payload_js: Path,
         for s, ns in by_score.items():
             if len(ns) > 1:
                 warnings.append(
-                    f"F5(note): score {s!r} is reported for ledger rows {ns} - "
-                    "acceptable ONLY if their artifacts differ; verify before reusing")
+                    f"F5(note): rounded score {s!r} appears in ledger rows {ns}; "
+                    "a score match alone cannot establish artifact identity. Compare "
+                    "full prediction-array hashes where available.")
         for r in rows:
             if r["unique"].upper().startswith("NO") and "same payload" not in r["desc"].lower():
                 msg = (f"F6: ledger row {r['n']} is marked Unique?=NO without an "
@@ -147,17 +155,18 @@ def check(submissions: Path, ledger: Path, payload_js: Path,
     else:
         warnings.append(f"F5: ledger not found at {ledger}")
 
-    # ---- F7: site payload --------------------------------------------------
+    # ---- F7: compare like-for-like array hashes, never TIFF hashes ----------
     if payload_js.exists():
         text = payload_js.read_text()
-        m = re.search(r"pixels_sha256=([0-9a-f]{16})", text)
+        m = re.search(r"pixels_sha256=([0-9a-f]{16,64})", text)
         if m:
             short = m.group(1)
-            dup = [n for h, ns in by_hash.items() for n in ns if h.startswith(short)]
-            if len(dup) > 1:
+            dup = [name for h, group in by_prediction_hash.items()
+                   if h.startswith(short) for name in group]
+            if dup:
                 problems.append(
-                    f"F7: the site payload pins pixels {short}... which matches "
-                    f"{len(dup)} files in submissions/ ({', '.join(dup)})")
+                    f"F7: site payload pixel hash {short}... matches prediction-array "
+                    f"hash in {len(dup)} submission manifest(s): {', '.join(dup)}")
     return problems, warnings
 
 
@@ -182,8 +191,8 @@ def main() -> int:
         for p in problems:
             print("  - " + p)
         return 1
-    print("uniqueness gate: PASS (no byte-identical submissions, no unexplained "
-          "duplicate scores, every artifact carries NOTE + MANIFEST)")
+    print("uniqueness audit: PASS (no proven duplicate TIFF/prediction arrays or "
+          "manifest-integrity failures; score ties are review warnings only)")
     return 0
 
 

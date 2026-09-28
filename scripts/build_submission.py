@@ -23,6 +23,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -196,9 +197,14 @@ def main() -> int:
         "px_mid": int(((arr > 0.0) & (arr < 1.0)).sum()),
         "px_nan": int(np.isnan(arr).sum()),
     }
+    prediction_sha256 = hashlib.sha256(
+        np.ascontiguousarray(arr, dtype=np.float32).tobytes(order="C")
+    ).hexdigest()
     manifest = {
         "file": tif.name,
         "sha256": sha,
+        "prediction_sha256": prediction_sha256,
+        "prediction_hash_scope": "full float32 array in C order after output/nodata policy",
         "built_utc": utc.isoformat(),
         "policy": args.policy or policy_slug,
         "note": note,
