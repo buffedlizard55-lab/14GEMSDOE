@@ -1,0 +1,21 @@
+# competition data (large, license-gated) and derived artifacts
+data/raw/*
+data/external/*
+data/processed/*
+data/demo/*
+!data/raw/.gitkeep
+!data/external/.gitkeep
+!data/processed/.gitkeep
+!data/demo/.gitkeep
+
+# model artifacts and submissions (keep manifests out of git too; regenerate)
+artifacts/
+submissions/
+*.npy
+*.pyc
+__pycache__/
+.pytest_cache/
+.DS_Store
+
+# note: docs/js/payload.js and docs/js/leaderboard.js ARE tracked (site inputs);
+# research/leaderboard_snapshot.json IS tracked (the audited feed history).

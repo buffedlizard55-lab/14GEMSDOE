@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to submit — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html" class="active">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>How to make a submission — the exact walkthrough</h1>
+<p class="lede">One file, one Note, two minutes. This page is the executive
+summary of the submission process: the file format the platform requires, the
+fastest route to it, and every rejection we have already hit — with the fix.</p>
+
+<div class="card hero">
+<h2 style="border:0;padding:0;margin-top:0">The 60-second route</h2>
+<ol>
+  <li>Open the <a href="index.html#build-submission">Executive summary</a> and click
+      <strong>Build submission.tif</strong>. Your browser writes the GeoTIFF locally
+      and downloads it as <code>GEMS-…&lt;UTC&gt;-&lt;sha8&gt;.tif</code>.</li>
+  <li>Copy the <strong>Note</strong> shown under the button (it is unique to that build).</li>
+  <li>Go to the <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">competition page</a>
+      → <em>Submit</em> (left sidebar) → <em>Make new submission</em>.</li>
+  <li><em>File to submit</em> → choose the downloaded .tif (or the .zip).</li>
+  <li>Paste the Note into <em>Note (optional)</em> → confirm. Done.</li>
+</ol>
+</div>
+
+<h2>§1 What the file must be</h2>
+<p>Requirements as printed on the official problem description
+(<a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#submission-format" target="_blank" rel="noopener">source</a>):</p>
+<table>
+<tr><th>Requirement</th><th>Value</th><th>Checked by</th></tr>
+<tr><td>Format</td><td>single-band GeoTIFF (.tif), or a .zip with one GeoTIFF</td><td class="src">form text</td></tr>
+<tr><td>CRS</td><td>UTM zone 11N — EPSG:32611</td><td class="src"><code>scripts/validate_submission.py</code></td></tr>
+<tr><td>Resolution</td><td>100 m</td><td class="src">same</td></tr>
+<tr><td>Shape / bounds</td><td>same as the training data — 3,292 × 3,730 px; data outside the bounds is null or NaN</td><td class="src">same</td></tr>
+<tr><td>Band type</td><td>32-bit float (<code>float32</code>), single layer</td><td class="src">same</td></tr>
+<tr><td>Values</td><td>probabilities in <strong>[0, 1]</strong>; higher = more likely fault</td><td class="src">same</td></tr>
+</table>
+
+<h2>§2 Four ways to produce the file</h2>
+<ol>
+  <li><strong>From this site</strong> — <a href="index.html#build-submission">one click</a>
+      (no install; validated at build time).</li>
+  <li><strong>From the pipeline</strong> —
+      <code>python3 scripts/build_submission.py artifacts/pred.npy --policy "&lt;run id&gt;"</code>
+      → writes <code>submissions/GEMS_&lt;policy&gt;_&lt;UTC&gt;_&lt;sha8&gt;.tif</code>
+      plus a <code>.NOTE.txt</code> and a <code>.MANIFEST.json</code> (hash, value
+      histogram, clip counts) and refuses to emit a file that would be rejected.</li>
+  <li><strong>From the reference-style notebook</strong> — any float32 raster on the
+      template grid can be pushed through <code>scripts/validate_submission.py</code>
+      and uploaded.</li>
+  <li><strong>Max-compatibility variant</strong> — identical predictions with
+      <code>0.0</code> outside the footprint and no NaN anywhere
+      (<code>--zero-outside</code> / the third button). Under the official
+      scoring equations NaN-outside and 0-outside are equivalent; use this variant
+      only if the form has already rejected the NaN variant (§6).</li>
+</ol>
+
+<h2>§3 Unique names and Notes — no more indistinguishable submissions</h2>
+<p>Every build is named <code>GEMS_&lt;policy-slug&gt;_&lt;UTC&gt;_&lt;sha8&gt;.tif</code>
+where <code>sha8</code> is the first 8 hex digits of the file's SHA-256. Two builds
+of different pixels can never share a name, and the manifest proves which pixels
+were uploaded. The Note field mirrors it:</p>
+<pre>S5-A · relay-corridor ensemble r7 · heldout DTI 0.31 · sha8=05256bf5</pre>
+<p>Convention: <code>&lt;run&gt; · &lt;what is new&gt; · &lt;holdout number&gt; · sha8</code>.</p>
+
+<h2>§4 What is scored (why “predicting the known faults” scores ~0.156)</h2>
+<div class="note ok">
+<strong>Official staff ruling</strong> —
+<a href="https://community.drivendata.org/t/scoring-clarification-are-known-usgs-ingenious-faults-masked-when-scoring-and-are-they-in-the-final-round-label-set/11516" target="_blank" rel="noopener">forum thread 11516</a>
+(2026-09-16, DrivenData staff): “Pixels corresponding to known USGS/INGENIOUS
+faults are masked / excluded from evaluation, so they do not count towards penalty
+terms.” Including the catalogue in your prediction is free but earns nothing —
+the entire score comes from your <em>off-catalogue</em> predictions near the
+hidden new faults.
+</div>
+
+<h2>§5 Budget and selection rules</h2>
+<ul>
+  <li><strong>3 submissions per week</strong> per entity (rules §3.2/§3.4 —
+      <a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">official rules PDF</a>).</li>
+  <li>By the deadline you must choose <strong>one</strong> submission to be scored
+      in <em>both</em> prize rounds (rules §3.5) — chosen without knowing your
+      private-test score (§3.6.2).</li>
+  <li>Phase 1 ($50,000, top 5 × $10,000) scores against the private new-fault set;
+      Phase 2 ($250,000) re-scores the same file against labels expanded by expert
+      review of everyone's predictions.</li>
+  <li>Finalists submit complete code + documentation (rules §3.5) — this repository
+      is structured to be that deliverable.</li>
+</ul>
+
+<h2 id="rejection">§6 “Predicted values must be in range [0, 1]” — what it means and how to fix it</h2>
+<p>The form's range check reads your raster's values. It trips on exactly two
+mechanical causes (both reproduced and caught by
+<code>tests/test_submission_gate.py</code>):</p>
+<table>
+<tr><th>Cause</th><th>Symptom</th><th>Fix</th></tr>
+<tr><td>Values outside [0, 1] — raw scores/logits, or 0–255 bytes</td>
+    <td>min &lt; 0 or max &gt; 1 in the manifest</td>
+    <td><code>build_submission.py</code> clamps to [0, 1] and reports how many
+        pixels were clipped; better: pass calibrated probabilities</td></tr>
+<tr><td>NaN <em>inside</em> the scored region (holes in the prediction)</td>
+    <td>“NaN in: n filled” after <code>--fix-nan</code></td>
+    <td>run with <code>--fix-nan</code> (fills holes with 0.0), or use the
+        max-compat button (<code>0.0</code> outside, no NaN at all)</td></tr>
+</table>
+<p>Nothing else about the container (deflate compression, GDAL_NODATA=nan, EPSG
+tag form) has ever triggered a rejection in our runs; if a new message appears,
+record it verbatim in <code>research/limitations_and_next.md</code> before
+changing anything.</p>
+
+<h2>§7 Pre-flight checklist</h2>
+<ul>
+  <li>☐ File name carries its own <code>sha8</code> and policy slug.</li>
+  <li>☐ Note pasted and matches the run (policy · holdout DTI · sha8).</li>
+  <li>☐ <code>validate_submission.py</code> says PASS (or the site build log shows every self-check green).</li>
+  <li>☐ This run beat the current best on the spatially-blocked holdout before it
+        was allowed to use a weekly slot.</li>
+  <li>☐ The week's budget (≤ 3) is being spent deliberately; slot #3 is a control
+        only when its purpose is written down first.</li>
+</ul>
+</main>
+
+<footer>
+  Every process on this page is implemented in <code>scripts/</code> and covered by tests ·
+  rules quotes come from
+  <a href="https://docs.nlr.gov/docs/fy26osti/96647.pdf" target="_blank" rel="noopener">docs.nlr.gov/docs/fy26osti/96647.pdf</a>
+  (GEMS Prize Official Rules, September 2026)
+</footer>
+</body>
+</html>

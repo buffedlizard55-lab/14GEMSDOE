@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14GEMSDOE — GEMS Prize submission builder</title>
+<meta name="description" content="Build and download a format-validated GEMS Prize submission GeoTIFF in one click, plus the verified research, hypotheses, and pipeline behind it.">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html" class="active">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Find the faults nobody has mapped yet.</h1>
+<p class="lede">
+The GEMS Prize (US DOE Office of Geothermal) pays for algorithms that surface
+geological faults missing from the public USGS/INGENIOUS catalogue — faults that
+indicate geothermal resources in the GeoDAWN region of Nevada and eastern California.
+Score: a distance-weighted Tversky index that punishes missed faults
+four times harder than false alarms. Competition closes
+<strong>Dec 3, 2026 23:59 UTC</strong>; prize pool <strong>$300,000</strong>
+(verified on the official page — see <a href="data.html">Data &amp; sources</a>).
+</p>
+
+<div class="card hero" id="build-submission">
+  <h2 style="border:0;padding:0;margin-top:0">⬇ The file to submit — build &amp; download it here</h2>
+  <p>
+  The DrivenData <em>File to submit</em> dialog takes a single-band GeoTIFF
+  (or a <code>.zip</code> containing one) on the competition grid:
+  <strong>float32, probabilities in [0, 1], NaN outside the footprint</strong>.
+  This page assembles that file in <em>your browser</em> from the pixel payload
+  shipped with it — no install, no GPU, nothing uploaded. The download name is
+  unique per build, and the suggested <strong>Note</strong> below tells your
+  team's submissions apart later.</p>
+
+  <div id="demoBanner" class="note" style="display:none">
+    <strong>DEMO payload loaded.</strong> The competition data sits behind a
+    DrivenData login and is not in this repository yet, so the pixels below come
+    from the synthetic test region — the container, validation, naming and note
+    flow are exactly the real ones, but <em>do not upload this file</em>. Once
+    <code>scripts/build_submission.py</code> has run on real data,
+    <code>scripts/build_site_payload.py</code> swaps in the real field and this
+    banner disappears.
+  </div>
+
+  <div class="grid2">
+    <div class="stat"><div class="k">Build state</div><div class="v"><span id="buildState" class="pill">decoding…</span></div>
+      <div class="s">download buttons enable only after every self-check passes</div></div>
+    <div class="stat"><div class="k">Grid</div><div class="v">3,292 × 3,730 · EPSG:32611</div>
+      <div class="s">100 m pixels · float32 · 1 band · GDAL_NODATA=nan</div></div>
+    <div class="stat"><div class="k">What gets scored</div><div class="v">off-catalogue faults only</div>
+      <div class="s">known USGS/INGENIOUS fault pixels are masked from evaluation
+      (official staff ruling)</div></div>
+    <div class="stat"><div class="k">Weekly budget</div><div class="v">3 submissions</div>
+      <div class="s">one final selection is scored in both prize rounds</div></div>
+  </div>
+
+  <h3>1 · Build the .tif</h3>
+  <button class="btn primary" id="btnTif" disabled>Build submission.tif</button>
+  <button class="btn secondary" id="btnZip" disabled>Build submission.zip</button>
+  <button class="btn secondary" id="btnCompat" disabled>Max-compat .tif (0.0 outside, no NaN)</button>
+  <div class="kv mono" style="margin:8px 0">filename: <span id="btnName">…</span></div>
+  <div id="buildStatus">initializing…</div>
+
+  <h3>2 · Paste this Note next to the file</h3>
+  <pre id="noteText">(note appears here after the payload decodes)</pre>
+
+  <h3>3 · Upload</h3>
+  <p>Open the competition <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/"
+  target="_blank" rel="noopener">submission page</a> → <em>Submit</em> → <em>Make new submission</em>
+  → choose the file you just downloaded → paste the Note → confirm.
+  Full click-by-click walkthrough, including what to do if the form says
+  <em>“Predicted values must be in range [0, 1]”</em>:
+  <a href="how-to-submit.html"><strong>How to submit →</strong></a></p>
+</div>
+
+<h2>Why the team kept scoring 0.1563 — and what changes now</h2>
+<div class="card">
+<p><strong>Verified autopsy (2026-09-28).</strong> The prior project sites
+GEMSDOE1 and 5GEMSDOE ship <em>byte-identical prediction fields</em> — the same
+artifact <code>sha256 7f00890a…</code>, same payload <code>259,495 runs</code>,
+same value histogram. Identical pixels score identical numbers, which is why
+GEMSDOE1, 5GEMSDOE, 8GEMSDOE and GEMSDOE2 all landed on
+<strong>0.1563 / 0.1560</strong> and why three unrelated leaderboard accounts
+(extradr19, SDCF9, smashi34) currently tie at exactly 0.1563. The score is not
+a mystery floor — it is the score of that one field. Every future run in this
+repo gets a unique name, its own content hash, and its own note
+(<code>scripts/build_submission.py</code> enforces it), and no idea reaches a
+submission slot without first beating the current best on the spatially-blocked
+holdout. Details: <a href="strategy.html">Strategy</a>.</p>
+</div>
+
+<h2>The five moves we are making (distinct ideas, not the same idea re-dressed)</h2>
+<div class="grid2">
+  <div class="stat"><div class="k">Move 1 · structural completion</div><div class="v">relay ramps &amp; tips</div>
+    <div class="s">emit the small connecting faults the catalogue omits at step-overs,
+    horsetails and intersections (Faulds et al.: 32% / 22% / 22% / 8% of systems)</div></div>
+  <div class="stat"><div class="k">Move 2 · hydrothermal expression</div><div class="v">heat · springs · sinter</div>
+    <div class="s">faults feed hot springs and sinter deposits; where expression exists
+    without a catalogue fault, an unmapped structure is the explanation</div></div>
+  <div class="stat"><div class="k">Move 3 · magnetic lineaments</div><div class="v">edge transforms</div>
+    <div class="s">structure-tensor / edge detection on the GeoDAWN magnetics for
+    concealed faults with no surface scarp</div></div>
+  <div class="stat"><div class="k">Move 4 · completeness residuals</div><div class="v">strain vs. catalogue</div>
+    <div class="s">where strain rate and relief predict deformation the catalogue
+    does not show, flag the gap</div></div>
+  <div class="stat"><div class="k">Move 5 · hide-and-recover</div><div class="v">no leaky training</div>
+    <div class="s">the model only ever learns to recover <em>hidden</em> traces;
+    “distance to known fault = 0” is never the answer</div></div>
+</div>
+<p class="src">Each move names its layers, its physical signature, and its
+evidence on the <a href="hypotheses.html">Hypotheses</a> page, ranked by expected
+DTI gain and implementation cost, with the free official data source that backs it.</p>
+
+<h2>What the score actually rewards</h2>
+<div class="card">
+<div class="grid2">
+  <div class="stat"><div class="k">False negatives</div><div class="v">β = 0.8</div>
+    <div class="s">missing a hidden fault costs 4× an equal false positive</div></div>
+  <div class="stat"><div class="k">False positives</div><div class="v">α = 0.2</div>
+    <div class="s">exploratory confidence on genuinely plausible faults is cheap</div></div>
+  <div class="stat"><div class="k">Match tolerance</div><div class="v">300 m triangular</div>
+    <div class="s">a trace within 100 m of the hidden fault still earns 0.67 of full credit</div></div>
+  <div class="stat"><div class="k">Phase 2 upside</div><div class="v">$250,000</div>
+    <div class="s">experts verify your novel faults and add them to the labels —
+    genuine discoveries are re-scored as truth</div></div>
+</div>
+<p class="src">Equations transcribed from the official problem description and
+checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
+<a href="https://community.drivendata.org/t/scoring-clarification-are-known-usgs-ingenious-faults-masked-when-scoring-and-are-they-in-the-final-round-label-set/11516" target="_blank" rel="noopener">forum thread 11516</a>.</p>
+</div>
+
+<h2>Status board</h2>
+<table>
+<tr><th>Item</th><th>State</th><th>Evidence</th></tr>
+<tr><td>Competition facts (metric, format, dates, rules)</td>
+    <td><span class="pill ok">VERIFIED</span></td>
+    <td class="src">official pages + rules PDF — <a href="data.html">source table</a></td></tr>
+<tr><td>Free external datasets catalogued (INGENIOUS release)</td>
+    <td><span class="pill ok">VERIFIED</span></td>
+    <td class="src">16 files/DOIs with working links — <a href="data.html">source table</a></td></tr>
+<tr><td>Competition rasters in <code>data/raw/</code></td>
+    <td><span class="pill warn">NEEDS LOGIN</span></td>
+    <td class="src">DrivenData auth required — run
+        <code>scripts/download_competition_data.sh</code> and follow its steps</td></tr>
+<tr><td>Pipeline (features → hide-and-recover → holdout → submission)</td>
+    <td><span class="pill ok">TESTED</span></td>
+    <td class="src">51/51 tests green + end-to-end synthetic demo run</td></tr>
+<tr><td>Submission builder + format gate</td>
+    <td><span class="pill ok">TESTED</span></td>
+    <td class="src">reproduces and catches the exact “[0, 1]” rejection causes</td></tr>
+<tr><td>Real-model holdout score</td>
+    <td><span class="pill warn">PENDING DATA</span></td>
+    <td class="src">blocked on <code>data/raw/</code> placement</td></tr>
+</table>
+</main>
+
+<footer>
+  Built for the <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">GEMS Prize Challenge</a> ·
+  every claim on this site links to its source; numbers without sources are labelled as team-reported ·
+  repository: <code>buffedlizard55-lab/14GEMSDOE</code>
+</footer>
+<script src="js/payload.js"></script>
+<script src="js/tif_writer.js"></script>
+<script src="js/site.js"></script>
+</body>
+</html>
