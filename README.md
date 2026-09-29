@@ -194,15 +194,19 @@ baseline); R6-2 intersection halos is killed by rule. The all6 ensemble gate
 (R5+R6) completed: 0.0679/0.0221/0.0074 vs horse 0.0624/0.0217/0.0040 — better
 means but sparse wins on only 2/4 folds, so the pre-registered fold-wise rule
 sends the weekly slot to the rebuilt horse ensemble
-(`submissions/GEMS_r5-geom-horse-ensemble_20260929T044943Z_b9d51ebb.tif`,
+(`submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`,
 uniqueness audit PASS, HUMAN upload pending). Round-7 hypotheses — grounded in
 C28 (misregistration-as-target) and C21 (continuations-as-truth) — were
 pre-registered in `research/hypotheses_round7.md` and gated this session:
 **R7-1, R7-2, R7-3, R7-5 PROMOTED** (far 4/4 each; R7-2's buried-continuation
-bridge lifts the isolated truth subset +19 %), R7-4 killed by the prior. Two
-ensemble attempts (all6, then the pre-registered horse7 = horse + R7-1/3/5)
-both fail the fold-wise sparse rule (2/4) despite better means — the horse
-artifact stands as the single upload candidate.
+bridge lifts the isolated truth subset +19 %), R7-4 killed by the prior. Three
+ensemble attempts (all6; horse7 = horse + R7-1/3/5 under v1 and the
+pre-registered protocol-v2 emission calibration) all fail the fold-wise sparse
+rule (2/4) despite better means — the horse arm stands, built at the
+official-marginal-economics budget (fine-grid CALIB dense-optimal q 0.0225,
+TEST dense 0.0699):
+`submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`,
+uniqueness audit PASS, HUMAN upload pending.
 
 ## How this repo fulfils the prompt
 

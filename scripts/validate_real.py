@@ -424,14 +424,22 @@ def score_field(pred: np.ndarray, gt: np.ndarray, valid: np.ndarray,
 
 
 def calibrate_policy(field: np.ndarray, calib: np.ndarray, valid: np.ndarray,
-                     seed: int = 11, frac: float = 0.30, radius_px: float = 3.0
-                     ) -> dict:
+                     seed: int = 11, frac: float = 0.30, radius_px: float = 3.0,
+                     sparse_frac: float = 0.20, v1: bool = False) -> dict:
     """Choose the emission policy on the hidden CALIB components only.
 
     Policies are the two families that can move this metric: a probability
     threshold (emit everything above t) and a top-q budget by probability
     (emit the q·|valid| highest pixels).  Selection is on a 30 % subsample of
     CALIB for cost; the chosen policy is re-scored on the full CALIB set.
+
+    Protocol v2 (research/hypotheses_round7.md §5, pre-registered 2026-09-29):
+    a fine top-q grid (0.0025 -> 0.05, 16 log-spaced budgets) and the criterion
+    mean(CALIB dense DTI, CALIB sparse-view DTI) — the sparse view is
+    ``sample_truth(calib, sparse_frac)``, the same operator as the TEST sparse
+    protocol — with exact ties resolved to the smaller emitted budget.  The
+    coarse-grid dense-only v1 behaviour is kept behind ``v1=True`` so archived
+    gates stay reproducible.
     """
     if calib is None or not calib.any():
         return {"policy": "thresh", "param": 0.5, "calib_dti": None}
@@ -441,18 +449,44 @@ def calibrate_policy(field: np.ndarray, calib: np.ndarray, valid: np.ndarray,
     sub = np.zeros(calib.size, dtype=bool)
     sub[take] = True
     sub = sub.reshape(calib.shape)
+    if v1:
+        topk_grid = (0.005, 0.01, 0.02, 0.05)
+    else:
+        topk_grid = tuple(float(f"{q:.6g}") for q in np.geomspace(0.0025, 0.05, 16))
     policies = ([("thresh", t) for t in (0.5, 0.7, 0.9, 0.95, 0.99)]
-                + [("topk", q) for q in (0.005, 0.01, 0.02, 0.05)])
-    best = None
+                + [("topk", q) for q in topk_grid])
+    if v1:
+        best = None
+        for pol, par in policies:
+            pred = emit_policy(field, pol, par, valid)
+            d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
+            if best is None or d > best[2]:
+                best = (pol, par, d)
+        pol, par, _ = best
+        pred = emit_policy(field, pol, par, valid)
+        full = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
+        return {"policy": pol, "param": float(par), "calib_dti": float(full)}
+
+    sub_sparse = sample_truth(sub, sparse_frac, np.random.default_rng(seed + 7))
+    best = None   # (criterion_and_tiebreak, policy, param, dense, sparse)
     for pol, par in policies:
         pred = emit_policy(field, pol, par, valid)
-        d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
-        if best is None or d > best[2]:
-            best = (pol, par, d)
-    pol, par, _ = best
+        d_d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
+        d_s = gdti.dti(pred, sub_sparse, radius_px=radius_px, eval_mask=valid)["dti"]
+        crit = 0.5 * (d_d + d_s)
+        n_emit = float(pred.sum()) / float(valid.sum())
+        # strict > keeps the smaller emitted budget on exact ties
+        key = (crit, -n_emit)
+        if best is None or key > best[0]:
+            best = (key, pol, par, d_d, d_s)
+    _, pol, par, _, _ = best
     pred = emit_policy(field, pol, par, valid)
-    full = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
-    return {"policy": pol, "param": float(par), "calib_dti": float(full)}
+    full_d = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
+    full_s = gdti.dti(pred, sample_truth(calib, sparse_frac,
+                                         np.random.default_rng(seed + 7)),
+                      radius_px=radius_px, eval_mask=valid)["dti"]
+    return {"policy": pol, "param": float(par), "calib_dti": float(0.5 * (full_d + full_s)),
+            "calib_dense_dti": float(full_d), "calib_sparse_dti": float(full_s)}
 
 
 def emit_policy(field: np.ndarray, policy: str, param: float,
@@ -688,7 +722,8 @@ def run(args) -> int:
                                     args.chunk_rows)
             del ch_pred
             np.save(fields_dir / f"fold{k}_{arm}.npy", pred.astype(np.float16))
-            pol = calibrate_policy(pred, calib, valid, seed=100 + k)
+            pol = calibrate_policy(pred, calib, valid, seed=100 + k,
+                                   sparse_frac=args.sparse_frac, v1=args.calib_v1)
             emitted = emit_policy(pred, pol["policy"], pol["param"], valid)
             row = {
                 "fold": k, "arm": arm, "n_features": len(names_now),
@@ -697,6 +732,8 @@ def run(args) -> int:
                 "raw_calib": None if calib is None else score_field(pred, calib, valid)["dti"],
                 "calib_policy": pol["policy"], "calib_param": pol["param"],
                 "calib_dti": pol["calib_dti"],
+                "calib_dense_dti": pol.get("calib_dense_dti"),
+                "calib_sparse_dti": pol.get("calib_sparse_dti"),
                 "test_dense_at_t": score_field(emitted, test, valid)["dti"],
                 "test_sparse_at_t": score_field(emitted, sparse_gt, valid)["dti"],
                 "test_far_at_t": (score_field(emitted, far_gt, valid)["dti"]
@@ -813,6 +850,9 @@ def main() -> int:
     ap.add_argument("--far-px", type=float, default=10.0,
                     help="far-test distance (px) from any context trace")
     ap.add_argument("--sparse-frac", type=float, default=0.20)
+    ap.add_argument("--calib-v1", action="store_true",
+                    help="use the archived v1 emission calibration (coarse grid, "
+                         "dense-only criterion) instead of pre-registered v2")
     ap.add_argument("--n-pos", type=int, default=20000)
     ap.add_argument("--n-neg", type=int, default=40000)
     ap.add_argument("--iters", type=int, default=150)

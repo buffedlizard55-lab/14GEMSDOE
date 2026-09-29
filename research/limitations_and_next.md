@@ -33,24 +33,21 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
 
 *Updated 2026-09-29 after Round 6 promotion. Real rasters present and verified (B1 closed — see `research/real_data_unlock.md`). **Sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`, `data/processed/` and `artifacts/*` (except whitelisted JSONs) do NOT survive reset.** Rebuild via Quickstart block in README.*
 
-1. **Upload the validated field(s) — HUMAN ACTION (DrivenData login).** NOTE:
-   the round-6 horse TIFF did **not** survive the sandbox reset
-   (`submissions/*` is gitignored) and must be rebuilt before upload. Wait for
-   the all6 gate (`artifacts/holdout_round6_all6.json`, running) and then build
-   **one** field: `build_real_submission.py` auto-selects by the pre-registered
-   rule among the arms in the gate JSON. If all6 is not eligible, re-run
-   `--arms geom geom_horse` (~25 min) to regenerate its fold fields and build
-   the horse field instead. Spend **one** weekly slot on the ensemble-class
-   field, not on single arms (C8: one submission per entity is scored across
+1. **Upload the validated artifact — HUMAN ACTION (DrivenData login).**
+   **READY:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`
+   (horse 4-fold ensemble, official-economics budget q 0.0225, TEST dense
+   0.0699; uniqueness audit PASS; zero uploads of these pixels). All ensemble
+   alternatives (all6, horse7 v1, horse7 v2) were decided by the pre-registered
+   fold-wise sparse rule and lost; the artifact is the single upload candidate.
+   Spend **one** weekly slot (C8: one submission per entity is scored across
    both rounds). Record the DrivenData submission ID in the ledger.
 
-2. **Complete full 4-fold for all6 (R5+R6 ensemble)** — first attempt OOM-killed
-   (exit 137) at fold 2 after reproducing the interim record exactly; re-run as
-   `--arms geom all6` (2-arm process, lower peak) to
-   `artifacts/holdout_round6_all6.json`. Interim 2-fold: all6 0.0675/0.0212/0.0068
-   (fold0), 0.0767/0.0268/0.0095 (fold1) — beats horse AND curv on all three
-   protocols in both folds. If all6 beats horse on sparse+far ≥3/4, promote all6
-   and build its submission (queue item 1).
+2. ~~Complete full 4-fold for all6~~ **DONE (2026-09-29):** all6 4-fold
+   0.0679/0.0221/0.0074 vs horse 0.0624/0.0217/0.0040 — sparse wins 2/4 →
+   all6 NOT eligible (fold-wise rule). horse7 (horse + R7-1/3/5) then failed
+   the same rule twice (v1 2/4, protocol-v2 2/4). Recorded failure mode:
+   fold-wise sparse consistency on budget-drift folds. See
+   `research/results_ledger.md` gates 7 and 9.
 
 3. ~~Full-grid validation for remaining R6 arms~~ **DONE (2026-09-29):**
    `artifacts/holdout_round6_rest.json`. R6-5 shore PROMOTED (4/4 sparse & far),
@@ -103,6 +100,22 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
    synthetic kill is void as evidence, directive 4).
 
 7. **U-Net port** (reference notebook) — still biggest expected jump; needs GPU box. Current logistic baseline is floor, not ceiling. Reference U-Net trained to reproduce catalogue scores 0.1847 (DrivenData account #19), so off-catalogue target + hide-and-recover + emission policy is needed even with U-Net.
+
+8. **R8 pre-registration candidates (2026-09-29, for the next session's
+   3–5 hypotheses):** (a) **band-6 depth feature** — FLAG #11 resolution shows
+   `tc` is the top-of-crustal magnetic source depth estimate (km, smooth
+   regional structure), not an edge raster; use it as a long-wavelength
+   structural-level feature (and its edges stay available). (b) **budget-matched
+   sparse comparison for ensembles** — the three ensemble misses are all
+   budget-drift artifacts; a pre-registered rule comparing arms at matched
+   CALIB budgets would isolate channel value from emission drift (do NOT
+   retro-fit the old rule). (c) **sparse-stable ensemble emission** — a
+   constrained CALIB policy (maximize dense subject to sparse ≥ bench) tested
+   as a NEW policy family. (d) R6-4 slip/dilation (blocked on external data —
+   see item 4).
+9. **GitHub push + PR #9 update** — blocked on an invalid `GH_TOKEN`
+   (2026-09-29, mid-session expiry: the session's commits are local; push
+   `arena/01a0eae6-14gemsdoe` and sync the PR once GitHub is reconnected).
 
 8. **R3E prior-overlap test** stays mandatory before any prior-extension proposal (round-3 null stands: multiplicative prior cannot extend classifier support).
 
@@ -174,15 +187,30 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
     in range [0, 1]"). Mechanism inferred, not disclosed. Mitigated: finite
     default emission in the site builder and `build_submission.py`. Needs one
     real finite-file upload to confirm the fix end-to-end.
-14. **FLAG #11 — `tc` band tag conflicts with the official feature list.** The
-    file's own per-band `description` tag (read line by line 2026-09-29 via
-    `src.tags(i)`) says "Tilt angle or total curvature"; the official
-    provided-features list (C27) names "top-of-crustal magnetic source depth"
-    among the 15 published layers, and no other band tag matches that name.
-    Either the tag is a generic fallback or the official list is loose. Until
-    resolved, `tc` is used only as an edge-strength raster (both readings
-    support that), never as a depth estimate. See
-    `research/hypotheses_round7.md` §4.
+14. **FLAG #11 — `tc` band tag conflict — RESOLVED 2026-09-29 (data-driven).**
+    The file's per-band `description` tag says "Tilt angle or total curvature"
+    while the official provided-features list (C27, [provided
+    features](https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#provided-features))
+    names "top-of-crustal magnetic source depth estimate" and no other tag
+    matches it. Measurements on the actual band (index 6, `gems.realdata.
+    read_band(6)`): min 2.953, max 88.567, median 18.482, std 4.418,
+    **fraction of pixels < 0 = 0.000**, pct1..99 = 7.7..29.1. A tilt-angle
+    response is bounded at exactly ±90° and MUST change sign over a dipolar
+    magnetic survey; total curvature sign-changes at contacts. A depth
+    estimate is strictly positive — and 3–89 km with median ~18.5 km is the
+    published range of top-of-crustal magnetic-source / Curie-style depths for
+    the Great Basin. Supporting checks: corr(band6, band15 basement depth) =
+    0.21 (weak — band 6 is NOT a re-skinned sediment thickness, which would
+    correlate ~1 after unit scaling); RMS|∇|/std = 0.107 vs 0.021 for band 15
+    (local-wavenumber depth maps are speckled — expected). **Conclusion: band
+    6 is the top-of-crustal magnetic source depth estimate in km; the GDAL
+    description is a mistaken generic fallback.** Current usage (`tc` as an
+    edge-strength raster) remains valid under either reading and is unchanged;
+    using band 6 as a *depth* feature is now a pre-registrable R8 candidate.
+    (Note: the official figure asset `gems_tc_tmi.png` uses "tc" for total
+    radiometric counts — the figure caption's 16th named GeoDAWN product, not
+    necessarily inside `training_features.tif`; no band tag mentions
+    radiometrics. That naming coincidence is not evidence about band 6.)
 15. **FLAG #12 — `geod_dilaterate` sign convention is not stated.** The tag
     says "rate of volumetric strain (expansion/contraction)" without declaring
     which sign is extension. R7-5 defaults to the geodetic convention

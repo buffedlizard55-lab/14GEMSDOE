@@ -367,3 +367,49 @@ class TestStitchAndHorse7Wiring(unittest.TestCase):
         self.assertIn("align_offset", names)
         self.assertNotIn("stitch_bridge", names)  # excluded at definition time
         self.assertIn("horse7", vr.ARM_SPEC)
+
+
+class TestCalibPolicyV2(unittest.TestCase):
+    """Pre-registered emission-policy protocol v2 (hypotheses_round7.md section 5)."""
+
+    def _setup(self):
+        import numpy as np
+        rng = np.random.default_rng(3)
+        n = 160
+        field = (rng.random((n, n)) * 0.2).astype(np.float32)
+        calib = np.zeros((n, n), bool)
+        calib[30:32, 20:80] = True
+        calib[100:102, 20:80] = True
+        field[30:32, 20:80] = 0.95
+        field[100:102, 20:80] = 0.45
+        valid = np.ones((n, n), bool)
+        return field, calib, valid
+
+    def test_v2_reports_both_views_and_mean(self):
+        import numpy as np
+        import validate_real as vr
+        field, calib, valid = self._setup()
+        pol = vr.calibrate_policy(field, calib, valid, seed=5)
+        self.assertIn("calib_dense_dti", pol)
+        self.assertIn("calib_sparse_dti", pol)
+        self.assertAlmostEqual(pol["calib_dti"],
+                               0.5 * (pol["calib_dense_dti"] + pol["calib_sparse_dti"]),
+                               places=9)
+
+    def test_v2_uses_fine_budget_grid(self):
+        import numpy as np
+        import validate_real as vr
+        field, calib, valid = self._setup()
+        pol = vr.calibrate_policy(field, calib, valid, seed=5)
+        if pol["policy"] == "topk":
+            fine = {float(f"{q:.6g}") for q in np.geomspace(0.0025, 0.05, 16)}
+            self.assertIn(pol["param"], fine)
+        else:
+            self.assertIn(pol["param"], (0.5, 0.7, 0.9, 0.95, 0.99))
+
+    def test_v1_reproduces_archived_behaviour(self):
+        import validate_real as vr
+        field, calib, valid = self._setup()
+        pol = vr.calibrate_policy(field, calib, valid, seed=5, v1=True)
+        self.assertEqual(set(pol.keys()), {"policy", "param", "calib_dti"})
+        self.assertIn(pol["param"], (0.5, 0.7, 0.9, 0.95, 0.99, 0.005, 0.01, 0.02, 0.05))

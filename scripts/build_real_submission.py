@@ -84,6 +84,12 @@ def main() -> int:
     ap.add_argument("--arm", default="")
     ap.add_argument("--outdir", default="submissions")
     ap.add_argument("--emission", default="artifacts/real_emission_ensemble.npy")
+    ap.add_argument("--budget", type=float, default=None,
+                    help="override the emission budget (fraction of valid px). "
+                         "Default: median of the per-fold CALIB-chosen fractions. "
+                         "An override must carry its provenance in the note — the "
+                         "pre-registered one is the fine-grid CALIB dense-optimal "
+                         "(official marginal economics, hypotheses_round7.md §5).")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
@@ -114,7 +120,8 @@ def main() -> int:
     print(f"[submission] arm={arm} folds={len(fields)} "
           f"rationale={rationale or 'caller-specified'}", flush=True)
 
-    # calibrated budget: median of the per-fold fractions chosen on CALIB
+    # calibrated budget: median of the per-fold fractions chosen on CALIB,
+    # unless an explicit --budget override with recorded provenance is given
     fracs = []
     for f in folds:
         if f["calib_policy"] == "topk":
@@ -122,7 +129,14 @@ def main() -> int:
         else:                                    # threshold policy -> its mass
             n = int(f.get("n_emit", 0))
             fracs.append(n / float(valid.sum()))
-    q = float(np.median(fracs))
+    if args.budget is not None:
+        q = float(args.budget)
+        extra_note = (f"; emission budget {q:.6f} is an explicit override "
+                      f"(fine-grid CALIB dense-optimal, median of per-fold "
+                      f"optima — official marginal economics)")
+    else:
+        q = float(np.median(fracs))
+        extra_note = ""
     n_emit = max(1, int(round(q * int(valid.sum()))))
     flat = np.flatnonzero(valid & np.isfinite(field))
     order = np.argsort(-field.ravel()[flat])[:n_emit]
@@ -145,6 +159,7 @@ def main() -> int:
     far_mean = rows[arm].get("far_mean")
     note = NOTE_TEMPLATE.format(arm=arm, extra=extra, q=q,
                                 far="n/a" if far_mean is None else f"{far_mean:.4f}")
+    note += extra_note
     (ROOT / "artifacts" / "real_submission_note.txt").write_text(note + "\n")
     print(f"[submission] note: {note}", flush=True)
 

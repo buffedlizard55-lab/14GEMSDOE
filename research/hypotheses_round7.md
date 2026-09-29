@@ -251,3 +251,35 @@ uploaded until it beats the current holdout best (post-R6: `all6` or
   ranking note above): `horse7` takes the weekly slot only if it beats
   `geom_horse` on sparse AND far in ≥3/4 folds of a same-run 4-fold gate;
   otherwise the built horse artifact stands.
+
+## 5. Emission-policy amendment (protocol v2 — recorded 2026-09-29, BEFORE any v2 gate numbers)
+
+**Motivation (failure analysis of the two completed ensemble attempts, not a
+post-hoc score grab):** `all6` and `horse7` both beat `geom_horse` on far 4/4
+and on the means, and both lost the fold-wise *sparse* rule 2/4 — and in both
+cases the losing folds are exactly the folds where the CALIB grid search chose
+`topk:0.02` (double the budget): the coarse policy grid
+({0.005, 0.01, 0.02, 0.05}) plus a dense-only CALIB criterion cannot see the
+sparse-view cost of wider budgets. The standing prompt states the economics
+explicitly: *emission policy matters more than feature list; add a pixel when
+ΔTP/ΔFP > 0.2·D/(1−0.2·D)* (derived in `gems/dti.py` terms: with D the current
+DTI, 0.2·D/(1−0.2·D) = 0.2·TP_w/(0.2·FP_w + 0.8·FN_w) — the official marginal
+gain condition).
+
+**Protocol v2 (applies to every arm of a gate equally; same-run comparisons
+stay valid; pinned v1 rows remain v1 records):**
+1. Policy grid: the 5 probability thresholds + a **fine top-q grid**
+   (16 budgets, 0.0025 → 0.05 log-spaced) replacing the coarse 4.
+2. CALIB selection criterion = **mean of CALIB dense DTI and CALIB sparse-view
+   DTI**, where the sparse view is `sample_truth(calib, sparse_frac)` — the
+   same operator as the TEST `sparse` protocol. Both views on the 30 % CALIB
+   subsample; the chosen policy is re-scored on full CALIB.
+3. Exact ties resolve to the **smaller emitted budget**.
+
+**Pre-registered decision for the v2 gate (`--arms geom geom_horse horse7`,
+plus `geom_stitch` for its v2 consistency check):** if `horse7` beats
+`geom_horse` on sparse AND far in ≥3/4 folds under protocol v2, the upload
+slot goes to a fresh `horse7` artifact built from the v2 gate fields;
+otherwise the built horse artifact stands (and is rebuilt from the v2 fields
+only if the v2 emission changes its pixels). The v1 decisions recorded above
+(R7 promotions, all6/horse7 v1 outcomes) are final as v1 records.

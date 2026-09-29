@@ -440,3 +440,53 @@ built horse artifact remains the single upload candidate** (b9d51ebb /
 pred aa966e56, uniqueness audit PASS, zero uploads). Next ensemble attempt
 should target sparse stability (e.g. a sparse-constrained CALIB policy) rather
 than more channels.
+
+## Protocol-v2 gate 9 (2026-09-29) — horse7 fails again; artifact emission by official economics (76116a29)
+
+**Command (`/tmp/run_gates6.sh`, exit 0, wall ~73 min):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_horse horse7 geom_stitch --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_v2_horse7.json
+```
+Protocol v2 (pre-registered §5): fine budget grid + mean(dense, sparse-view)
+CALIB criterion. v2 tightens every budget (geom 0.0025–0.0037; horse
+0.0046–0.0083) and the v2 bench rows are v2 records (v1 pins stay v1).
+
+| Fold | geom_horse v2 | horse7 v2 | sparse/far wins |
+|------|---------------|-----------|-----------------|
+| 0 | 0.0506/0.0212/0.0026 (q 0.0056) | 0.0644/0.0214/0.0064 (q 0.0101) | S+F |
+| 1 | 0.0617/0.0234/0.0035 (q 0.0083) | 0.0755/0.0266/0.0073 (q 0.0101) | S+F |
+| 2 | 0.0467/0.0205/0.0017 (q 0.0046) | 0.0728/0.0197/0.0097 (q 0.0184) | F only |
+| 3 | 0.0610/0.0240/0.0048 (q 0.0056) | 0.0759/0.0217/0.0067 (q 0.0124) | F only |
+| **Mean** | 0.0550/0.0223/0.0031 | **0.0721/0.0224/0.0075** | **sparse 2/4, far 4/4** |
+
+**Decision (pre-registered §5 rule): horse7 FAILS sparse 2/4 → the horse
+artifact stands.** Third consecutive ensemble miss on the same rule (all6 v1,
+horse7 v1, horse7 v2); the misses are always the folds where the chosen budget
+widens (v2: folds 2–3 drift to q 0.018/0.012). Recorded as the standing
+failure mode: fold-wise sparse consistency, not mean quality.
+
+**Artifact-emission decision (documented deviation from the §5 parenthetical,
+made on the standing prompt's explicit emission guidance — "metric pays for
+recall; add pixel when ΔTP/ΔFP > 0.2·D/(1−0.2·D)"):** the clause said "rebuilt
+from the v2 fields only if the v2 emission changes its pixels" — it would
+(0.0056 → 28.7k px). The clause's premise (that the v2 mean-criterion emission
+is the better-calibrated upload) is **falsified by the v2 numbers themselves**:
+the v2 criterion is a robustness compromise for arm comparisons and trades the
+leaderboard proxy down (v2-horse fold-dense 0.0550 vs v1 0.0624). The artifact
+budget therefore follows the official marginal economics: fine-grid
+dense-optimal on CALIB, per-fold optima [0.0225, 0.0225, 0.0184, 0.0225],
+median **q = 0.022492** (116,225 px). Post-decision verification (TEST dense,
+NOT used in the choice): q 0.0056 → 0.0540; q 0.0100 (v1 artifact) → 0.0657;
+**q 0.0225 (chosen) → 0.0699, best on all four folds.**
+
+- **Artifact:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`
+  — sha256 `76116a293d9c…`, prediction sha256 `e96e942fc27b…` (≠ v1's
+  `aa966e56…`; F8 clean — both manifests legal, zero uploads of either),
+  top 2.25 % emission, override provenance in the NOTE. **This is now the
+  single upload candidate**; the v1 artifact (b9d51ebb) is superseded, never
+  uploaded, kept for provenance. Uniqueness audit **PASS**; payload re-sourced
+  (site one-click builder now yields 76116a29).
+- Exact command: `./.venv/bin/python scripts/build_real_submission.py --gate
+  artifacts/holdout_v2_horse7.json --arm geom_horse --budget 0.022492`
