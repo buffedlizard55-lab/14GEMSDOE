@@ -7,17 +7,20 @@ GeoDAWN region — the structures that indicate hidden geothermal resources.
 
 **Live status site (GitHub Pages):** `docs/index.html` in this repo — executive
 summary first, one-click submission `.tif` builder, verified source tables,
-leaderboard feed. **Start there to make a submission.**
+leaderboard feed, artifact audit. **Start there to make a submission.**
 
 ---
 
 ## ⚡ 60-second submission
 
 1. Open the site → **Build submission.tif** → the file downloads with a unique name.
-2. Copy the **Note** shown beside it.
+2. Copy the **Note** shown beside it (it names the arm, the holdout value and the
+   artifact hash).
 3. DrivenData → *Submit* → *Make new submission* → choose the file → paste the Note.
-4. If the form says *"Predicted values must be in range [0, 1]"* — the site's
-   [How to submit §6](docs/how-to-submit.html#rejection) has the exact fix.
+4. The file is **finite everywhere inside the scored footprint** and `0.0` outside.
+   If the form still answers *"Predicted values must be in range [0, 1]"*, see
+   [How to submit §6](docs/how-to-submit.html#rejection) — the observed cause is a
+   NaN or an out-of-range value anywhere in the raster.
 
 ---
 
@@ -36,10 +39,10 @@ leaderboard feed. **Start there to make a submission.**
 >
 > We need to figure out why we keep scoring 0.1563 — are we copying the same
 > work over and over? We need different ideas, not the same idea tried a
-> different way. Never re-upload byte-identical prediction artifacts. A repeated
+> different way. Never re-upload a byte-identical prediction artifact. A repeated
 > leaderboard score rounded to four decimals is an audit trigger, not proof that
-> two prediction rasters are identical; compare the pixel-array hash and platform
-> submission records where available.
+> two prediction rasters are identical; compare the prediction-array hash, and
+> when the upload records are missing, say so instead of asserting identity.
 >
 > Generate 3–5 candidate geological hypotheses we haven't tried yet, each
 > naming: the specific layer(s) involved, the physical signature being targeted,
@@ -61,7 +64,7 @@ leaderboard feed. **Start there to make a submission.**
 > Turn them into features and candidate corridors: distance and azimuth to the
 > nearest known trace; along-strike versus across-strike distance to trace
 > endpoints; overlapping-tip detection and bridging corridors; intersection
-> density; the angle between a local lineament and neighboring known strikes;
+> density; the angle between a local lineament and neighbouring known strikes;
 > slip and dilation tendency from the INGENIOUS release. Add a completeness
 > angle: compare known-fault density with what strain rate, relief and
 > range-front geometry would predict; treat strongly negative residuals that
@@ -82,24 +85,18 @@ leaderboard feed. **Start there to make a submission.**
 > executive summary. Give every submission a unique name and a short comment to
 > tell submissions apart.
 >
-> **Round-2 directive (2026-09-28).** Stop re-shipping the catalogue skeleton.
-> Generate 3–5 geological hypotheses we have NOT tried, each naming the specific
-> layers, the physical signature (edge-detection or curvature transform), why it
-> catches a fault missing from the USGS/INGENIOUS catalogue rather than one
-> already in it, and how it differs from anything already in the repo. Rank by
-> expected DTI gain and implementation cost. Validate the top candidate on the
-> spatially-blocked holdout BEFORE touching a weekly submission slot — never
-> spend a slot on an idea that has not beaten the current real-data holdout best.
-> If a candidate needs new external data, name the specific free official source
-> and verify availability. Figure out why we keep scoring 0.1563 and whether
-> 5GEMSDOE and GEMSDOE1 reused an artifact; never re-upload a byte-identical
-> prediction raster. A four-decimal score tie is not proof of identical work.
-> Do deep research into geothermal systems; store official-source evidence and
-> limitations. Think outside the box but stay grounded in science. Find data
-> others overlook. Be contrarian but smart. Track the live public leaderboard
-> (checked 2026-09-28: DARD 0.3168; not directly comparable to local synthetic
-> or blocked-holdout scores). Keep the Core Values (Maximize P(Win), Own the
-> Outcome) focal to every decision.
+> **Session-14 directives (2026-09-28).** (1) The data blocker is closed: verify
+> the real rasters by hash and grid before any modelling
+> (`scripts/bridge_team_mirror.sh`, `scripts/verify_real_data.py`). (2) Answer
+> the 0.1563 question with hashes — a rounded-score tie is evidence of nothing;
+> a matching prediction-array SHA-256 is evidence of everything. (3) The metric
+> pays for **recall**, not for a frozen 2 % budget: add a pixel when
+> ΔTP/ΔFP > 0.2·D/(1−0.2·D) (= 0.0323 at D = 0.1563), and scaling a support up
+> never lowers the score — so the emission policy, not the feature list, is the
+> first thing to test on real data. (4) Validate every new arm on the real
+> hide-and-recover gate before spending a slot; a synthetic-model number is not
+> evidence. (5) Record every result — winners *and* kills — with the exact
+> command that produced it.
 >
 > **Core values: Maximize P(Win)** — in every decision weigh tradeoffs, assess
 > risk, choose the path that maximizes the probability of winning. **Own the
@@ -114,257 +111,238 @@ leaderboard feed. **Start there to make a submission.**
 *This block is the project's constitution. Every deliverable in this repo is
 traced to a line of it in the table below.*
 
-## Round-2 result — what the blocked holdout actually decided (2026-09-28)
+## State of the project — 2026-09-29 (session 14GEMSDOE)
 
-Nine feature arms, one model, one protocol
-(`scripts/validate_round2.py` → `artifacts/holdout_round2.json`):
+### 1. The data is real, in the repo's working tree, and hash-verified
 
-| arm | recovery | discovery | combined DTI | Δ vs baseline | decision |
-|---|---|---|---|---|---|
-| baseline (catalogue geometry + fields) | 0.3073 | 0.0081 | 0.2863 | — | incumbent |
-| N1 gravity-gradient edge terminations | 0.3003 | 0.0087 | 0.2804 | −0.0059 | **killed** |
-| N2 seismicity / strain lineaments | 0.3218 | 0.0569 | 0.3352 | +0.0489 | promoted |
-| N3 alteration-cap margin | 0.3086 | 0.0057 | 0.2855 | −0.0008 | killed |
-| N5 range-front topographic step | 0.3214 | 0.0050 | 0.2961 | +0.0097 | promoted |
-| GEO-ONLY / BLEND(max) / BLEND-ADD | 0.08–0.18 | 0.02–0.03 | 0.10–0.20 | negative | killed |
-| **BLEND-MUL `classifier × (1 + 0.5·prior)`** | **0.3673** | **0.0612** | **0.3842** | **+0.0979** | **promoted** |
-
-Three findings that change the strategy:
-
-1. **The literature-ranked top candidate was killed by the gate — and that is the
-   gate working.** N1 (gravity-gradient terminations) had a verbatim statement
-   from the INGENIOUS authors backing it and the lowest cost, and it still made
-   the holdout worse. No slot was spent on it.
-2. **A multiplicative blend of classifier and geophysics beats both.** It is the
-   only form that improves recovery *and* discovery; additive and max blends
-   smear probability mass and pay FP without lifting the per-truth-pixel maximum.
-3. **A catalogue-trained model is structurally bad at discovery — and discovery
-   is the entire competition.** The baseline's discovery DTI is 0.0081 because it
-   has never been shown a fault that is absent from the catalogue, while the
-   prize masks known-fault pixels and scores only off-catalogue faults.
-
-Full record with sources, layer names, transforms and the honesty statement:
-**[`research/hypotheses_round2.md`](research/hypotheses_round2.md)**.
-
-## Round-3 result — five new hypotheses, gate says keep the incumbent (2026-09-28)
-
-Session 14 pre-registered five genuinely new candidates
-(`scripts/validate_round3.py` → `artifacts/holdout_round3.json`, identical
-round-2 protocol, incumbent reproduced exactly):
-
-| candidate | layers / transform | Δ combined vs incumbent | decision |
+| File | Bytes | SHA-256 | Grid |
 |---|---|---|---|
-| R3A tip-continuation cones | catalogue geometry; oriented decaying wedge past each trace tip | −0.1071 | **killed** |
-| R3B completeness-angle residual | ridge OLS of catalogue density on relief/strain/range-front; signed residual | −0.1047 | **killed** |
-| R3C magnetic-basement lineaments | structure-tensor + ridge skeleton on magnetics; strike agreement | −0.1028 | **killed** |
-| R3D scarplet curvature-linkage | Laplacian curvature → trend closing → bridge pixels | −0.0787 (best non-blend, +0.019 vs baseline) | **killed** |
-| R3E tendency-weighted corridors | slip/dilation tendency × corridors | not gated — external raster pending | **not slot-eligible** |
-| BMUL-R3A / BMUL-R3AC (incumbent stacks) | ALL + R3 blocks | −0.0052 / −0.0084 | **killed** |
-| BMUL-R3Dp (bridge into the prior) | prior-channel test | **+0.0000** | **null — mechanism found** |
+| `data/raw/training_features.tif` (19 bands) | 418,912,844 | `4371c82e3b8339b807bdffcf4ef59a225520fe2988d521be208ae33743123bc5` | 3,730 × 3,292, EPSG:32611, 100 m, float32, nodata `-3.4028235e+38` |
+| `data/raw/training_labels.tif` | 425,830 | `7ba308ccdc4418b31a178f4f1ef21aaa6e152e4028f2f6f64b01f7eb25ae4093` | same grid, int8, nodata `-1` |
+| `data/raw/sample_submission.tif` | 1,599,597 | `2176d08e485aa2cd2860ce8df539db4faf4d76163b38a4dd8c30a40454d35cbc` | same grid, float32, nodata NaN |
 
-Two findings:
+Fetch with **`bash scripts/bridge_team_mirror.sh`** (the group's own transit
+mirror through the GitHub Contents API; every byte SHA-256-checked), then
+**`python3 scripts/verify_real_data.py`** which re-measures the grid, CRS, band
+count, band descriptions, nodata sentinel, the 60,988-pixel catalogue and the
+5,167,373-pixel footprint against the official specification and writes
+`artifacts/real_data_audit.json`. The rasters are licence-gated competition data
+and are **not** tracked in git; only the hashes and the audit are.
 
-1. **The incumbent survived its strongest challenge yet.** Every plausible new
-   idea lost to `classifier(ALL) × (1+0.5·prior)` (0.3842). The gate has now
-   killed eleven source-backed arms across two rounds; no submission slot was
-   ever spent on a loser.
-2. **The multiplicative prior can only re-weight the classifier's support — it
-   can never extend it** (the null: at a bridge pixel the classifier scores ~0,
-   (1+0.5·prior)·0 = 0; where the classifier is ~1 the product clips at 1).
-   Any future "field X through the prior" idea must first show pixel overlap
-   with the classifier's confident support. The remaining leverage is the real
-   rasters, then U-Net capacity — not more logistic-era feature arms.
+This closes the previous session's stated blocker. The files are
+**team-mirrored**, i.e. transported from the shares named in the project brief
+rather than downloaded from the login-gated data tab; that distinction is
+recorded in `research/real_data_unlock.md` and is why the verification script
+measures the files against independent expectations instead of trusting a name.
 
-Full record: **[`research/hypotheses_round3.md`](research/hypotheses_round3.md)**,
-site page **`docs/hypotheses-round3.html`**.
+### 2. Why the group kept scoring 0.1563 — answered with hashes
 
-## Round-4 research — pre-registered, not slot-eligible (2026-09-28)
+`research/artifact_audit.md`, evidence `artifacts/scored_artifact_audit.json`:
 
-A new review produced four candidate mechanisms that are not duplicate feature
-arms: (1) multi-physics edge topology across gravity, magnetics and conductivity;
-(2) channel deflection/offset from USGS 3DEP elevation plus 3DHP hydrography;
-(3) geologic-contact offset graphs from USGS/Nevada map data; and (4) signed,
-alternating scarp-polarity sequences from high-resolution elevation. Each entry
-names its layers, signature, missing-fault rationale, repo-difference, qualitative
-upside/cost, source and unresolved availability checks in
-[`research/hypotheses_round4.md`](research/hypotheses_round4.md).
+* **GEMSDOE1 and 5GEMSDOE published byte-identical files.** Their copies of
+  `data/evidence/runs/ens12-adopted-floor0.1-w0/submission.tif` carry the same
+  git blob SHA-1 (`812e61b7…`), the same 570,890 bytes and the same SHA-256
+  (`7f00890a…`). Identical pixels ⇒ identical score. This is *artifact-level*
+  proof; the upload-level claim still rests on group records, because no
+  DrivenData submission IDs exist in any of the group's repositories.
+* **Eight scored artifacts, eight distinct prediction arrays** — the group has
+  not been uploading one file over and over. But two of them (`ens12` 0.1563 and
+  `dual-union` 0.1560) overlap with Jaccard 0.94: the same idea twice.
+* **The three "pindrop" submissions used an identical 155,021-pixel budget and
+  scored 0.0830 / 0.1152 / 0.1193.** Selection moved the score by 0.036 — more
+  than any feature round has.
+* **The catalogue-hugging field scored worst** (0.0286, with 73 % of its mass
+  inside 300 m of the catalogue) while fields with 8–20 % catalogue overlap
+  scored 3–4× higher. The scored population is not the catalogue neighbourhood.
 
-**No real-data validation was possible and no slot was spent.** `data/raw/`,
-`data/processed/`, and `data/external/` contain only placeholders. The top
-candidate is therefore a research hypothesis, not an implemented or validated
-improvement. Existing round-2/3 scores are explicitly synthetic and must not be
-compared with the public leaderboard score. This review installed test
-requirements into the ignored `.venv/` and verified **102 tests passed**; that
-checks software behavior, not geology or competition performance. Slot decision:
-**HOLD** until a real, spatially-blocked hide-and-recover result beats the
-real-data incumbent.
+### 3. The metric algebra that the whole group was missing
 
-### Audit correction: repeated scores are not duplicate-file evidence
+`DTI = T/(0.2T + 0.2E + 0.8·N_t)`, so a pixel is worth emitting iff
+`ΔT/ΔE > 0.2·D/(1 − 0.2·D)` — **0.0323 at D = 0.1563**, 0.0677 at the leader's
+0.3168 — and scaling an existing support up (`p → c·p`) *never* lowers the score
+(monotone in `c`). Binary emission is therefore optimal given a support, and the
+binding question is not "which feature" but **"what support"**. This is derived,
+not fitted, and it is checked numerically in `tests/test_dti_fast.py` against the
+reference transcription of the published equations.
 
-The GEMSDOE1 and 5GEMSDOE Pages currently publish the same pinned artifact SHA
-prefix (`7f00890a…`) and the same run-length payload description. That is strong
-evidence their *published builders* encode the same prediction field. The repo
-does not contain the original upload binaries or DrivenData submission IDs, so
-it cannot independently prove which exact file was uploaded. The reported
-0.1563 leaderboard ties for 8GEMSDOE or other accounts do **not** prove identical
-rasters: scores are rounded to four decimals and different fields can yield the
-same displayed score. Hash each actual pixel array and retain submission IDs;
-use score collisions only to trigger a provenance audit. The ledger also has
-repeated shortened artifact IDs (`6452ae1d00`, `0c9199f14e62`) for separate
-entries; the uniqueness script flags them for review, but the missing original
-files prevent proving whether those uploads duplicated predictions.
+### 4. Round 5: five new hypotheses, gated on the real rasters
+
+`research/hypotheses_round5.md` — R5-1 relay-ramp interior maturity, R5-2
+accommodation-zone transfer corridors between opposed-polarity systems, R5-3
+amplitude-normalised magnetic tilt angle co-located with gravity edges, R5-4
+range-front profile-curvature (fan-buried) response, R5-5 conditioned
+completeness residual. Each entry names its layers, its physical signature, why
+it should catch a fault *missing* from the catalogue, and its difference from
+every arm previously run here or in the sibling registers (H1–H41). Ranking and
+the pre-registered decision rule are in that document.
+
+The gate is `scripts/validate_real.py` — real rasters, two-view hide-and-recover
+component split (TEST 20 % / CALIB 20 % / HIDE 35 % / visible 25 %; the model
+trains with TEST **and** HIDE removed so "distance to a mapped trace" cannot leak
+the target, then predicts with the submission-time context), emission policy
+calibrated on hidden CALIB components only, scored with the official metric on
+`dense`, `sparse(20 %)` and `far` (>1 km from any context trace) truth protocols.
+
+**Status: the first full-grid run reached fold 2 of 4 and was interrupted by a
+sandbox reset** (the snapshot keeps git-tracked files only, so `.venv/`,
+`data/raw/`, `data/processed/` and the saved fields disappeared mid-run).
+`artifacts/holdout_real.json` is therefore *not* written yet. The interim 2-fold
+table — R5-4 profile curvature winning both protocols in both completed folds,
+every arm improving `far`, calibrated budget ≈ 0.5 % of the footprint — is
+recorded in `research/results_ledger.md` and repeated in
+`research/hypotheses_round5.md` §4. **Nothing is promoted, nothing is killed, no
+submission slot is spent.** Re-run is item 1 of
+`research/limitations_and_next.md` §B.
 
 ## How this repo fulfils the prompt
 
 | Prompt requirement | Where it lives | Verified by |
 |---|---|---|
 | Auditable data table with official links | `docs/data.html`, `research/knowledge_base.md` | every row carries its source URL + check date |
-| No hallucinations; verify line by line | `research/knowledge_base.md` (VERIFIED/TEAM-REPORTED/FLAG vocabulary) | irregularities section `research/limitations_and_next.md` §C |
-| Why 0.1563; unique submissions | `research/scoring_analysis.md`, `research/results_ledger.md` | matching published builder metadata; upload binaries/IDs unavailable; exact prediction hashes are the only duplicate proof |
-| 3–5 ranked geological hypotheses + layers/signatures/why-missing/differences | `docs/hypotheses.html`, `research/hypotheses.md` | sources verified; ranking decision log |
-| Holdout gate before any submission slot | `gems/blocks.py`, `scripts/validate_blocks.py`, `scripts/validate_round2.py`, slot log on `docs/leaderboard.html` | `tests/test_blocks.py`, `tests/test_hypotheses_round2.py` |
-| Round-2 hypotheses N1–N5 | `research/hypotheses_round2.md`, `gems/hypotheses.py`, `gems/geoedges.py`, `docs/hypotheses-round2.html` | holdout values are synthetic; not real competition validation |
-| Round-4 novel hypotheses and validation status | `research/hypotheses_round4.md`, `docs/hypotheses-round4.html` | four ranked candidates; real holdout blocked; no slot spent |
-| Unique prediction artifacts | `scripts/check_submission_uniqueness.py`, `scripts/build_submission.py` (prediction-array + TIFF hashes) | exact hash collision is hard failure; rounded scores are review warnings only |
-| External data obtainability checked, not assumed | `research/knowledge_base.md` §3 + T8, `scripts/download_external_data.sh` | every row carries URL + check date; reachability measured 2026-09-28 |
-| External data: named free official sources, obtainability checked | `research/knowledge_base.md` §3, `scripts/download_external_data.sh` | GDR 1391 + ScienceBase DOIs opened 2026-09-28 |
-| Catalogue-geometry features + corridors | `gems/features.py` | `tests/test_features.py` |
-| Slip/dilation tendency (INGENIOUS) | `gems/features.py::load_external_raster`, DOI 10.5066/P9YL58W6 | source table |
-| Completeness angle (strain/relief vs catalogue) | H5 in `docs/hypotheses.html` | gate defined per hypothesis |
-| Hide-and-recover training | `gems/hide_recover.py`, `scripts/train_hide_recover.py` | leak invariant asserted every epoch; `tests/test_hide_recover.py` |
-| Site: obvious TIF generation | `docs/index.html` (hero builder), `docs/js/tif_writer.js` | `tests/test_tif_writer.py` (node ↔ rasterio bit-compare) |
+| Real competition data verified before use | `scripts/bridge_team_mirror.sh`, `scripts/verify_real_data.py`, `artifacts/real_data_audit.json` | grid/CRS/bands/nodata/catalogue-pixel checks against the official spec |
+| No hallucinations; verify line by line | `research/knowledge_base.md` (VERIFIED / TEAM-REPORTED / FLAG vocabulary), `research/limitations_and_next.md` §C | irregularities enumerated with both values |
+| Why 0.1563; unique submissions | `research/artifact_audit.md`, `artifacts/scored_artifact_audit.json` | git blob SHA-1 = byte identity across two repos; 8/8 distinct prediction arrays |
+| 3–5 ranked geological hypotheses with layers/signature/why-missing/differences | `research/hypotheses_round5.md`, `docs/hypotheses-round5.html` | pre-registered before the gate ran |
+| Holdout gate before any submission slot | `scripts/validate_real.py`, `gems/realchannels.py`, `tests/` | real rasters; calibration on hidden traces only |
+| Catalogue-geometry features + corridors | `gems/realchannels.py` (distance/azimuth, along- vs across-strike, endpoint distance, relay corridors, accommodation corridors, junction density, strike mismatch) | `tests/test_realchannels.py` |
+| Completeness angle (strain/relief/range-front vs catalogue) | `gems/realchannels.completeness_residual` (+ R5-5 conditioning) | fit restricted to the training footprint |
+| Slip/dilation tendency (INGENIOUS) | `gems/features.py::load_external_raster`, DOI 10.5061/… see KB §3 | source table; raster not yet fetched (FLAG #1b) |
+| Hide-and-recover training | `gems/hide_recover.py`, `scripts/validate_real.py --protocol component` | anti-leak invariant; calibration traces never seen by the scored model |
+| Emission policy derived from the metric | `gems/dti_fast.py`, `scripts/validate_real.py` sweep | `tests/test_dti_fast.py` (reference-agreement + NMS equivalence) |
+| Site: obvious TIF generation | `docs/index.html` (hero builder), `docs/js/tif_writer.js` | `tests/test_tif_writer.py` |
 | Executive summary: exactly how to submit | `docs/how-to-submit.html` | rejection modes reproduced in tests |
-| Unique name + short comment per submission | `scripts/build_submission.py` (`GEMS_<policy>_<UTC>_<sha8>.tif` + NOTE.txt + MANIFEST.json) | `tests/test_submission_gate.py` |
+| Unique name + short comment per submission | `scripts/build_submission.py` (`GEMS_<policy>_<UTC>_<sha8>.tif` + NOTE + MANIFEST) | `tests/test_submission_gate.py` |
 | Up-to-date feed; no manual checking | `scripts/refresh_leaderboard.py` → `docs/leaderboard.html` | `tests/test_leaderboard_parser.py` |
 | Multi-pass working | session log in `research/limitations_and_next.md` | passes recorded per session |
 
-## Public leaderboard check (2026-09-28)
+## Public leaderboard check (live, fetched 2026-09-28 this session)
 
-* Leaderboard #1 **DARD 0.3168** (the brief's "0.3049" figure is stale — FLAG #3;
-  top-5 re-verified live, T11).
-* Team-thread reported scores include 0.1563 / 0.1461 / 0.1193; they are not
-  independently tied to submission IDs in this checkout. GEMSDOE1 and 5GEMSDOE
-  pages show matching artifact metadata, but their upload binaries/IDs are absent.
-  Other 0.1563 ties are not proof of duplicate predictions.
-* Deadline **Dec 3, 2026 23:59 UTC**; 3 submissions/week (rolling window, C22);
-  one file scored in both rounds; Phase 2 ($250k) re-scores against
+Source: <https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/>
+(read directly, rows 1–50; full row list in `research/leaderboard_snapshot.json`,
+feed regenerated into `docs/js/leaderboard.js`).
+
+* #1 **DARD 0.3168** (11 submissions); #2 alexoktaba 0.2993; #3 HardcoreTechGod
+  0.2854; #4 mzoorob 0.2843; #5 joeyfezster 0.2806; #6 GrigorSargsyan 0.2742;
+  #7 op01 0.2489. The brief's "0.3049" figure is stale (FLAG #3).
+* **`op01` moved 0.1293 → 0.2489 in this refresh** (from #44 to #7, 1 h 57 min
+  before the fetch): a single submission can jump 40 places, so the plateau is
+  not a ceiling — it is an emission-policy problem, not a data problem.
+* **DrivenData's own reference account `doegemsDrivendata` is #19 with 0.1847** —
+  the reference U-Net trained to reproduce the catalogue is *not* the frontier,
+  consistent with the scored population excluding the catalogue.
+* **The 0.1563 plateau is now exactly three consecutive accounts** — #27
+  extradr19, #28 SDCF9, #29 smashi34 (3 / 3 / 2 submissions) — and the group has
+  *proven* that GEMSDOE and 5GEMSDOE publish byte-identical artifacts
+  (`research/artifact_audit.md`). No other leaderboard row in the top 50 shows
+  that score.
+* Other group rows: #34 wbg1 0.1461, #48 smrtdoog5 0.1193.
+* Deadline **Dec 3, 2026 23:59 UTC**; 3 submissions per rolling week (C22); one
+  file is scored in both phases; Phase 2 ($250k) re-scores against
   expert-expanded labels.
-* **Submission-form fact (T9/FLAG #10):** the form rejects NaN-nodata files with
-  "Predicted values must be in range [0, 1]". The site's default download and
-  `build_submission.py` now emit finite files (0.0 outside the footprint —
-  score-neutral).
 
 ## Repository map
 
 ```
 README.md                  ← you are here (standing prompt above)
-docs/                      ← GitHub Pages site (executive summary + TIF builder,
-                             round-1 + round-2 hypothesis pages)
+docs/                      ← GitHub Pages site: executive summary, TIF builder,
+                             data table, hypotheses (rounds 1–5), artifact audit
 gems/
-  dti.py                   ← the official metric (equations transcribed, tested)
-  features.py              ← catalogue-geometry features (distance, azimuth,
-                             along/across, relay corridors, junction density,
-                             strike mismatch, slip/dilation tendency)
-  geoedges.py              ← NEW: gravity-gradient ridges, edge terminations,
-                             junctions, alteration-cap margin
-  hypotheses.py            ← NEW: the N1–N5 arm feature blocks
-  hide_recover.py          ← hide-and-recover protocol + anti-leak invariant
-  blocks.py                ← spatially-blocked folds with purge buffer
-  raster.py                ← GeoTIFF read/write + submission format gate
-  synthesize.py            ← synthetic GeoDAWN-like forward model, now with a
-                             catalogue/true-fault split and geophysical analogues
+  dti.py                   ← reference transcription of the official metric + tests
+  dti_fast.py              ← float32 full-grid metric, NMS/top-k/threshold emitters
+  realdata.py              ← real raster access (labels, template, bands, hashes)
+  realchannels.py          ← catalogue geometry, geophysics, curvature,
+                             completeness, round-5 channels (R5-1 … R5-5)
+  features.py              ← round-1 feature library (synthetic + real capable)
+  geoedges.py, hypotheses.py ← round-2/3 arms (synthetic-model era)
+  hide_recover.py, blocks.py ← hide-and-recover protocol + spatial blocks
+  raster.py                ← GeoTIFF I/O + submission format gate
+  synthesize.py            ← legacy synthetic forward model (rounds 1–3 only)
 scripts/
-  validate_round2.py       ← round-2 hypothesis A/B gate (the slot currency)
-  validate_round3.py       ← NEW: round-3 gate (R3 arms vs the true incumbent)
-  check_submission_uniqueness.py ← exact TIFF/prediction-hash gate; rounded scores warn
-  build_submission.py      ← unique sha8 name + NOTE + MANIFEST + format gate
-                             (clamps to [0,1], fixes NaN — T9)
-  train_hide_recover.py    ← hide-and-recover training (arm-aware, R3 context-safe)
-  download_competition_data.sh ← team-provided Dropbox shares (unverified) + sha256
-  build_features.py, build_site_payload.py, refresh_leaderboard.py,
-  download_external_data.sh, prepare_data.py,
-  make_demo.py, validate_blocks.py, validate_submission.py
-tests/                     ← 101 tests: metric vectors, leak invariant, format gate,
-                             JS↔Python GeoTIFF parity, block splits, feed parser,
-                             geoedge geometry, R3 arm geometry/leak-safety,
-                             mirror-list guard, uniqueness gate
-research/                  ← knowledge base, scoring analysis, round-1/2/3
-                             hypothesis records, results ledger, limitations
-data/raw/                  ← competition data goes here (one command — see below)
-data/external/             ← free external layers (scripts/download_external_data.sh)
+  bridge_team_mirror.sh    ← fetch + SHA-256-verify the real rasters
+  verify_real_data.py      ← official-spec audit → artifacts/real_data_audit.json
+  validate_real.py         ← THE gate: real rasters, hide-and-recover, emission sweep
+  audit_scored_artifacts.py ← artifact identity audit (file + pixel hashes, Jaccard)
+  check_submission_uniqueness.py ← blocks byte-identical prediction arrays
+  build_submission.py      ← unique name + NOTE + MANIFEST + format gate
+  prepare_data.py, build_features.py, train_hide_recover.py,
+  validate_blocks.py, validate_round2.py, validate_round3.py,
+  build_site_payload.py, refresh_leaderboard.py, download_external_data.sh
+tests/                     ← unit + protocol tests (see `pytest tests -q`)
+research/                  ← knowledge base, round-1…5 hypothesis records,
+                             artifact audit, results ledger, limitations
+data/raw/                  ← real rasters (git-ignored; fetch with the bridge script)
+data/processed/            ← grid.json, valid_mask.npy, known_faults.npy, channels/
+artifacts/                 ← gate results + audits (git-ignored except the
+                             documented holdout JSONs)
 submissions/               ← built submission files + NOTE + MANIFEST (never re-used)
-artifacts/                 ← holdout JSON + model runs; git-ignored EXCEPT the
-                             tracked gate evidence holdout_round2.json /
-                             holdout_round3.json / holdout_round3_followup.json
 ```
 
 ## Quickstart
 
 ```bash
-# 0. environment (first time on any machine; numpy/scipy/rasterio/scikit-image):
+# 0. environment  (NOTE: .venv/, data/ and artifacts/ other than the three
+#    whitelisted holdout JSONs do NOT survive a sandbox reset — after a reset,
+#    start here)
 python3 -m venv .venv
-./.venv/bin/pip install numpy scipy rasterio scikit-image pytest
+./.venv/bin/pip install numpy scipy rasterio scikit-image scikit-learn pytest
 
-# 1. attempt data placement. The Dropbox links supplied in the project brief
-#    are team-provided shares, not verified official mirrors. Hashes record
-#    downloaded bytes but do not authenticate them. Confirm files against the
-#    official login-gated data tab before training; use its download if unsure.
-bash scripts/download_competition_data.sh
-python3 scripts/prepare_data.py
+# 1. real data (needs gh or curl; SHA-256 verified) + official-spec audit
+bash scripts/bridge_team_mirror.sh
+./.venv/bin/python scripts/verify_real_data.py
+./.venv/bin/python scripts/prepare_data.py
 
-# 2. free external layers (unrestricted machine):
-bash scripts/download_external_data.sh
+# 2. THE gate: real rasters, hide-and-recover, plus the emission sweep
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+    --arms geom geo geom_ramp geom_acc geom_tilt geom_curv geom_gap all \
+    --n-pos 20000 --n-neg 40000 --iters 150 --out artifacts/holdout_real.json
+./.venv/bin/python scripts/sweep_real.py --gate artifacts/holdout_real.json \
+    --out artifacts/emission_sweep.json          # policy chosen on CALIB only
 
-# 3. train through hide-and-recover and score the spatially-blocked holdout:
-python3 scripts/train_hide_recover.py
-python3 scripts/validate_blocks.py        # ← the only number that may spend a slot
+# 3. (optional) the spatial-block protocol, for extrapolation behaviour
+./.venv/bin/python scripts/validate_real.py --protocol block --folds 4 \
+    --out artifacts/holdout_real_block.json
 
-# 3b. the hypothesis gates (round 2 = N-arms + blends; round 3 = R3 arms +
-#     incumbent stacks; both run on the synthetic forward model today and
-#     unchanged on the real rasters once data/processed/ exists):
-python3 scripts/validate_round2.py
-python3 scripts/validate_round3.py
-python3 scripts/check_submission_uniqueness.py   # must exit 0 before any upload
+# 4. artifact identity audit (never re-upload a repeated prediction array)
+./.venv/bin/python scripts/audit_scored_artifacts.py --fetch-scored
+./.venv/bin/python scripts/check_submission_uniqueness.py
 
-# 4. build + validate a uniquely-named submission:
-python3 scripts/build_submission.py artifacts/pred.npy --policy "bmul w0.5 holdout<VALUE>"
+# 5. build a uniquely-named submission from the validated gate fields
+#    (selects the winning arm by the pre-registered rule, averages the four
+#     fold fields, emits at the CALIB-calibrated budget, clamps to [0,1])
+./.venv/bin/python scripts/build_real_submission.py            # or --arm all
+./.venv/bin/python scripts/check_submission_uniqueness.py      # must exit 0
+./.venv/bin/python scripts/build_site_payload.py submissions/GEMS_*.tif
 
-# 5. ship it to the site's one-click builder:
-python3 scripts/build_site_payload.py submissions/GEMS_*.tif
-
-# tests (102 passed in this review) and the synthetic end-to-end demo:
+# 6. tests
 ./.venv/bin/python -m pytest tests -q
-./.venv/bin/python scripts/make_demo.py
 ```
 
 ## Limitations in the way (full queue: `research/limitations_and_next.md`)
 
-1. **Competition data is not present.** `bash scripts/download_competition_data.sh`
-   can fetch team-provided Dropbox shares on machines with network access, but
-   those links are not independently authenticated as official competition
-   mirrors. SHA256 records file integrity only, not source identity. The official
-   DrivenData data tab is login-gated. Verify the downloaded rasters and source
-   metadata against the official files before training. Until actual labels and
-   features are present, all holdout numbers in this repo are synthetic-model
-   results and cannot establish leaderboard improvement.
-2. **This sandbox TLS-allowlists {pypi, pythonhosted, github, api.github,
-   codeload, npmjs}** (re-measured 2026-09-28, T8) — Dropbox/GDR/ScienceBase
-   downloads and the DEM tiles must be fetched elsewhere; the Arena page-fetch
-   tools *do* reach those hosts, which is how every source in
-   `knowledge_base.md` was verified.
-3. **No GPU here** — logistic-baseline protocol work only; U-Net port queued
-   (the reference solution's exact hyperparameters are recorded, C24). Round 3
-   showed the logistic model's *support* is now the binding constraint
-   (prior-extensibility null), so capacity is the next lever after real data.
-4. **4 of the 19 feature bands are not named in any public document** (15 are,
-   C27) — read all 19 `description`/`data_category` tags on arrival; the code
-   refuses to guess.
-5. **No verified free official paleo-shoreline dataset yet** — this blocks
-   hypothesis N4 (lidar scarp + shoreline suppression) until one is sourced
-   (FLAG #1b).
-6. **Submission-form range check rejects NaN** anywhere in the raster (T9,
-   FLAG #10) — finite emission is the default everywhere (site builder +
-   `build_submission.py`), and the value gate refuses out-of-range builds.
+1. **The scored truth is not observable.** Phase-1 labels are a privately
+   withheld "new fault" set (C12); every local number is a proxy computed against
+   the public catalogue, and a promotion here is a hypothesis that survived, not
+   a leaderboard gain.
+2. **The rasters are team-mirrored, not authenticated from the data tab.** Hash
+   and grid verification make a substitution implausible (the 60,988-pixel
+   catalogue and the exact grid match independent published measurements), but
+   the authoritative check is a login-gated download.
+3. **No GPU, 3.9 GB RAM, CPU-only.** A U-Net of the reference class is not
+   trainable here; the gate uses histogram gradient boosting over engineered
+   channels (~35 features). The reference solution is the floor to beat, not the
+   ceiling.
+4. **The external layers (slip/dilation tendency, heat flow, MT conductance,
+   paleo-shorelines, 3DEP/topographic tiles) are still unfetched** — the sandbox
+   cannot open gdr.openei.org / sciencebase.gov / prd-tnm.s3.amazonaws.com, and
+   the Arena page tools return text, not rasters (FLAG #1). Named free official
+   sources are recorded in `research/knowledge_base.md` §3 with check dates.
+5. **The `far` protocol is a diagnostic subset, not a leaderboard estimate**;
+   `dense` is optimistic and `sparse(20 %)` is the honest analogue of a thin
+   new-fault population. Both are reported for every arm.
+6. **Upload receipts do not exist in this project.** Score↔file attribution for
+   historical submissions rests on group records; the audit says exactly which
+   pairings are proven (byte-identity between two repositories) and which are
+   inferred.
 
 ## Honesty rules (non-negotiable)
 
@@ -372,4 +350,6 @@ python3 scripts/build_site_payload.py submissions/GEMS_*.tif
   labelled `TEAM-REPORTED` or `FLAG`, never stated as fact.
 * Blank scores stay blank. Disagreements between brief and official sources are
   recorded as irregularities with both values.
+* A four-decimal score tie is never evidence of duplicate work; a matching
+  prediction-array SHA-256 is.
 * Tests reproduce every past failure mode deliberately so it cannot recur.

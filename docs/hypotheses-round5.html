@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 5 — five new hypotheses on the real rasters — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
+  <a href="hypotheses-round5.html" class="active">Hypotheses (round 5)</a>
+  <a href="audit.html">Artifact audit</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Round 5 — five new hypotheses, gated on the <em>real</em> rasters</h1>
+<p class="lede">Rounds 1–4 were gated on a synthetic forward model. This round is
+the first measured on the official competition rasters, with hide-and-recover
+component folds, a held-out threshold calibration, and the official
+distance-weighted Tversky metric (<strong>no submission slot is spent under any
+outcome</strong>).</p>
+
+<div class="note"><strong>The metric rule that reframes every arm.</strong>
+<code>DTI = T/(T + 0.2E + 0.8·FN)</code>, so adding one unit of value at a pixel
+whose kernel credit is <code>k</code> raises the score iff
+<code>k &gt; 0.2·DTI</code>. At our operating point (0.1563) that is
+<code>k &gt; 0.031</code>: a prediction <strong>1 px</strong> from a true trace
+still earns <code>k = 2/3</code> and one <strong>2 px</strong> away still earns
+<code>1/3</code>, both far above the bar — because a false positive costs only
+0.2 while a miss costs 0.8. Two consequences: emit supports at full value, and
+let a believed support travel with its 1–2 px kernel neighbourhood. Both forms
+are asserted numerically in <code>tests/test_dti_fast.py</code>.</div>
+
+<h2>The five candidates</h2>
+<table>
+<tr><th>#</th><th>Hypothesis — layers → transform</th><th>Physical signature</th><th>Why it should catch a fault <em>missing</em> from the catalogue</th><th>Difference from everything already run</th><th>Cost</th></tr>
+<tr><td>R5-1</td><td><strong>Relay-ramp interior maturity.</strong> Catalogue geometry only (<code>training_labels.tif</code>). Components → PCA tips → tip pairs ≤ 6 km with ≤ 40° strike difference, overlapping along strike → weight by the published ramp-width distribution (0.1–14.6 km, mean 2.8 km) × hard-link overlap × parallelity → paint the <em>interior</em> quad.</td><td>The interior of a step-over/relay ramp — where the short connecting faults and the highest modelled dilatation live.</td><td>Step-overs host ~32 % of the 2012 catalogue and 39.6 % of the &gt;1,430 favourable settings mapped in 2026; their connecting faults are short, low-relief and buried under the ramp's own sediment apron, so a regional catalogue records the bounding strands but not the bridge.</td><td>Round-1 corridors bridge any two components within 4.5 km with an ellipse and no overlap requirement; R3A projects cones past single tips. R5-1 requires genuine <em>along-strike overlap</em> (the published hard-link criterion, ~70 % of higher-temperature step-overs) and paints the interior. No sibling register arm targets relays.</td><td>low</td></tr>
+<tr><td>R5-2</td><td><strong>Accommodation-zone transfer corridors.</strong> Catalogue geometry + <code>det_elev</code> (band 12). Per-trace topographic polarity (elevation difference sampled ±4 px across the local strike normal) → components ≥ 2 km → tips 5–25 km apart, opposed polarity, ≤ 50° strike difference → thin 0.3–1.2 km bands along the facing-tip segment, weight peaking at the 2.8 km relay-ramp mean.</td><td>Two systems handing over displacement — expressed topographically as an interbasinal high between opposed range fronts.</td><td>Accommodation zones are ~6 % of systems by count but <strong>19.3 % of favourable-setting area</strong>: extensive, diffuse settings whose interior is rarely mapped as faults while the bounding faults are.</td><td>Nothing in this repo uses throw/dip <em>polarity</em>: the round-1 corridors are polarity-blind and short-range, N5 thresholds range-front position, R3D links curvature scarplets point-wise. No sibling arm pairs opposed-polarity systems.</td><td>medium</td></tr>
+<tr><td>R5-3</td><td><strong>Amplitude-normalised magnetic tilt angle + gravity-edge coincidence.</strong> Bands 9 (<code>tmi_vg</code>) and 3 (<code>tmi_hg</code>) → θ = atan2(∂T/∂z, |∇<sub>H</sub>T|); coincidence with the gravity gradient (band 18).</td><td>Zero crossings of the tilt angle mark magnetic source <em>edges</em> independently of amplitude; a coincident gravity-gradient edge marks a density <em>and</em> magnetic boundary.</td><td>A fault buried under basin fill or late-Pleistocene lake sediments has no scarp and usually no catalogue entry, and a ratio detector keeps responding where an amplitude threshold fails. The 2026 mapping paper reports that terminating/intersecting gravity gradients "defined many of the fault terminations and fault intersections … especially in the many basins of the region, where basin-fill sediments obscure the subsurface architecture".</td><td>This repo has no tilt-angle channel at all: N1 works on amplitude gradients, R3C uses a magnetic structure tensor. In the sibling registers H17 is a gravity-only contour and H18 used the shipped <code>tc</code> band <em>as if</em> it were a tilt angle — the identity check later showed <code>tc</code> is top-of-crustal source depth (r ≈ −0.001 vs |tilt|), so the true tilt of bands 9/3 had never been tested.</td><td>low</td></tr>
+<tr><td>R5-4</td><td><strong>Range-front fan/curvature response.</strong> Band 12 (<code>det_elev</code>) → profile curvature along the steepest-descent direction, pooled with a 5×5 line maximum so the response survives a 1–2 px placement error inside the 300 m kernel.</td><td>Convex breaks in slope where a range front steps, bends, or is buried by an alluvial fan.</td><td>The mapping campaign states that "much of the GBR was inundated by late Pleistocene lakes, and thus faults that have not ruptured in the Holocene are obscured by lake sediments and shoreline features", and that fault tips with minimal surface rupture are "difficult to recognize even with high-resolution lidar".</td><td>N5 thresholds slope and range-front position; R3D links negative-curvature scarplets as points. Neither uses <em>directional</em> (profile) curvature, which is invariant to the front's azimuth and therefore comparable along a curving front. Sibling H26 is the Laplacian of a gravity slope; H32 needs an external 10 m DEM.</td><td>medium</td></tr>
+<tr><td>R5-5</td><td><strong>Conditioned completeness residual.</strong> Bands 12, 5, 4, 7 + catalogue density. OLS of smoothed catalogue density on smoothed strain/relief/range-front predictors (fit inside the training footprint only) → signed residual <em>and</em>-ed with an independent topographic anomaly.</td><td>Where the catalogue is thinner than the physical setting predicts <em>and</em> an independent topographic edge exists there.</td><td>If the catalogue were complete, density would track the predictors. A strongly negative residual that coincides with independent evidence is the gap candidate the brief asks for.</td><td>R3B used the raw residual alone and was killed. R5-5 conditions it on independent evidence — the only form the brief sanctions. Sibling H41 uses distance-to-catalogue as an anti-target, not a completeness residual.</td><td>low</td></tr>
+</table>
+
+<h2>Gate protocol (pre-registered before any arm was scored)</h2>
+<ol>
+<li><strong>Truth:</strong> the official catalogue (<code>training_labels.tif</code>); 3,199 connected components.</li>
+<li><strong>Split per fold:</strong> TEST 20 % / CALIB 20 % / HIDE 35 % of all
+components, leaving 25 % always visible. Features for training and for choosing
+the emission threshold are built from the visible quarter only, so a hidden
+structure is absent from every context-derived channel (hide-and-recover). The
+scored field is then rebuilt with the full catalogue minus TEST — exactly what a
+submission-time model sees.</li>
+<li><strong>Calibration:</strong> the emission threshold is chosen on the hidden
+CALIB traces only, never on TEST.</li>
+<li><strong>Learner:</strong> identical for every arm
+(<code>HistGradientBoostingClassifier</code>, 120 iterations, lr 0.08, 31
+leaves); only the feature block changes.</li>
+<li><strong>Truth protocols:</strong> <code>dense</code> (all TEST pixels),
+<code>sparse</code> (fixed 20 % subsample), <code>far</code> (TEST pixels more
+than 1,000 m from any context trace — the closest analogue of a genuinely
+unmapped fault, and the protocol that cannot be won by hugging the catalogue).</li>
+<li><strong>Emission sweep:</strong> thresholds × dilations (0/1/2 px) and
+budgets {2, 5, 10 %} of the footprint × {top-k, greedy NMS r = 3}.</li>
+<li><strong>Decision rule:</strong> promote only if an arm beats the baseline on
+<em>both</em> <code>sparse</code> and <code>far</code> in ≥ 3 of 4 folds with the
+calibrated threshold; everything else is killed and recorded.</li>
+</ol>
+
+<h2>Results — interim (2 of 4 folds; the run was interrupted)</h2>
+<div class="note" id="results-placeholder">
+<strong>The gate was interrupted.</strong> The first full-grid run completed
+fold 0 and fold 1, was running fold 2, and stopped when the sandbox reset removed
+<code>.venv/</code>, <code>data/raw/</code> and the saved fields (the workspace
+snapshot keeps git-tracked files only). The script writes its JSON after the last
+fold, so <code>artifacts/holdout_real.json</code> does not exist yet and the
+numbers below are transcribed from the run log in
+<a href="../research/results_ledger.md">research/results_ledger.md</a>. Nothing is
+promoted, nothing is killed, <strong>no submission slot has been spent</strong>.
+</div>
+<p>Protocol: real rasters; 3,199 catalogue components; per fold TEST 640 / CALIB
+640 / HIDE 1,120 components with the model trained on a view that excludes
+<em>both</em> TEST and HIDE, then predicting from the submission-time context
+(full catalogue minus TEST). Emission policy chosen on the hidden CALIB
+components only — in every row below that choice was <strong>top 0.5 % by
+probability</strong> (25,837 px ≈ 0.50 % of the 5,167,373-px footprint).</p>
+<table id="results-table">
+<tr><th>Arm</th><th>Fold 0 dense / sparse / far</th><th>Fold 1 dense / sparse / far</th><th>Sparse wins vs geom</th><th>Far wins vs geom</th><th>Decision</th></tr>
+<tr><td><strong>geom</strong> (baseline, catalogue geometry only)</td><td>0.0381 / 0.0165 / 0.0006</td><td>0.0381 / 0.0145 / 0.0006</td><td>—</td><td>—</td><td>reference</td></tr>
+<tr><td>geo (+ 12 official bands)</td><td>0.0421 / 0.0186 / 0.0033</td><td>0.0330 / 0.0132 / 0.0012</td><td>1/2</td><td>2/2</td><td>pending</td></tr>
+<tr><td>geom_ramp — R5-1 relay-ramp interior</td><td>0.0422 / 0.0186 / 0.0033</td><td>0.0337 / 0.0135 / 0.0012</td><td>1/2</td><td>2/2</td><td>pending</td></tr>
+<tr><td>geom_acc — R5-2 accommodation corridors</td><td>0.0420 / 0.0185 / 0.0034</td><td>0.0330 / 0.0128 / 0.0010</td><td>1/2</td><td>2/2</td><td>pending</td></tr>
+<tr><td>geom_tilt — R5-3 magnetic tilt angle</td><td>0.0423 / 0.0186 / 0.0033</td><td>0.0333 / 0.0133 / 0.0010</td><td>1/2</td><td>2/2</td><td>pending</td></tr>
+<tr><td><strong>geom_curv — R5-4 profile curvature</strong></td><td><strong>0.0445 / 0.0196 / 0.0050</strong></td><td><strong>0.0429 / 0.0179 / 0.0062</strong></td><td><strong>2/2</strong></td><td><strong>2/2</strong></td><td>pending</td></tr>
+<tr><td>geom_gap — R5-5 conditioned residual</td><td>0.0436 / 0.0189 / 0.0023</td><td>0.0345 / 0.0144 / 0.0012</td><td>1/2</td><td>2/2</td><td>pending</td></tr>
+<tr><td><strong>all</strong> — every round-5 channel</td><td><strong>0.0450 / 0.0198 / 0.0043</strong></td><td>0.0422 / 0.0173 / 0.0053</td><td><strong>2/2</strong></td><td><strong>2/2</strong></td><td>pending</td></tr>
+<tr><td>fold 2 (incomplete)</td><td colspan="5">geom 0.0333/0.0142/0.0000 · geo 0.0335/0.0154/0.0014 · ramp 0.0327/0.0149/0.0013 · acc 0.0327/0.0150/0.0012</td></tr>
+</table>
+<h3>What the interim record says</h3>
+<ul>
+<li><strong>R5-4 (range-front profile curvature) is the strongest single addition
+measured in this project to date</strong> and the only round-5 arm that beats the
+baseline on <em>both</em> the sparse and the far protocol in <em>both</em>
+completed folds (+0.0064 dense and +0.0044 far on fold 0; +0.0048 dense and
++0.0056 far on fold 1).</li>
+<li><strong>All five mechanisms improve the <code>far</code> protocol</strong> —
+TEST pixels more than 1 km from any other catalogue trace, the closest available
+analogue of a genuinely unmapped structure. Three of them lose the
+<code>sparse</code> comparison in fold 1, i.e. in a linear model they dilute as
+often as they help.</li>
+<li><strong>The calibrated budget is ~0.5 % of the footprint</strong> — 6× smaller
+than the 155,021-px support the group historically uploaded. Support quality, not
+mass, is what the metric pays for.</li>
+<li>Absolute levels (≤0.045 dense) are hide-and-recover catalogue numbers on a
+20 % component split; they are <strong>not</strong> leaderboard estimates and must
+not be compared with the 0.1563 plateau.</li>
+</ul>
+<p>Promote rule (unchanged, pre-registered): beat <code>geom</code> on
+<strong>sparse AND far in ≥ 3 of 4 folds</strong>. With two folds available,
+nothing is promoted and nothing is killed; the rerun is the first action of the
+next session.</p>
+
+<h2>Sources for manual review</h2>
+<ul>
+<li>Faulds et al. 2012 (GDR 383) — step-overs 32 %, intersections 22 %, terminations 22 %, accommodation 8 %: <a href="https://gdr.openei.org/files/383/Faulds%20et%20al%202012%20GeoNZ%20Paper.pdf">PDF</a>.</li>
+<li>Faulds et al. 2026 (Stanford Geothermal Workshop) — &gt;1,430 favourable settings; by area step-overs 33.3 %, terminations 20.3 %, accommodation 19.3 %, intersections 17.4 %; gravity-gradient evidence; lake-sediment and shoreline masking: <a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2026/Faulds.pdf">PDF</a>.</li>
+<li>Giddens &amp; Faulds 2025 (SGW) — relay-ramp widths 0.1–14.6 km (mean 2.8 km); higher-temperature step-overs ~70 % hard-linked: <a href="https://pangea.stanford.edu/ERE/pdf/IGAstandard/SGW/2025/Giddens.pdf">PDF</a>.</li>
+<li>Hermant et al. 2025 (SGW) — CNN fault mapping in the same region; catalogue positions differ from lidar ground truth by up to 400 m; paleo-shorelines are false positives: <a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2025/Hermant.pdf">PDF</a>.</li>
+<li>Competition metric and data: <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/">DrivenData page 967</a>.</li>
+</ul>
+<p>Full record: <a href="../research/hypotheses_round5.md">research/hypotheses_round5.md</a>.</p>
+</main>
+<footer>Round 5 · pre-registered 2026-09-28 · real rasters · interim 2-of-4-fold record · no slot spent.</footer>
+</body>
+</html>

@@ -97,6 +97,77 @@ Cumulative gate tally: **11 source-backed arms killed across rounds 2–3, one
 promoted blend, zero wasted slots.** The null establishes the
 support-extensibility constraint on every future prior idea.
 
+## Round-5 real-data gate record (2026-09-28/29, session 14GEMSDOE) — INTERRUPTED, no slot spent
+
+First gate in this project to run on the **real** competition rasters
+(`data/raw/*`, SHA-256-verified; see `research/real_data_unlock.md`).
+Command:
+
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geo geom_ramp geom_acc geom_tilt geom_curv geom_gap all \
+  --n-pos 20000 --n-neg 40000 --iters 150 --out artifacts/holdout_real.json
+```
+
+Protocol: 3,199 catalogue components; per fold TEST 640 / CALIB 640 / HIDE 1120
+components; the model trains on the always-visible 25 % plus HIDE (TEST and HIDE
+absent from the *training view*, so "distance to a mapped trace" cannot leak the
+target), then predicts with the submission-time context (full catalogue minus
+TEST). Emission policy = top-q by probability, q chosen on the hidden CALIB
+components; here q = 0.005 (25,837 px ≈ 0.50 % of the 5,167,373-px footprint).
+`dense` = all TEST pixels, `sparse` = 20 % subsample, `far` = TEST pixels
+> 1,000 m from any context trace.
+
+**The run completed fold 0 and fold 1, was in fold 2, and stopped when the
+sandbox was reset** (the workspace snapshot keeps git-tracked files only, so
+`data/raw`, `data/processed` and `.venv` were removed mid-run, taking the saved
+fields with them). The numbers below are therefore an **interim record of a
+2-of-4-fold run**, transcribed from the run log before the reset. They are
+*not* a completed gate and no decision is taken on them.
+
+| Arm | f0 dense | f0 sparse | f0 far | f1 dense | f1 sparse | f1 far | sparse wins vs geom | far wins vs geom |
+|---|---|---|---|---|---|---|---|---|
+| **geom** (baseline, 12 geom features) | 0.0381 | 0.0165 | 0.0006 | 0.0381 | 0.0145 | 0.0006 | — | — |
+| geo (+ 12 official bands) | 0.0421 | 0.0186 | 0.0033 | 0.0330 | 0.0132 | 0.0012 | 1/2 | 2/2 |
+| geom_ramp (R5-1) | 0.0422 | 0.0186 | 0.0033 | 0.0337 | 0.0135 | 0.0012 | 1/2 | 2/2 |
+| geom_acc (R5-2) | 0.0420 | 0.0185 | 0.0034 | 0.0330 | 0.0128 | 0.0010 | 1/2 | 2/2 |
+| geom_tilt (R5-3) | 0.0423 | 0.0186 | 0.0033 | 0.0333 | 0.0133 | 0.0010 | 1/2 | 2/2 |
+| **geom_curv (R5-4)** | **0.0445** | **0.0196** | **0.0050** | **0.0429** | **0.0179** | **0.0062** | **2/2** | **2/2** |
+| geom_gap (R5-5) | 0.0436 | 0.0189 | 0.0023 | 0.0345 | 0.0144 | 0.0012 | 1/2 | 2/2 |
+| **all (R5-1…R5-5)** | **0.0450** | **0.0198** | 0.0043 | 0.0422 | 0.0173 | **0.0053** | **2/2** | **2/2** |
+
+Fold 2 (incomplete when the reset hit): geom 0.0333/0.0142/0.0000, geo
+0.0335/0.0154/0.0014, geom_ramp 0.0327/0.0149/0.0013, geom_acc
+0.0327/0.0150/0.0012.
+
+### What the interim record already says (all of it conditional on 2 folds)
+
+1. **R5-4 profile curvature is the strongest single addition measured in this
+   project to date** (+0.0064 dense / +0.0031 sparse / +0.0044 far on fold 0;
+   +0.0048 / +0.0034 / +0.0056 on fold 1, all vs the geom baseline at the same
+   calibrated budget). It is the only round-5 arm that wins both protocols in
+   both completed folds.
+2. **Every arm improves the `far` protocol** (2/2 folds) — i.e. all five
+   mechanisms do add information about TEST pixels that are >1 km from any other
+   catalogue trace, which is the closest available analogue of a genuinely
+   unmapped structure. The failures are on `sparse`, where the extra features
+   dilute the linear model in fold 1.
+3. **The calibrated budget is ~0.5 % of the footprint** (25,837 px), 6× smaller
+   than the 155,021 px the group historically shipped. On the real rasters, the
+   calibrated top-0.5 % beats everything else the sweep can express — consistent
+   with the metric's "quality of support, not mass" behaviour.
+4. **Absolute levels are low** (0.033–0.045 dense, ≤0.006 far). These are
+   hide-and-recover catalogue numbers on a 20 % component TEST split, not
+   leaderboard estimates; the withheld new-fault population is different in kind.
+
+### Gate status
+
+`artifacts/holdout_real.json` was **not written** (the script writes the JSON
+only after all four folds). The rerun after the environment restore is the next
+action; the promote rule is unchanged (beat geom on both sparse and far in ≥ 3 of
+4 folds), and no submission slot is spent on any outcome.
+
+
 ## Reading
 
 Most ≥0.14 scores in this ledger are reported for catalogue-oriented approaches,
