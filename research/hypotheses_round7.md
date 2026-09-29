@@ -194,8 +194,15 @@ uploaded until it beats the current holdout best (post-R6: `all6` or
   3.57 px against an injected misregistration of 2 px); the fixed penalty
   reduced it to 2.80 px and is not tuned on any gate result. The tie-break
   (exact ties resolve to the smallest displacement) is unchanged.
-* New diagnostic subset (computed from saved fold fields + truth, no re-run):
-  continuation subset as defined in R7-2.
+* New diagnostic subset (computed from gate JSON split ids + fold fields, no
+  re-run): continuation subset as defined in R7-2 — implemented as
+  `scripts/continuation_subset.py` with 3 unit tests. **First measurement (on
+  the round-6-rest fields): 52.5 % of TEST pixels belong to continuation
+  components (hidden components with an endpoint within 20 px of a visible
+  endpoint, strike within 30°), and current arms recover them ~2.5× better
+  than isolated components (shore: cont 0.0471 vs iso 0.0193; condbase: cont
+  0.0420 vs iso 0.0162).** C21's continuation class is the mass of the truth
+  population; the isolated remainder is where R7-2's bridge must reach.
 * Promote rule unchanged: beat the same-run `geom` on sparse AND far in ≥ 3/4
   folds; for R7-1 additionally the δ ≥ 1 stress condition.
 

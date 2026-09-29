@@ -222,3 +222,38 @@ class TestMisregistrationStress(unittest.TestCase):
         src = (REPO / "scripts" / "validate_real.py").read_text()
         self.assertIn("--misreg-px", src)
         self.assertIn("misreg_px", src)
+
+
+class TestContinuationSubset(unittest.TestCase):
+    """R7-2 diagnostic: hidden components that continue a visible trace."""
+
+    def test_collinear_tip_pair_is_continuation(self):
+        # visible trace ending at (20, 10); test trace continuing east to (20, 30)
+        test = np.zeros((48, 48), dtype=bool)
+        test[20, 14:31] = True
+        visible = np.zeros((48, 48), dtype=bool)
+        visible[20, 2:11] = True          # collinear, gap 3 px
+        from scripts.continuation_subset import continuation_subset
+        cont, iso = continuation_subset(test, visible, tip_px=20.0, angle_deg=30.0)
+        self.assertTrue(np.array_equal(cont, test))   # whole trace continues
+        self.assertFalse(iso.any())
+
+    def test_orthogonal_far_component_is_isolated(self):
+        test = np.zeros((48, 48), dtype=bool)
+        test[40, 30:45] = True            # horizontal, far from the visible end
+        visible = np.zeros((48, 48), dtype=bool)
+        visible[5:20, 5] = True           # vertical trace top-left
+        from scripts.continuation_subset import continuation_subset
+        cont, iso = continuation_subset(test, visible, tip_px=20.0, angle_deg=30.0)
+        self.assertFalse(cont.any())
+        self.assertTrue(iso.any())
+
+    def test_needs_both_proximity_and_strike(self):
+        # near the visible tip but orthogonal -> not a continuation
+        test = np.zeros((48, 48), dtype=bool)
+        test[10:25, 22] = True
+        visible = np.zeros((48, 48), dtype=bool)
+        visible[20, 2:11] = True
+        from scripts.continuation_subset import continuation_subset
+        cont, iso = continuation_subset(test, visible, tip_px=20.0, angle_deg=30.0)
+        self.assertFalse(cont.any())
