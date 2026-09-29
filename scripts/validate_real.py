@@ -63,7 +63,8 @@ from scipy import ndimage
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from gems import dti as gdti  # noqa: E402
+from gems import dti as gdti  # noqa: E402  (reference, used in tests only)
+from gems import dti_fast as df  # noqa: E402
 from gems import realchannels as rc  # noqa: E402
 from gems import realdata as rd  # noqa: E402
 from gems.blocks import assign_folds  # noqa: E402
@@ -274,7 +275,15 @@ def sample_pixels(context: np.ndarray, valid: np.ndarray, rng: np.random.Generat
 
 def score_field(pred: np.ndarray, gt: np.ndarray, valid: np.ndarray,
                 radius_px: float = 3.0) -> dict:
-    return gdti.dti(pred, gt, radius_px=radius_px, eval_mask=valid)
+    """Official DTI on the full grid.
+
+    Uses ``gems.dti_fast`` (float32) rather than the float64 transcription:
+    measured on the real 3730x3292 grid the two agree to 3.8e-09 and the fast
+    path takes 1.5 s per call against 5.2 s, which matters because the
+    calibration loop scores one emission per candidate policy per arm.
+    ``tests/test_gate_metric_equivalence.py`` pins the equivalence.
+    """
+    return df.dti_fast(pred, gt, radius_px=radius_px, eval_mask=valid)
 
 
 def calibrate_policy(field: np.ndarray, calib: np.ndarray, valid: np.ndarray,
@@ -300,12 +309,12 @@ def calibrate_policy(field: np.ndarray, calib: np.ndarray, valid: np.ndarray,
     best = None
     for pol, par in policies:
         pred = emit_policy(field, pol, par, valid)
-        d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
+        d = df.dti_fast(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
         if best is None or d > best[2]:
             best = (pol, par, d)
     pol, par, _ = best
     pred = emit_policy(field, pol, par, valid)
-    full = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
+    full = df.dti_fast(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
     return {"policy": pol, "param": float(par), "calib_dti": float(full)}
 
 

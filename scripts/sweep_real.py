@@ -40,7 +40,7 @@ from scipy import ndimage
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from gems import dti as gdti  # noqa: E402
+from gems import dti_fast as df  # noqa: E402
 from gems import realdata as rd  # noqa: E402
 
 
@@ -151,10 +151,10 @@ def main() -> int:
             for policy, param in policies:
                 pred = emit(policy, param, field, valid)
                 npx = int((pred > 0).sum())
-                d_test = gdti.dti(pred, truth[k]["test"], radius_px=3.0, eval_mask=valid)
-                d_calib = (gdti.dti(pred, truth[k]["calib"], radius_px=3.0, eval_mask=valid)
+                d_test = df.dti_fast(pred, truth[k]["test"], radius_px=3.0, eval_mask=valid)
+                d_calib = (df.dti_fast(pred, truth[k]["calib"], radius_px=3.0, eval_mask=valid)
                            if truth[k]["calib"] is not None and truth[k]["calib"].any() else None)
-                d_far = (gdti.dti(pred, truth[k]["far"], radius_px=3.0, eval_mask=valid)
+                d_far = (df.dti_fast(pred, truth[k]["far"], radius_px=3.0, eval_mask=valid)
                          if truth[k]["far"] is not None and truth[k]["far"].any() else None)
                 rows.append({
                     "arm": arm, "fold": int(k), "policy": policy, "param": param,
