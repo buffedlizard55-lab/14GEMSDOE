@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 6 — five new hypotheses distinct from R1–R5 — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
+  <a href="hypotheses-round5.html">Hypotheses (round 5)</a>
+  <a href="hypotheses-round6.html" class="active">Hypotheses (round 6)</a>
+  <a href="audit.html">Artifact audit</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Round 6 — five new geological hypotheses distinct from R1–R5</h1>
+<p class="lede">Real competition rasters, hide-and-recover component folds, emission calibrated on hidden CALIB traces only, official DTI metric. Top candidate <strong>R6-1 horsetail splay fan</strong> beats baseline on sparse AND far in 4/4 folds — first arm in this project to meet the pre-registered promote rule on real data. <strong>No submission slot is spent in this session; the validated field is built and format-gated for next slot.</strong></p>
+
+<div class="note"><strong>Metric reminder:</strong> DTI = T/(0.2T+0.2E+0.8·N). Adding a pixel is worth it iff ΔT/ΔE > 0.2·D/(1-0.2·D) = 0.0323 at D=0.1563. Scaling a support up never lowers score. Binary 1.0 emission optimal given support. Emission budget calibrated on CALIB, not TEST.</div>
+
+<h2>The five candidates (ranked by expected DTI ÷ cost)</h2>
+<table>
+<tr><th>#</th><th>Hypothesis — layers → transform</th><th>Physical signature</th><th>Why missing from catalogue</th><th>Difference from everything already run</th><th>Cost</th></tr>
+<tr><td><strong>R6-1</strong></td><td><strong>Horsetail splay fan at fault terminations.</strong> Catalogue geometry (<code>training_labels.tif</code>) + <code>det_elev</code> (band 12) + <code>det_elev_slope</code> (band 19) + structure tensor of detrended elevation. At each endpoint, 120° fan (60° each side of outward strike) radius 0.5–2 km (5–20 px), weight = (1-d/R)·exp(-Δθ²/2σ²), σ=35°, modulated by slope magnitude (≥0.3 even where slope low). Max over all tips, off-trace only, Gaussian σ=1 px.</td><td>Angular divergence of short lineaments radiating from trace endpoints within 0.5–2 km — horsetail splay.</td><td>Faulds et al. 2026: "some FSS (e.g., fault tips) are characterized by minor faults with minimal surface ruptures, making them difficult to recognize even with high-resolution lidar" (KB S14). Catalogue records main strand but not distributed splay. Terminations 22% of systems (2012), horsetails 20% later vintage (KB S2). Exactly the "small connecting structures" brief hypothesizes are omitted.</td><td>R3A = decaying cones past single tips (isotropic wedge, no fan, no slope modulation). R5-1 = relay <em>interior</em> between overlapping strands, not tip splay. R3D = curvature-linkage point-wise, no tip-anchored fan. No sibling arm targets horsetail fans.</td><td>low</td></tr>
+<tr><td><strong>R6-2</strong></td><td><strong>Normal × strike-slip intersection halos.</strong> Catalogue + <code>geod_shearrate</code> (band 7) + <code>geod_dilaterate</code> (band 8) + <code>tmi_hg</code> (band 3) + junction density. (1) Junction pixels with ≥3 neighbours where strike variance >45° (orthogonal). (2) Near-miss tip pairs within 2 km whose strikes differ >45°. Halo = Gaussian σ=10 px (1 km) around candidates, weight = shear_norm × dilation_norm × (1-parallelism) × junction_density_norm.</td><td>Intersection density of catalogue traces where strike difference >45° + geodetic shear high + dilation high, emitting 1–3 km halo.</td><td>Intersections host 22% of systems (Faulds 2012) and 26.1% of FSS (2026), but small linking faults at intersection buried under basin fill (Faulds: "basin-fill sediments obscure subsurface architecture"). Catalogue records crossing strands but not linking faults. Geodetic strain shows active deformation where no scarp.</td><td>junction_density counts any junction, no strike filter, no halo, no geodetic weighting. relay_corridors requires sub-parallel (≤40°), opposite of this (≥45°). No arm uses shear × dilation product. Sibling H11–H41 have no orthogonal intersection detector.</td><td>low</td></tr>
+<tr><td>R6-3</td><td><strong>Conductive-base step / clay-cap edge.</strong> <code>cond_surf</code> (band 17) + <code>depth_to_base_surf</code> (band 15) + <code>tmi</code> (band 14) + <code>iso_grav_anom_hg</code> (band 18). HGM of depth_to_base: |∇ depth| via Sobel, 90th percentile ridge = fault-controlled base step. High cond ≥80th = clay cap. Magnetic low ≤20th = altered rocks. Coincidence: HGM ridge within 500 m of cond high AND mag low. Cap margin distance = distance transform + Gaussian decay σ=5 px.</td><td>Horizontal gradient magnitude ridge of conductive base depth coincident with high conductivity and magnetic low — edge of geothermal clay cap.</td><td>Faulds et al. 2026: "magnetic lows and low resistivity anomalies may respectively indicate altered rocks and clay caps at depth induced by geothermal activity" (KB S12). Fault feeding cap not necessarily mapped, cap invisible to scarp-based compilation. 39% of Great Basin systems are blind (KB S3).</td><td>N3 = (high cond AND mag low) mask → margin, but no depth_to_base gradient, and N3 killed on synthetic not real. R5-3 = tilt angle, no conductivity. No arm uses depth_to_base HGM. Sibling H18 used tc band as tilt, not conductivity.</td><td>medium</td></tr>
+<tr><td>R6-4</td><td><strong>Slip &amp; dilation tendency corridors (external INGENIOUS release).</strong> External: <code>Shapefile_INGENIOUS area.zip</code> from DOI 10.5066/P9YL58W6 (Siler 2022, USGS) → rasterized slip_tendency + dilation_tendency (0–1) on competition grid EPSG:32611 100 m bilinear. Transform: rasterize shapefile, interpolate between segments via IDW, emit where dilation>0.7 AND slip>0.5 AND catalogue absent within 300 m. Weight = dilation × slip × (1-catalogue_proximity).</td><td>Slip tendency = τ/σn, dilation tendency = (σ1-σn)/(σ1-σ3) — high where fault optimally oriented for slip/opening under ambient stress.</td><td>Catalogue compilation geometry-only, not mechanics-based. Faults optimally oriented for dilation more likely permeable and host geothermal fluid (Siler et al., INGENIOUS). Such faults may be subtle/buried but mechanically favored, so missing from Qfaults. INGENIOUS authors calculated this to "help identify faults likely to host as-yet-undiscovered hydrothermal processes" (ScienceBase abstract, verified 2026-09-29).</td><td>No arm in this repo or siblings uses external stress-derived rasters. Prompt explicitly lists "Slip and dilation tendency from the INGENIOUS release" as feature — never implemented until now. Sibling H41 uses distance-to-catalogue as anti-target, not mechanics.</td><td>med-high</td></tr>
+<tr><td>R6-5</td><td><strong>Paleo-lake shoreline suppression + sub-lake fault enhancement.</strong> <code>det_elev</code> (band 12) + <code>det_elev_slope</code> (band 19) + <code>iso_grav_anom</code> (band 13) + <code>iso_grav_anom_hg</code> (band 18) + structure tensor. Detect shorelines: high coherence >0.7 + low slope <30th percentile + sub-horizontal strike. Two outputs: shoreline_mask (suppress FP where scarps are shorelines) and sub_lake_enhanced: det_elev < shoreline elevation AND gravity HGM high (basin structure beneath lake sediments). Weight = gravity_HGM_norm × (1-shoreline_proximity).</td><td>Detect paleo-shoreline terraces as high-coherence low-curvature lineaments; sub-lake fault enhancement where gravity indicates basin structure beneath former lake bottom.</td><td>Faulds et al. 2026: "much of the GBR was inundated by late Pleistocene lakes, and thus faults that have not ruptured in the Holocene are obscured by lake sediments and shoreline features" (KB S14). Hermant et al. 2025: CNN detects paleo-shorelines as false positives (KB M4) — shoreline scarps look like fault scarps. Faults under lake beds systematically missing.</td><td>N4 idea (lidar scarp + shoreline suppression) pre-registered but never implemented due to missing external paleo-shoreline dataset (FLAG #1b). This arm derives shorelines from det_elev + slope + coherence, and uses gravity to see through lake fill (Faulds: gravity gradients defined terminations in basins). R5-4 = profile curvature alone, no shoreline concept. Sibling H32 uses external 10 m DEM, not detrended elevation.</td><td>medium</td></tr>
+</table>
+
+<h2>Ranking by expected DTI ÷ cost (pre-registered)</h2>
+<table>
+<tr><th>Rank</th><th>Arm</th><th>Expected Δ sparse vs geom</th><th>Expected Δ far vs geom</th><th>Cost</th><th>Ratio</th></tr>
+<tr><td>1</td><td>R6-2 intersection halos</td><td>+0.004–0.007</td><td>+0.005–0.009</td><td>low</td><td>high</td></tr>
+<tr><td>2</td><td>R6-1 horsetail splay fan</td><td>+0.003–0.006</td><td>+0.004–0.008</td><td>low</td><td>high</td></tr>
+<tr><td>3</td><td>R6-4 slip/dilation tendency</td><td>+0.003–0.006</td><td>+0.005–0.010</td><td>med-high</td><td>medium-high</td></tr>
+<tr><td>4</td><td>R6-3 conductive-base step</td><td>+0.002–0.005</td><td>+0.003–0.006</td><td>medium</td><td>medium</td></tr>
+<tr><td>5</td><td>R6-5 paleo-shoreline</td><td>+0.001–0.004</td><td>+0.002–0.005</td><td>medium</td><td>low-medium</td></tr>
+</table>
+<p>Top candidate for validation: <strong>R6-2</strong> (lowest cost, highest expected gain). Smoke test on 800×800 crop showed R6-1 actually beating R6-2 on dense/sparse, so both were promoted to full-grid validation.</p>
+
+<h2>Gate protocol (same as R5, pre-registered)</h2>
+<ol>
+<li><strong>Truth:</strong> official catalogue 3,199 components.</li>
+<li><strong>Split per fold:</strong> TEST 20% / CALIB 20% / HIDE 35% / visible 25%. Training view excludes TEST and HIDE; prediction view = full catalogue minus TEST (submission-time context). Anti-leak by construction.</li>
+<li><strong>Calibration:</strong> emission policy (threshold / top-k) chosen on hidden CALIB only.</li>
+<li><strong>Learner:</strong> weighted logistic regression 150 GD iters lr 0.5 L2 1e-3, 20k pos + 40k neg sampled from visible, standardized by training mean/std. Identical for every arm.</li>
+<li><strong>Truth protocols:</strong> dense (all TEST), sparse (20% subsample), far (TEST >1 km from any context trace).</li>
+<li><strong>Decision rule:</strong> promote only if beats baseline on both sparse and far in ≥3 of 4 folds. No slot spent until met.</li>
+</ol>
+
+<h2>Results — R6-1 horsetail splay fan (full 4-fold, real rasters)</h2>
+<div class="note ok"><strong>VALIDATED — meets promote rule.</strong> 4 folds, component protocol, seed 20260928. Files: <code>artifacts/holdout_round6_horse.json</code>, fields in <code>artifacts/real_fields/fold{k}_geom_horse.npy</code>. Emission calibrated on CALIB only.</div>
+<table>
+<tr><th>Fold</th><th>geom dense / sparse / far</th><th>geom_horse dense / sparse / far</th><th>Δ dense</th><th>Δ sparse</th><th>Δ far</th></tr>
+<tr><td>0</td><td>0.0381 / 0.0165 / 0.0006</td><td>0.0627 / 0.0211 / 0.0041</td><td>+0.0246</td><td>+0.0046</td><td>+0.0035</td></tr>
+<tr><td>1</td><td>0.0381 / 0.0145 / 0.0006</td><td>0.0659 / 0.0233 / 0.0041</td><td>+0.0278</td><td>+0.0088</td><td>+0.0035</td></tr>
+<tr><td>2</td><td>0.0333 / 0.0142 / 0.0000</td><td>0.0494 / 0.0206 / 0.0019</td><td>+0.0161</td><td>+0.0064</td><td>+0.0019</td></tr>
+<tr><td>3</td><td>0.0444 / 0.0153 / 0.0002</td><td>0.0715 / 0.0215 / 0.0059</td><td>+0.0271</td><td>+0.0062</td><td>+0.0057</td></tr>
+<tr><td><strong>Mean</strong></td><td><strong>0.0385 / 0.0151 / 0.0003</strong></td><td><strong>0.0624 / 0.0217 / 0.0040</strong></td><td><strong>+0.0239</strong></td><td><strong>+0.0066</strong></td><td><strong>+0.0037</strong></td></tr>
+</table>
+<p><strong>Promote decision:</strong> geom_horse beats geom on sparse in 4/4 folds and on far in 4/4 folds (far baseline 0.0003 → 0.0040, 13×). Meets pre-registered rule (≥3/4). <strong>Promoted as new incumbent for submission building.</strong></p>
+<p>Comparison vs R5-4 profile curvature (previous best):</p>
+<table>
+<tr><th>Fold</th><th>geom_curv dense / sparse / far (from interim 2-fold + partial)</th><th>geom_horse vs curv</th></tr>
+<tr><td>0</td><td>0.0446 / 0.0203 / 0.0054</td><td>horse +0.0181 dense, +0.0008 sparse, -0.0013 far</td></tr>
+<tr><td>1</td><td>0.0424 / 0.0173 / 0.0059</td><td>horse +0.0235 dense, +0.0060 sparse, -0.0018 far</td></tr>
+</table>
+<p>Horse wins dense/sparse, loses far by ~0.0015 vs curvature. All6 (horse+curv+xsec+others) interim: fold0 0.0675/0.0212/0.0068, fold1 0.0767/0.0268/0.0095 — beats both single arms, suggesting combination is best. Full 4-fold for all6 was interrupted; rerun pending.</p>
+
+<h2>Results — other R6 arms (smoke 800×800 crop, 2 folds, 20 iters — diagnostic only)</h2>
+<table>
+<tr><th>Arm</th><th>dense mean</th><th>sparse mean</th><th>far mean</th><th>Δ vs geom</th></tr>
+<tr><td>geom</td><td>0.0142</td><td>0.0078</td><td>0.0000</td><td>—</td></tr>
+<tr><td>geom_horse</td><td>0.0499</td><td>0.0225</td><td>0.0045</td><td>+0.0357 / +0.0147 / +0.0045</td></tr>
+<tr><td>geom_xsec</td><td>0.0369</td><td>0.0143</td><td>0.0003</td><td>+0.0226 / +0.0065 / +0.0003</td></tr>
+<tr><td>geom_condbase</td><td>0.0337</td><td>0.0172</td><td>0.0000</td><td>+0.0195 / +0.0094 / 0</td></tr>
+<tr><td>geom_shore</td><td>0.0353</td><td>0.0178</td><td>0.0027</td><td>+0.0211 / +0.0100 / +0.0027</td></tr>
+</table>
+<p>Smoke shows all R6 arms improve dense and sparse vs geom; horse best on all three, shore second on far. Full-grid validation for xsec/condbase/shore pending (interrupted after 1 fold). No decision taken on them yet.</p>
+
+<h2>Block protocol (spatial blocks 512 px, purge 3 px)</h2>
+<p>All arms ~0.0001 dense — block protocol too harsh: TEST block has no nearby context, model trained on distant blocks cannot extrapolate. Component far protocol (>1 km) is the meaningful spatially-blocked metric for this task (structures far from catalogue). File: <code>/tmp/holdout_round6_block.json</code>.</p>
+
+<h2>Submission built from validated arm</h2>
+<p>From <code>artifacts/holdout_round6_horse.json</code> (4 folds):</p>
+<ul>
+<li>Fields averaged over 4 folds (hide-and-recover ensemble).</li>
+<li>Emission budget = median of per-fold CALIB-chosen fractions = top 1.00% by probability → 51,674 px (1.00% of footprint). Calibrated on hidden CALIB components, not TEST.</li>
+<li>File: <code>submissions/GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif</code> — float32, [0,1], 0 outside footprint (finite variant), passes <code>validate_submission.py</code> (no NaN, no inf, EPSG:32611, 3730×3292).</li>
+<li>Unique name: <code>GEMS_&lt;policy&gt;_&lt;UTC&gt;_&lt;sha8&gt;.tif</code> + NOTE + MANIFEST (prediction_sha256, histogram, clip counts).</li>
+<li>Site payload swapped to real field: <code>docs/js/payload.js</code> kind=real, pixels_sha256 aa966e56…</li>
+</ul>
+
+<h2>External data source for R6-4 (verified obtainable)</h2>
+<ul>
+<li>DOI: <a href="https://doi.org/10.5066/P9YL58W6" target="_blank">10.5066/P9YL58W6</a> — Shapefile for slip tendency and dilation tendency calculated for Quaternary faults in the Great Basin — USGS ScienceBase item 6296974dd34ec53d276bb33d, verified via fetch_page 2026-09-29 (file list: Shapefile_INGENIOUS area.zip 27.35 MB, Shapefile_Full Study.zip 34.25 MB, KMZs).</li>
+<li>License: public domain (USGS), CC0-compatible, allowed by competition rules (C13 external data allowed with license permitting use and sharing with sponsor).</li>
+<li>Obtainable: yes — download via ScienceBase JSON API <code>https://www.sciencebase.gov/catalog/item/6296974dd34ec53d276bb33d?format=json</code> lists direct download URLs; fetch_page returned file list. Requires geopandas + rasterio to rasterize onto competition grid (100 m, EPSG:32611). Not yet fetched in this sandbox due to TLS blocklist, but script template exists in <code>scripts/download_external_data.sh</code> (DOI-managed section).</li>
+<li>FLAG: R6-4 not scored yet because external shapefile not present in <code>data/external/</code>; placeholder returns empty dict. Will be implemented on unrestricted runner.</li>
+</ul>
+
+<h2>Sources for manual review</h2>
+<ul>
+<li>Faulds et al. 2012 (GDR 383) — 32/22/22/8%: <a href="https://gdr.openei.org/files/383/Faulds%20et%20al%202012%20GeoNZ%20Paper.pdf">PDF</a> — VERIFIED</li>
+<li>Faulds et al. 2026 (SGW) — >1,430 FSS, 7.7% area, gravity-gradient evidence, lake sediments: <a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2026/Faulds.pdf">PDF</a> — VERIFIED</li>
+<li>Giddens &amp; Faulds 2025 (SGW) — ramp widths 0.1–14.6 km mean 2.8 km, 70% hard-linked: <a href="https://pangea.stanford.edu/ERE/pdf/IGAstandard/SGW/2025/Giddens.pdf">PDF</a> — VERIFIED</li>
+<li>Hermant et al. 2025 (SGW) — CNN fault mapping, 400 m misalignment, paleo-shorelines as FP: <a href="https://pangea.stanford.edu/ERE/db/GeoConf/papers/SGW/2025/Hermant.pdf">PDF</a> — VERIFIED</li>
+<li>Siler 2022 slip/dilation tendency — DOI 10.5066/P9YL58W6, ScienceBase: <a href="https://www.sciencebase.gov/catalog/item/6296974dd34ec53d276bb33d">catalog</a> — VERIFIED via fetch_page 2026-09-29</li>
+<li>Competition metric: <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#performance-metric">page 967 metric section</a> — VERIFIED</li>
+<li>Submission format: <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#submission-format">page 967 format</a> — VERIFIED</li>
+<li>Masking ruling: <a href="https://community.drivendata.org/t/scoring-clarification-are-known-usgs-ingenious-faults-masked-when-scoring-and-are-they-in-the-final-round-label-set/11516">forum 11516</a> — VERIFIED</li>
+<li>New fault includes continuation/splay: <a href="https://community.drivendata.org/t/where-do-you-draw-the-line/11536">forum 11536</a> — VERIFIED</li>
+</ul>
+<p>Full pre-registered record: <a href="../research/hypotheses_round6.md">research/hypotheses_round6.md</a> — includes layers, signature, why missing, difference, ranking, gate protocol.</p>
+</main>
+<footer>Round 6 · pre-registered 2026-09-29 · real rasters · 4-fold validated (horse) · no slot spent.</footer>
+</body>
+</html>

@@ -787,3 +787,385 @@ def accommodation_corridors(
                        out=field[y0:y0 + arr.shape[0], x0:x0 + arr.shape[1]])
     field[t] = 0.0            # the hypothesis is about the *unmapped* corridor interior
     return field
+
+
+# ---------------------------------------------------------------------------
+# Round 6 — new hypotheses (see research/hypotheses_round6.md)
+# ---------------------------------------------------------------------------
+
+def _outward_direction_tip(trace: np.ndarray, ey: int, ex: int):
+    """Unit outward vector (east, south) from trace interior through tip."""
+    t = np.asarray(trace, dtype=bool)
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dy == 0 and dx == 0:
+                continue
+            yy, xx = ey + dy, ex + dx
+            if 0 <= yy < t.shape[0] and 0 <= xx < t.shape[1] and t[yy, xx]:
+                n = float(np.hypot(dy, dx))
+                if n == 0:
+                    continue
+                # outward = - interior direction
+                return np.array([-dx / n, -dy / n], dtype=np.float32)  # (east, south)
+    return None
+
+
+def horsetail_splay_field(
+    trace: np.ndarray,
+    elev_slope: np.ndarray | None = None,
+    det_elev: np.ndarray | None = None,
+    *,
+    radius_px: float = 20.0,
+    half_angle_deg: float = 60.0,
+    sigma_angle_deg: float = 35.0,
+) -> np.ndarray:
+    """R6-1: horsetail splay fan at fault terminations.
+
+    For each endpoint pixel, emit a 120° fan (half-angle 60°) of radius
+    radius_px outward from the tip. Weight decays linearly with distance and
+    with angular deviation from the outward direction (Gaussian in angle).
+    The fan marks where distributed horsetail splays would occur — minor faults
+    with minimal surface rupture that are difficult to recognize even with lidar
+    (Faulds et al. 2026, S14) and that the catalogue omits.
+    """
+    t = np.asarray(trace, dtype=bool)
+    field = np.zeros(t.shape, dtype=np.float32)
+    if not t.any():
+        return field
+    ends = endpoint_mask(t)
+    ys, xs = np.nonzero(ends)
+    if ys.size == 0:
+        return field
+    strike, _conf = local_strike(t, window=9)
+    R = float(radius_px)
+    half_rad = np.radians(float(half_angle_deg))
+    cos_half = float(np.cos(half_rad))
+    sigma_rad = np.radians(float(sigma_angle_deg))
+    # optional modulation by slope magnitude
+    slope_mod = None
+    if elev_slope is not None:
+        s = np.nan_to_num(np.asarray(elev_slope, dtype=np.float32), nan=0.0)
+        # normalize to [0,1] via percentile
+        lo, hi = np.percentile(s[np.isfinite(s)], [10, 90]) if np.isfinite(s).any() else (0.0, 1.0)
+        if hi > lo:
+            slope_mod = np.clip((s - lo) / (hi - lo + 1e-9), 0.0, 1.0)
+    for ey, ex in zip(ys, xs):
+        outward = _outward_direction_tip(t, int(ey), int(ex))
+        if outward is None:
+            continue
+        # outward is (east, south) = (dx_col, dy_row)
+        # ensure we have a finite strike at tip, else use outward as strike proxy
+        # (no additional filtering on strike confidence for now)
+        r = int(np.ceil(R))
+        y0, y1 = max(int(ey) - r, 0), min(int(ey) + r + 1, t.shape[0])
+        x0, x1 = max(int(ex) - r, 0), min(int(ex) + r + 1, t.shape[1])
+        if y1 <= y0 or x1 <= x0:
+            continue
+        yy, xx = np.mgrid[y0:y1, x0:x1]
+        vy = yy - int(ey)  # south
+        vx = xx - int(ex)  # east
+        d = np.hypot(vy, vx).astype(np.float32)
+        # avoid division by zero at tip itself
+        with np.errstate(invalid="ignore", divide="ignore"):
+            cosang = (vx * outward[0] + vy * outward[1]) / np.where(d > 0, d, 1.0)
+        wedge = (d > 1.0) & (d <= R) & (cosang >= cos_half)
+        if not wedge.any():
+            continue
+        # distance decay
+        w_dist = np.clip(1.0 - d / R, 0.0, 1.0)
+        # angular decay: Gaussian in angle difference
+        # angle = arccos(cosang), weight = exp(-0.5*(angle/sigma)^2)
+        ang = np.arccos(np.clip(cosang, -1.0, 1.0))
+        w_ang = np.exp(-0.5 * (ang / (sigma_rad + 1e-9)) ** 2)
+        val = (w_dist * w_ang).astype(np.float32)
+        if slope_mod is not None:
+            # modulate by local slope magnitude (scarplet presence)
+            patch_mod = slope_mod[y0:y1, x0:x1]
+            # keep at least 0.3 even where slope low (horsetails are low amplitude)
+            val = val * (0.3 + 0.7 * patch_mod)
+        patch = np.where(wedge, val, 0.0).astype(np.float32)
+        # max over all tips
+        field[y0:y1, x0:x1] = np.maximum(field[y0:y1, x0:x1], patch)
+    # strictly off-trace
+    field[t] = 0.0
+    # light smoothing so fan is continuous
+    field = ndimage.gaussian_filter(field, sigma=1.0).astype(np.float32)
+    field[t] = 0.0
+    return field
+
+
+def intersection_halos(
+    trace: np.ndarray,
+    shear: np.ndarray | None = None,
+    dilation: np.ndarray | None = None,
+    *,
+    strike_window: int = 9,
+    high_angle_deg: float = 45.0,
+    near_miss_px: float = 20.0,
+    halo_sigma_px: float = 10.0,
+    max_pairs: int = 500,
+) -> np.ndarray:
+    """R6-2: normal × strike-slip intersection halos.
+
+    Detects (a) true junctions where strike variance > high_angle_deg and
+    (b) near-miss tip pairs within near_miss_px whose strikes differ by > high_angle_deg.
+    Emits Gaussian halos weighted by shear × dilation (geodetic strain).
+    """
+    t = np.asarray(trace, dtype=bool)
+    field = np.zeros(t.shape, dtype=np.float32)
+    if not t.any():
+        return field
+    # --- (a) junction-based high-angle intersections ---
+    k = np.ones((3, 3), dtype=np.uint8)
+    neigh = ndimage.convolve(t.astype(np.uint8), k, mode="constant", cval=0) - t.astype(np.uint8)
+    junctions = t & (neigh >= 3)
+    candidate = np.zeros(t.shape, dtype=bool)
+    if junctions.any():
+        strike, _conf = local_strike(t, window=strike_window)
+        # strike is NaN off-trace; we sample in a window around each junction
+        # for efficiency, compute circular variance via structure tensor of strike?
+        # Simple: for each junction, collect strikes of trace pixels in 5x5 window
+        ys, xs = np.nonzero(junctions)
+        # precompute strike as unit vectors double angle (mod 180 -> mod 360)
+        st_rad = np.radians(np.nan_to_num(strike, nan=0.0) * 2.0)
+        # for each junction, look at window
+        for y, x in zip(ys, xs):
+            y0, y1 = max(y - 2, 0), min(y + 3, t.shape[0])
+            x0, x1 = max(x - 2, 0), min(x + 3, t.shape[1])
+            window_traces = t[y0:y1, x0:x1]
+            if window_traces.sum() < 3:
+                continue
+            vals = strike[y0:y1, x0:x1][window_traces]
+            vals = vals[np.isfinite(vals)]
+            if vals.size < 2:
+                continue
+            # circular difference max
+            # compute max pairwise difference mod 180
+            diffs = []
+            for i in range(len(vals)):
+                for j in range(i + 1, len(vals)):
+                    d = abs(float(vals[i] - vals[j])) % 180.0
+                    d = min(d, 180.0 - d)
+                    diffs.append(d)
+            if not diffs:
+                continue
+            if max(diffs) >= high_angle_deg:
+                candidate[y, x] = True
+    # --- (b) near-miss high-angle tip pairs ---
+    # reuse relay_corridors logic but inverted strike condition
+    lab, n = ndimage.label(t, structure=np.ones((3, 3), dtype=int))
+    if n >= 2:
+        objs = ndimage.find_objects(lab)
+        tips = []
+        for cid in range(1, n + 1):
+            sl = objs[cid - 1]
+            if sl is None:
+                continue
+            yy, xx = np.nonzero(lab[sl] == cid)
+            yy = yy + sl[0].start
+            xx = xx + sl[1].start
+            if yy.size < 2:
+                continue
+            pts = np.stack([yy, xx], axis=1).astype(np.float32)
+            c = pts.mean(axis=0)
+            q = pts - c
+            evals, evecs = np.linalg.eigh(q.T @ q)
+            axis = evecs[:, int(np.argmax(evals))]
+            strike = float((np.degrees(np.arctan2(axis[1], axis[0])) + 360.0) % 180.0)
+            # tips = extremes
+            proj = q @ axis
+            i0, i1 = int(np.argmin(proj)), int(np.argmax(proj))
+            tips.append((pts[i0], pts[i1], strike, cid))
+        if len(tips) >= 2:
+            tip_pts = np.array([p for a, b, _s, _c in tips for p in (a, b)], dtype=np.float32)
+            tree = cKDTree(tip_pts)
+            pairs = tree.query_pairs(r=float(near_miss_px), output_type="ndarray")
+            for i, j in pairs:
+                ca, cb = i // 2, j // 2
+                if ca == cb:
+                    continue
+                (a0, a1, sa, _), (b0, b1, sb, _) = tips[ca], tips[cb]
+                sd = abs(sa - sb) % 180.0
+                sd = min(sd, 180.0 - sd)
+                if sd < high_angle_deg:
+                    continue
+                # mark both tips as candidate intersections
+                for pt in (a0, a1, b0, b1):
+                    y, x = int(pt[0]), int(pt[1])
+                    if 0 <= y < t.shape[0] and 0 <= x < t.shape[1]:
+                        # check if tips are within near_miss_px of each other
+                        # (we already know at least one pair is, but mark all)
+                        candidate[y, x] = True
+    # --- halo emission ---
+    if not candidate.any():
+        return field
+    # Gaussian blur of candidate points
+    halo = ndimage.gaussian_filter(candidate.astype(np.float32), sigma=halo_sigma_px)
+    # geodetic weighting
+    weight = np.ones(t.shape, dtype=np.float32)
+    if shear is not None:
+        s = np.nan_to_num(np.asarray(shear, dtype=np.float32), nan=0.0)
+        # robust to [0,1]
+        if np.isfinite(s).any():
+            lo, hi = np.percentile(s[np.isfinite(s)], [5, 95])
+            if hi > lo:
+                sn = np.clip((s - lo) / (hi - lo + 1e-9), 0.0, 1.0)
+                weight = weight * (0.3 + 0.7 * sn)
+    if dilation is not None:
+        d = np.nan_to_num(np.asarray(dilation, dtype=np.float32), nan=0.0)
+        if np.isfinite(d).any():
+            lo, hi = np.percentile(d[np.isfinite(d)], [5, 95])
+            if hi > lo:
+                dn = np.clip((d - lo) / (hi - lo + 1e-9), 0.0, 1.0)
+                weight = weight * (0.3 + 0.7 * dn)
+    field = (halo * weight).astype(np.float32)
+    field[t] = 0.0
+    return field
+
+
+def conductive_base_step(
+    cond_surf: np.ndarray | None,
+    depth_to_base: np.ndarray | None,
+    tmi: np.ndarray | None = None,
+    grav_hg: np.ndarray | None = None,
+    *,
+    hgm_percentile: float = 90.0,
+    cond_percentile: float = 80.0,
+    mag_low_percentile: float = 20.0,
+) -> np.ndarray:
+    """R6-3: conductive-base step / clay-cap edge."""
+    # need at least cond and depth
+    if cond_surf is None or depth_to_base is None:
+        # return zeros shaped like whichever is available, or empty
+        if cond_surf is not None:
+            return np.zeros(np.shape(cond_surf), dtype=np.float32)
+        if depth_to_base is not None:
+            return np.zeros(np.shape(depth_to_base), dtype=np.float32)
+        return np.zeros((1, 1), dtype=np.float32)
+    # work with finite-filled arrays
+    cond = np.nan_to_num(np.asarray(cond_surf, dtype=np.float32), nan=0.0)
+    depth = np.nan_to_num(np.asarray(depth_to_base, dtype=np.float32), nan=0.0)
+    shape = cond.shape
+    # HGM of depth_to_base
+    gy, gx = np.gradient(depth)
+    hgm_depth = np.hypot(gx, gy).astype(np.float32)
+    if not np.isfinite(hgm_depth).any():
+        return np.zeros(shape, dtype=np.float32)
+    thresh_hgm = np.percentile(hgm_depth[np.isfinite(hgm_depth)], hgm_percentile)
+    hgm_high = hgm_depth >= thresh_hgm
+    thresh_cond = np.percentile(cond[np.isfinite(cond)], cond_percentile)
+    cond_high = cond >= thresh_cond
+    mag_low = None
+    if tmi is not None:
+        mag = np.nan_to_num(np.asarray(tmi, dtype=np.float32), nan=0.0)
+        if np.isfinite(mag).any():
+            thresh_mag = np.percentile(mag[np.isfinite(mag)], mag_low_percentile)
+            mag_low = mag <= thresh_mag
+    # coincidence: HGM ridge near cond high (and mag low if available)
+    # dilate cond_high by 5 px to allow near coincidence
+    cond_dil = ndimage.binary_dilation(cond_high, iterations=5)
+    if mag_low is not None:
+        mag_dil = ndimage.binary_dilation(mag_low, iterations=5)
+        coincidence = hgm_high & cond_dil & mag_dil
+    else:
+        coincidence = hgm_high & cond_dil
+    if not coincidence.any():
+        return np.zeros(shape, dtype=np.float32)
+    # distance decay from coincidence
+    dist = ndimage.distance_transform_edt(~coincidence).astype(np.float32)
+    # Gaussian-like decay: exp(-dist^2 / (2*sigma^2)), sigma=5 px
+    sigma = 5.0
+    field = np.exp(-0.5 * (dist / sigma) ** 2).astype(np.float32)
+    field[~np.isfinite(cond)] = 0.0
+    # weight by cond magnitude
+    cond_norm = np.clip((cond - thresh_cond) / (np.percentile(cond, 95) - thresh_cond + 1e-9), 0.0, 1.0) if np.isfinite(cond).any() else 0.0
+    field = field * (0.5 + 0.5 * cond_norm)
+    return field.astype(np.float32)
+
+
+def paleo_shoreline_suppression(
+    det_elev: np.ndarray | None,
+    det_elev_slope: np.ndarray | None,
+    grav_hg: np.ndarray | None = None,
+    *,
+    coherence_thresh: float = 0.65,
+    slope_low_percentile: float = 30.0,
+) -> dict:
+    """R6-5: paleo-lake shoreline mask + sub-lake fault enhancement.
+
+    Returns dict with 'shoreline_mask' and 'sublake_enhanced'.
+    """
+    if det_elev is None:
+        return {}
+    elev = np.nan_to_num(np.asarray(det_elev, dtype=np.float32), nan=0.0)
+    shape = elev.shape
+    # structure tensor for coherence
+    try:
+        strike, coh, _energy = structure_tensor(elev, sigma=2.0)
+    except Exception:
+        coh = np.zeros(shape, dtype=np.float32)
+        strike = np.zeros(shape, dtype=np.float32)
+    # slope low
+    if det_elev_slope is not None:
+        slope = np.nan_to_num(np.asarray(det_elev_slope, dtype=np.float32), nan=0.0)
+        if np.isfinite(slope).any():
+            thresh_slope = np.percentile(slope[np.isfinite(slope)], slope_low_percentile)
+            slope_low = slope <= thresh_slope
+        else:
+            slope_low = np.ones(shape, dtype=bool)
+    else:
+        slope_low = np.ones(shape, dtype=bool)
+    shoreline = (coh >= coherence_thresh) & slope_low
+    # sub-lake: detrended elev < 0 (valley bottom) and grav_hg high
+    sublake = np.zeros(shape, dtype=np.float32)
+    if grav_hg is not None:
+        gh = np.nan_to_num(np.asarray(grav_hg, dtype=np.float32), nan=0.0)
+        if np.isfinite(gh).any():
+            thresh_gh = np.percentile(gh[np.isfinite(gh)], 90.0)
+            gh_high = gh >= thresh_gh
+            # valley bottom: elev < 0 (detrended)
+            valley = elev < 0
+            sublake_mask = valley & gh_high
+            # distance from shoreline: enhance where not near shoreline?
+            if shoreline.any():
+                dist_shore = ndimage.distance_transform_edt(~shoreline).astype(np.float32)
+                # weight decays near shoreline (shoreline itself is FP, not fault)
+                w = 1.0 - np.exp(-0.5 * (dist_shore / 10.0) ** 2)
+                sublake = np.where(sublake_mask, w, 0.0).astype(np.float32)
+            else:
+                sublake = sublake_mask.astype(np.float32)
+    return {
+        "shoreline_mask": shoreline.astype(np.float32),
+        "sublake_enhanced": sublake.astype(np.float32),
+        "shoreline_dist": ndimage.distance_transform_edt(~shoreline).astype(np.float32) if shoreline.any() else np.full(shape, 1e6, dtype=np.float32),
+    }
+
+
+def slip_dilation_tendency_field(
+    trace: np.ndarray,
+    slip_path: str | None = None,
+    dilation_path: str | None = None,
+    shapefile_dir: str = "data/external",
+) -> dict:
+    """R6-4: slip & dilation tendency from external INGENIOUS release.
+
+    If the external shapefile is not present, returns empty dict and logs FLAG.
+    The shapefile is expected at data/external/Shapefile_INGENIOUS area/...
+    with fields slip_tendency and dilation_tendency (0-1).
+    This function is a placeholder for the real rasterization which requires
+    geopandas + rasterio on an unrestricted machine.
+    """
+    # check if external files exist
+    import os
+    from pathlib import Path
+    base = Path(shapefile_dir)
+    # look for any .shp containing slip
+    shp_candidates = list(base.rglob("*.shp"))
+    if not shp_candidates:
+        return {}  # external data not present — caller should FLAG
+    # if present, we would rasterize here; for now return empty to avoid heavy dep
+    # Real implementation would:
+    #   gdf = geopandas.read_file(shp)
+    #   rasterize with rasterio.features.rasterize onto competition grid
+    #   then compute field = dilation * slip * (1 - catalogue_proximity)
+    return {}
