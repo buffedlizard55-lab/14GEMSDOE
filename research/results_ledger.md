@@ -392,3 +392,51 @@ the pinned rows exactly):
   F5 warnings retained by design (score 0.1563 ties ≠ artifact identity).
 - Payload pixels unchanged (aa966e56); only the header `Source:` name moved
   from the lost 01:28 filename to the rebuilt one.
+
+## Round-7 gate 8 (2026-09-29) — R7-2 PROMOTED; horse7 fails the sparse rule, horse artifact stands
+
+**Command (`/tmp/run_gates5.sh`, exit 0, wall ~44 min):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_stitch geom_horse horse7 --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round7_stitch_horse7.json
+```
+`geom` and `geom_horse` reproduce the pinned fold rows exactly (protocol
+equivalence across the 5th consecutive gate). File:
+`artifacts/holdout_round7_stitch_horse7.json`.
+
+| Fold | geom | geom_stitch (R7-2) | geom_horse | horse7 |
+|------|------|--------------------|-----------|--------|
+| 0 | 0.0381/0.0165/0.0006 | 0.0435/0.0192/0.0037 | 0.0627/0.0211/0.0041 | 0.0681/0.0184/0.0080 |
+| 1 | 0.0381/0.0145/0.0006 | 0.0333/0.0131/0.0011 | 0.0659/0.0233/0.0041 | 0.0754/0.0266/0.0073 |
+| 2 | 0.0333/0.0142/0.0000 | 0.0359/0.0171/0.0018 | 0.0494/0.0206/0.0019 | 0.0723/0.0192/0.0097 |
+| 3 | 0.0444/0.0153/0.0002 | 0.0487/0.0178/0.0019 | 0.0715/0.0215/0.0059 | 0.0748/0.0220/0.0062 |
+| **Mean** | 0.0385/0.0151/0.0003 | **0.0403/0.0168/0.0021** | 0.0624/0.0217/0.0040 | **0.0727/0.0215/0.0078** |
+| Wins vs bench | — | **sparse 3/4, far 4/4 → R7-2 PROMOTED** | — | **sparse 2/4, far 4/4 → slot rule FAILS** |
+
+**R7-2 pre-registered continuation-subset report** (same gate, split ids + fold
+fields, `artifacts/continuation_subset_r7stitch*.json`; subset = TEST
+components with an endpoint within 20 px of a visible endpoint and strike
+within 30°; 52.5 % of TEST px):
+
+| arm | subset dense | continuation | isolated |
+|-----|--------------|--------------|----------|
+| geom | 0.0385 | 0.0427 | 0.0138 |
+| geom_stitch | 0.0403 | 0.0428 | **0.0164** (+19 %) |
+| geom_horse | 0.0623 | 0.0565 | 0.0272 |
+| horse7 | 0.0727 | 0.0610 | 0.0294 |
+
+The bridge's gain is in the *isolated* remainder, not the 20-px continuation
+window — its 48-px walk reaches past the diagnostic's tip window exactly as the
+earlier subset analysis predicted ("the isolated remainder is where R7-2's
+bridge must reach"). All five round-7 hypotheses are now decided: R7-1/2/3/5
+PROMOTED, R7-4 killed.
+
+**horse7 decision:** mean dense +0.0103 and far nearly double vs horse, but
+sparse loses on folds 0 and 2 (−0.0027, −0.0014; CALIB drifted to topk:0.02 on
+those folds — the wider budget dilutes sparse-at-t). The pre-registered
+fold-wise rule is not bent for better means (same outcome as all6). **The
+built horse artifact remains the single upload candidate** (b9d51ebb /
+pred aa966e56, uniqueness audit PASS, zero uploads). Next ensemble attempt
+should target sparse stability (e.g. a sparse-constrained CALIB policy) rather
+than more channels.
