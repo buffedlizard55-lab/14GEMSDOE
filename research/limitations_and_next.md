@@ -32,35 +32,55 @@ performance.
 
 ## B. Next-session work (in priority order)
 
-1. **Land the data (B1), then re-run BOTH gates on the real rasters**
-   (`scripts/validate_round2.py` and `scripts/validate_round3.py` run unchanged
-   once `data/processed/` exists). Deliverable: the arm tables computed on real
-   labels, BLEND-MUL re-measured as the incumbent; nothing may be uploaded
-   until it does.
-2. **Only then spend a weekly slot**, with
-   `scripts/build_submission.py --policy "bmul w0.5 holdout<VALUE>"` and
-   `scripts/check_submission_uniqueness.py` run first (exit 0 required).
-   **Upload the FINITE (0.0-outside) file** — the NaN variant is known-rejected
-   (T9/FLAG #10).
-3. **R3E prior-overlap test first**: when the INGENIOUS slip/dilation raster
-   lands, compute the pixel-level overlap between the tendency field and the
-   classifier's confident support BEFORE any gate run (the round-3 null makes
-   this the mandatory first step for every prior-extension proposal).
-4. **Scale `strike_field` and `relay_corridors` to the full grid** (tiled
-   convolutions; KD-tree pruning). Currently correct but tuned for ≤1k-component
-   synthetic regions.
-5. **U-Net port** (reference notebook) with hide-and-recover batches: hide
-   components per sample rather than per epoch; keep the same hidden-recovery
-   scoring; reference hyperparameters recorded (C24); the reference trains on
-   the known-fault population with no masking (C25) — a floor to beat.
-6. **Masking diagnostic slot** (S5-style catalogue-hedge probe) — only when the
-   slot budget is otherwise unused; interpretation written *before* upload.
-7. **Site payload swap:** after the first real validated submission,
-   `build_site_payload.py submissions/GEMS_….tif` and confirm the banner flips
-   from DEMO to the real artifact hash.
-8. **Leaderboard feed:** schedule `scripts/refresh_leaderboard.py` (locally or
-   via GitHub Action on a runner with network) so the snapshot stays current.
+*Updated 2026-09-29. The real rasters are in play now (B1 closed — see
+`research/real_data_unlock.md`), so the queue below is the real-data queue. **The
+sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`,
+`data/processed/` and `artifacts/*` (except the three whitelisted JSONs) do NOT
+survive a session reset.** Rebuild them first; the whole restore is one command
+block (see `README.md` Quickstart).*
 
+1. **Re-run the round-5 real gate to completion** (it was interrupted after 2 of
+   4 folds; interim table in `research/results_ledger.md`):
+   ```bash
+   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+     --arms geom geo geom_ramp geom_acc geom_tilt geom_curv geom_gap all \
+     --n-pos 20000 --n-neg 40000 --iters 150 --out artifacts/holdout_real.json
+   ```
+   ~25 min on this box (2 vCPU). Then the emission sweep:
+   `./.venv/bin/python scripts/sweep_real.py --gate artifacts/holdout_real.json
+   --out artifacts/emission_sweep.json`. Apply the pre-registered promote rule
+   (beat `geom` on **sparse AND far** in ≥3 of 4 folds). R5-4/R5-5 are the arms
+   to watch; the interim record has R5-4 winning both protocols in both folds
+   finished.
+2. **Then, and only then, spend one slot** on the winner via
+   `scripts/build_real_submission.py` (which selects the arm, averages the four
+   fold fields, emits at the CALIB-calibrated budget, and calls
+   `scripts/build_submission.py` for clamping/naming/the format gate).
+   `scripts/check_submission_uniqueness.py` must exit 0 first; the upload must be
+   the finite variant.
+3. **Fix `scripts/train_real_full.py`** — it still calls the pre-rewrite
+   `validate_real` API (`vr.geo_channels`, `sample_training_pixels`,
+   `ARM_EXTRA`, …) and cannot run. Intended purpose: train on the FULL catalogue
+   (no hide-out) and dump `artifacts/pred_<arm>.npy` for the submission builder.
+   ~1 h.
+4. **Swap the site payload to the real field** once a real submission exists:
+   `scripts/build_site_payload.py submissions/GEMS_*.tif`, then confirm the DEMO
+   banner disappears (`docs/js/payload.js` records `kind=demo|real`). The site
+   currently ships the demo payload and says so.
+5. **Feed maintenance:** run `scripts/refresh_leaderboard.py` against the live
+   leaderboard each session (2 entries in `research/leaderboard_snapshot.json`);
+   a scheduled GitHub Action on the team runner would remove the manual step.
+6. **U-Net port** (reference notebook) — still the biggest expected jump; needs
+   a GPU-class box or a long CPU budget that this sandbox does not have.
+7. **External layers** (3DEP 1 m DEM tiles, palaeo-shoreline masks, INGENIOUS
+   slip/dilation tendency): the hosts are on the sandbox block list. The named
+   free official sources with check dates are in `research/knowledge_base.md` §3;
+   bring them in through the team's GitHub runner, exactly as the rasters came in
+   (`scripts/bridge_team_mirror.sh` is the template: fetch → split → hash-pin).
+8. **R3E prior-overlap test** stays mandatory before any prior-extension
+   proposal (the round-3 null stands).
+
+## C. Irregularities flagged for human review
 ## C. Irregularities flagged for human review
 
 1. **FLAG #1 — sandbox network policy, RE-MEASURED (T8).** From bash, only
@@ -150,6 +170,37 @@ performance.
   **102/102**, including exact prediction-hash and score-tie-warning tests.
   This does not validate competition performance because real rasters/labels are
   still absent.
+
+## C2b. Session log — 14GEMSDOE (2026-09-28/29, round 5, real data)
+
+* **Pass 1 (implement + verify).** Real rasters recovered through the team's
+  GitHub mirror and SHA-256-verified (`research/real_data_unlock.md`); five new
+  hypotheses pre-registered (`research/hypotheses_round5.md`); channels
+  implemented in `gems/realchannels.py` (+10 unit tests); `scripts/validate_real.py`
+  rewritten around a two-view hide-and-recover protocol and a CALIB-chosen
+  emission policy; `scripts/sweep_real.py` and `scripts/build_real_submission.py`
+  added; `research/artifact_audit.md` rewritten on re-derived hashes.
+* **Pass 2 (review, find bugs, fix).** Six real bugs caught and fixed before the
+  gate: (a) `np.nan_to_num` missing in `design_matrix` → NaN columns poisoned
+  standardisation and produced all-zero scores; (b) float16 overflow in 12
+  geometry channels (`dist_endpoint` > 65,504) → per-channel guarded cast;
+  (c) the training view leaked the targets (it *included* TEST/HIDE) → split into
+  a train view (TEST+HIDE removed) and a prediction view (catalogue minus TEST);
+  (d) two full geometry views held simultaneously → ~2× memory → two-phase fold
+  loop (train all arms, free, then predict all arms); (e) `np.save` writing
+  `fold0_truth.npz.npy` where `np.savez` was meant; (f) NMS `taken` mask
+  indexing. Also corrected two documentation errors: the learner is weighted
+  logistic regression, *not* "HistGradientBoosting-equivalent"; and
+  `scripts/verify_real_data.py` compared affine-order against GDAL-order
+  transforms, producing a false FAIL.
+* **Pass 3 (re-check against the request).** Re-ran the smoke gate and the
+  sweep end-to-end before committing; re-verified the real-data hashes; re-read
+  the standing prompt. Result of the full gate rerun: **interrupted at fold 2 by
+  an environment reset** (see B.1 and the ledger); nothing promoted, nothing
+  killed, no slot spent.
+* **Environment reset (2026-09-29).** The workspace came back with tracked files
+  only. `data/raw/` (419 MB), `data/processed/`, `.venv/` and the gate fields had
+  to be rebuilt. This is now documented in README Quickstart step 0.
 
 ## D. Standing decisions (do not relitigate without new evidence)
 

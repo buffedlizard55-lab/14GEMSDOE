@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artifact audit — why 0.1563 kept appearing — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
+  <a href="hypotheses-round5.html">Hypotheses (round 5)</a>
+  <a href="audit.html" class="active">Artifact audit</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Artifact audit — why 0.1563 kept appearing</h1>
+<p class="lede">The question was blunt: <em>are we copying the same work over and
+over?</em> The answer is now measurable, because every scored artifact the group
+ever uploaded is available as a file. This page reports the hashes, the pixel
+comparisons, and exactly what is proven versus merely inferred.</p>
+
+<div class="note"><strong>Result in one line.</strong> GEMSDOE and 5GEMSDOE
+published <em>byte-identical</em> submission files (same git blob SHA-1, same
+570,890 bytes, same SHA-256) — so if both accounts uploaded what their sites
+publish, the identical score is not a coincidence, it is the same pixels. The
+group's eight other scored artifacts are all <em>different</em> prediction arrays;
+the real defect was not duplication of files but duplication of <em>idea</em>:
+eight fields, one emission style, two of them 94 % overlapping.</div>
+
+<h2>1. The identity proof</h2>
+<table>
+<tr><th>Evidence</th><th>Value</th></tr>
+<tr><td><code>data/evidence/runs/ens12-adopted-floor0.1-w0/submission.tif</code> — git blob SHA-1 in <code>buffedlizard55-lab/GEMSDOE</code></td><td><code>812e61b74050d1350cc2bde1fab0c76ead32e0c4</code></td></tr>
+<tr><td>same path — git blob SHA-1 in <code>buffedlizard55-lab/5GEMSDOE</code></td><td><code>812e61b74050d1350cc2bde1fab0c76ead32e0c4</code></td></tr>
+<tr><td>file size in both repositories</td><td>570,890 bytes</td></tr>
+<tr><td>SHA-256 of the file (re-hashed here; identical to the scored copy vendored in 7GEMSDOE)</td><td><code>7f00890a62878d612fb5eef67a9a364a2df819433dde74b6762ce4fc0fc4fe15</code></td></tr>
+<tr><td><code>docs/submission_field.bin</code> (the payload both websites ship)</td><td>identical git blob SHA-1 <code>6a89b64e01a7c11b8235449c538390ac3435605d</code>, 532,072 bytes</td></tr>
+</table>
+<p>A git blob SHA-1 is a <em>content</em> hash. Identical values mean identical
+bytes, independent of timestamps or commit history. Reproduce with:</p>
+<pre><code>python3 scripts/audit_scored_artifacts.py --fetch-scored
+# or against the vendored copies:
+python3 scripts/audit_scored_artifacts.py /path/to/external/scored/*.tif \
+        --json artifacts/scored_artifact_audit.json</code></pre>
+<p><strong>What this does not prove:</strong> which file each account actually
+uploaded. DrivenData submission IDs and upload binaries exist in none of the
+group's repositories. Artifact-level identity is proven; upload-level identity is
+inferred from group records. Nothing on this page claims more than that.</p>
+
+<h2>2. Are the eight scored artifacts different work?</h2>
+<table>
+<tr><th>Artifact</th><th>Public score</th><th>Bytes</th><th>Prediction-array SHA-256 (prefix)</th><th>Positives</th><th>On catalogue</th><th>Within 300 m</th><th>Jaccard ≥ 0.9 with</th></tr>
+<tr><td>gems6-hgb88-topk03</td><td>0.0286</td><td>1,652,883</td><td><code>74e1bd986d23a37d…</code></td><td>155,021</td><td>23,605</td><td>73.1 %</td><td>—</td></tr>
+<tr><td>gemsdoe1-ens12</td><td><strong>0.1563</strong></td><td>570,890</td><td><code>cc063e629aec10ea…</code></td><td>172,974</td><td>6,455</td><td>21.6 %</td><td>#3</td></tr>
+<tr><td>gemsdoe2-dual-union</td><td>0.1560</td><td>568,065</td><td><code>e6483ccef108bfe8…</code></td><td>183,642</td><td>7,693</td><td>23.2 %</td><td>#2</td></tr>
+<tr><td>gemsdoe3-pindrop-discovery</td><td>0.0830</td><td>777,446</td><td><code>73ac14d815b4c206…</code></td><td>155,021</td><td>0</td><td>8.5 %</td><td>—</td></tr>
+<tr><td>gemsdoe3-pindrop-nodes</td><td>0.1193</td><td>777,822</td><td><code>9e0084c3ed3da5b3…</code></td><td>155,021</td><td>0</td><td>8.8 %</td><td>—</td></tr>
+<tr><td>gemsdoe3-pindrop-ridge</td><td>0.1152</td><td>651,948</td><td><code>e45fc88ed2d69059…</code></td><td>155,021</td><td>0</td><td>19.5 %</td><td>—</td></tr>
+<tr><td>gemsdoe3-sgmc-gap <em>(never uploaded)</em></td><td>—</td><td>426,346</td><td><code>b21d53e97e6df340…</code></td><td>61,664</td><td>0</td><td>0.0 %</td><td>—</td></tr>
+<tr><td>gemsdoe4-combined</td><td>0.0343</td><td>505,882</td><td><code>b7f8d297a5f2cb3a…</code></td><td>264,247</td><td>5,924</td><td>14.7 %</td><td>—</td></tr>
+</table>
+<p><strong>8 files, 8 distinct prediction arrays.</strong> The group has not been
+re-uploading one raster. Two qualifications matter:</p>
+<ol>
+<li><strong>#2 and #3 are near-duplicates in content</strong> — Jaccard 0.94 on
+their positive-pixel sets, scores 0.1563 vs 0.1560. Different bytes, same idea,
+0.0003 apart.</li>
+<li><strong>Every field is binary and thin</strong> (mass equals the number of
+positive pixels; 1.2–5.1 % of the 5.17 M-pixel footprint). The metric algebra
+(see <a href="hypotheses-round5.html">round 5</a>) shows binary emission is right
+<em>given</em> a support, so the whole history has been a search over supports —
+at a frozen emission style.</li>
+</ol>
+
+<h2>3. What the scores reveal</h2>
+<ul>
+<li><strong>Selection moves the score; budget does not.</strong> The three
+"pindrop" submissions used an identical budget of exactly <strong>155,021
+pixels</strong> and scored 0.0830, 0.1152 and 0.1193 — a spread of 0.036 from
+nothing but the spatial choice, larger than any feature round the group has run.</li>
+<li><strong>Catalogue-hugging is the worst strategy.</strong> The field with 73 %
+of its mass inside 300 m of the catalogue scored <strong>0.0286</strong>; fields
+with 8–20 % catalogue overlap scored 3–4× higher. The scored population is the
+catalogue's <em>complement</em> (staff ruling: known USGS/INGENIOUS pixels are
+masked and excluded from evaluation).</li>
+<li><strong>A single submission can move 40 places.</strong> In the live
+leaderboard refresh during this session, <code>op01</code> went 0.1293 → 0.2489
+(#44 → #7) — so the plateau is an emission-policy problem, not a data problem.</li>
+</ul>
+
+<h2>4. The live leaderboard, checked today</h2>
+<p>Fetched directly from
+<a href="https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/">drivendata.org</a>
+(2026-09-28, rows 1–50; snapshot in <code>research/leaderboard_snapshot.json</code>):
+DARD 0.3168 #1 · alexoktaba 0.2993 · HardcoreTechGod 0.2854 · op01 0.2489 #7 ·
+DrivenData's own reference account <strong>#19 at 0.1847</strong> · and the
+<strong>0.1563 plateau at #27–29 = extradr19, SDCF9, smashi34</strong> (3/3/2
+submissions). No other row in the top 50 shows that score. The group's other
+rows: #34 wbg1 0.1461, #48 smrtdoog5 0.1193.</p>
+
+<h2>5. How a repeat can now never happen</h2>
+<ul>
+<li>Every build gets a unique name with the UTC timestamp and the artifact's
+own hash: <code>GEMS_&lt;policy&gt;_&lt;UTC&gt;_&lt;sha8&gt;.tif</code>, plus a
+<code>NOTE.txt</code> (the exact text for the DrivenData Note field) and a
+<code>MANIFEST.json</code> (policy, histogram, pixel SHA-256).</li>
+<li><code>scripts/check_submission_uniqueness.py</code> compares the
+<em>prediction-array</em> SHA-256 against every prior artifact and hard-fails on
+a collision — a repeated rounded score is only a warning, because a rounded
+score is not evidence of identity.</li>
+<li>The submission pipeline refuses to write a file with non-finite values or
+values outside [0, 1] — the exact rejection ("Predicted values must be in range
+[0, 1]") a teammate hit with a NaN-nodata upload.</li>
+</ul>
+<p>Full record with reproduction commands:
+<a href="../research/artifact_audit.md">research/artifact_audit.md</a>.</p>
+</main>
+<footer>Audit 2026-09-28 · hashes reproducible from the group's public repositories · no submission slot spent.</footer>
+</body>
+</html>
