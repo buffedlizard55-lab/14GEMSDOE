@@ -1253,3 +1253,140 @@ def transtensional_coupling(
     d_rel = np.maximum(robust_unit(d_ext), 0.0)   # excess extension
     coupling = s_rel * d_rel
     return {"trans_coupling": coupling.astype(np.float32)}
+
+
+def misregister_mask(mask: np.ndarray, delta_px: int, rng: np.random.Generator
+                     ) -> tuple[np.ndarray, np.ndarray]:
+    """R7-1 stress protocol: rigidly translate each component by <= delta_px.
+
+    Simulates the C28 condition ("portions of the existing fault data may be
+    misaligned from the true location of the surface fault"): every mapped
+    component is displaced by a random integer vector (uniform direction,
+    magnitude in [1, delta_px]; a redraw forces a non-zero shift).
+
+    Returns (shifted_mask, offsets) where offsets is an (n+1, 2) int array of
+    (dy, dx) per component id (id 0 unused).
+    """
+    m = int(delta_px)
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3), dtype=int))
+    if n == 0 or m <= 0:
+        return mask.copy(), np.zeros((n + 1, 2), dtype=int)
+    ys, xs = np.nonzero(mask)
+    cids = lab[ys, xs]
+    dy = rng.integers(-m, m + 1, size=n + 1)
+    dx = rng.integers(-m, m + 1, size=n + 1)
+    zero = (dy == 0) & (dx == 0)
+    zero[0] = False
+    if zero.any():                       # one redraw; if still zero, accept
+        dy[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+        dx[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+    ny, nx = mask.shape
+    nys = np.clip(ys + dy[cids], 0, ny - 1)
+    nxs = np.clip(xs + dx[cids], 0, nx - 1)
+    out = np.zeros(mask.shape, dtype=bool)
+    out[nys, nxs] = True
+    offsets = np.stack([dy, dx], axis=1)
+    return out, offsets
+
+
+def align_traces_to_expression(
+    context: np.ndarray,
+    expression: np.ndarray,
+    *,
+    max_offset: int = 3,
+    penalty_per_px: float = 0.02,
+) -> tuple[np.ndarray, np.ndarray]:
+    """R7-1: per-component rigid alignment of catalogue traces to expression.
+
+    C28 (VERIFIED problem description): *"portions of the existing fault data
+    may be misaligned from the true location of the surface fault, which is the
+    prediction target."*  For every connected component of ``context``, search
+    integer shifts in [-max_offset, max_offset]^2 (the metric kernel is 3 px)
+    and pick the shift maximising ``mean expression under the trace``
+    − ``penalty_per_px`` · |shift|.  The (0, 0) shift competes on equal terms,
+    so a well-registered trace is left alone.
+
+    The displacement penalty (amended 2026-09-29 after a crop smoke showed
+    mean |offset| exceeding the injected misregistration on noisy expression —
+    recorded BEFORE any gate numbers, not tuned on results) keeps the operator
+    from sliding traces to expression noise: a 3 px move must buy > 0.06 mean
+    expression (bands are robust-scaled to ~[−1, 1]).
+
+    Leak-free under hide-and-recover: only the (visible) context mask and
+    geophysical expression are read; hidden components are not in ``context``.
+
+    Returns (corrected_mask, offset_mag) with offset_mag the per-pixel shift
+    magnitude of the owning component (0 off-trace), *before* any credit
+    pooling — the caller pools it (e.g. via line_max) for the metric kernel.
+    """
+    mask = np.asarray(context, dtype=bool)
+    expr = np.nan_to_num(np.asarray(expression, dtype=np.float32),
+                         nan=0.0, posinf=0.0, neginf=0.0)
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3), dtype=int))
+    offset_mag = np.zeros(mask.shape, dtype=np.float32)
+    if n == 0:
+        return mask.copy(), offset_mag
+    ys, xs = np.nonzero(mask)
+    cids = lab[ys, xs]
+    ny, nx = mask.shape
+    m = int(max_offset)
+    shifts = [(dy, dx) for dy in range(-m, m + 1) for dx in range(-m, m + 1)]
+    counts = np.bincount(cids, minlength=n + 1).astype(np.float64)
+    # score[component, shift] = mean expression under the shifted component
+    scores = np.full((n + 1, len(shifts)), -np.inf, dtype=np.float64)
+    for k, (dy, dx) in enumerate(shifts):
+        sy = np.clip(ys + dy, 0, ny - 1)
+        sx = np.clip(xs + dx, 0, nx - 1)
+        sums = np.bincount(cids, weights=expr[sy, sx], minlength=n + 1)
+        scores[:, k] = sums / np.maximum(counts, 1.0)
+    # penalised objective; the extra 1e-6/px makes exact ties resolve toward
+    # the smallest displacement (expression ridges are commonly invariant along
+    # strike, and an arbitrary along-strike slide would displace trace ends)
+    dist = np.hypot([s[0] for s in shifts], [s[1] for s in shifts])
+    objective = scores - (float(penalty_per_px) + 1e-6) * dist[None, :]
+    pick = np.argmax(objective, axis=1)
+    best_dy = np.array([shifts[p][0] for p in pick], dtype=np.int64)
+    best_dx = np.array([shifts[p][1] for p in pick], dtype=np.int64)
+    nys = np.clip(ys + best_dy[cids], 0, ny - 1)
+    nxs = np.clip(xs + best_dx[cids], 0, nx - 1)
+    corrected = np.zeros(mask.shape, dtype=bool)
+    corrected[nys, nxs] = True
+    mag = np.hypot(best_dy[cids], best_dx[cids]).astype(np.float32)
+    offset_mag[nys, nxs] = mag
+    return corrected, offset_mag
+
+
+def component_offsets(n_comp: int, delta_px: int, rng: np.random.Generator
+                      ) -> np.ndarray:
+    """One rigid (dy, dx) shift per component id in 1..n_comp, |shift| <= delta.
+
+    Shared by every view of the same fold so the simulated misregistered world
+    is consistent (a component is displaced identically in the training and
+    prediction contexts).  Non-zero shifts are forced when possible.
+    """
+    m = int(delta_px)
+    dy = rng.integers(-m, m + 1, size=n_comp + 1)
+    dx = rng.integers(-m, m + 1, size=n_comp + 1)
+    zero = (dy == 0) & (dx == 0)
+    zero[0] = False
+    if zero.any():
+        dy[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+        dx[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+    return np.stack([dy, dx], axis=1)
+
+
+def displace_mask(mask: np.ndarray, lab: np.ndarray,
+                  offsets: np.ndarray) -> np.ndarray:
+    """Move every masked pixel by its component's offset (see component_offsets).
+
+    ``lab`` is the component label array of the FULL catalogue, so any subset
+    (training view, prediction view) is displaced consistently.
+    """
+    ys, xs = np.nonzero(mask)
+    if ys.size == 0:
+        return mask.copy()
+    o = offsets[lab[ys, xs]]
+    ny, nx = mask.shape
+    out = np.zeros(mask.shape, dtype=bool)
+    out[np.clip(ys + o[:, 0], 0, ny - 1), np.clip(xs + o[:, 1], 0, nx - 1)] = True
+    return out

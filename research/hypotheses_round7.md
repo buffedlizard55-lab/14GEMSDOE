@@ -188,6 +188,12 @@ uploaded until it beats the current holdout best (post-R6: `all6` or
   `geom_align` (R7-1, δ = 0 run) — each = geom + geo + its channel(s).
 * New protocol flag `--misreg-px` for the R7-1 stress test (rigid per-component
   translation of visible context, δ ∈ {0, 1, 2, 3}).
+* **Amendment (2026-09-29, recorded BEFORE any gate numbers):** the alignment
+  objective is `mean expression − 0.02·|shift|` px⁻¹. A 256-crop smoke showed
+  the unpenalised operator sliding traces to expression noise (mean |offset|
+  3.57 px against an injected misregistration of 2 px); the fixed penalty
+  reduced it to 2.80 px and is not tuned on any gate result. The tie-break
+  (exact ties resolve to the smallest displacement) is unchanged.
 * New diagnostic subset (computed from saved fold fields + truth, no re-run):
   continuation subset as defined in R7-2.
 * Promote rule unchanged: beat the same-run `geom` on sparse AND far in ≥ 3/4

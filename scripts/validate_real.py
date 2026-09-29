@@ -136,6 +136,26 @@ def _f16(a: np.ndarray) -> np.ndarray:
     return np.clip(x, -30000.0, 30000.0).astype(np.float16)
 
 
+def _expression_ridge_field(static: dict[str, np.ndarray]) -> np.ndarray:
+    """Ridge-strength expression field for R7-1 trace alignment.
+
+    Mean of the three independent ridge-strength bands (detrended-elevation
+    slope, TMI horizontal gradient, isostatic-gravity horizontal gradient).
+    All three are already robust-scaled to ~[-1, 1]; their mean is a relative
+    expression score, which is all the alignment operator needs.
+    """
+    z = None
+    for nm in ("det_elev_slope", "tmi_hg", "iso_grav_anom_hg"):
+        v = static.get(nm)
+        if v is None:
+            continue
+        v = np.nan_to_num(np.asarray(v, dtype=np.float32), nan=0.0)
+        z = v.copy() if z is None else z + v
+    if z is None:
+        raise ValueError("no expression bands in static channels")
+    return z / 3.0
+
+
 def build_geom_channels(context: np.ndarray, window: int = 9) -> dict[str, np.ndarray]:
     """Catalogue-geometry channels, computed from the CONTEXT mask only.
 
@@ -269,6 +289,7 @@ ARM_SPEC: dict[str, str] = {
     # Round 7
     "geom_gravtopo": "geom + geo + R7-3 gravity-gradient termination/intersection topology",
     "geom_trans": "geom + geo + R7-5 transtensional shear x extension coupling",
+    "geom_align": "geom(align) + geo + R7-1 expression-aligned traces (misregistration correction)",
 }
 
 
@@ -280,7 +301,7 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
     if arm == "geom":
         return names, r5, geo
     for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip",
-                  "gravtopo", "trans"):
+                  "gravtopo", "trans", "align"):
         if arm == f"geom_{extra}":
             r5.add(extra)
     if arm == "all":
@@ -315,6 +336,10 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
         names += ["grav_ridge", "grav_topo"]
     if "trans" in r5:
         names.append("trans_coupling")
+    if "align" in r5:
+        # the geometry block itself is rebuilt from the expression-aligned
+        # context in run(); this is the extra offset-magnitude channel
+        names.append("align_offset")
     if geo:
         names += list(GEO_BANDS)
     return names, r5, geo
@@ -497,6 +522,21 @@ def run(args) -> int:
         print(f"[gate] protocol=component comps={n_comp} TEST {n_test} / CALIB {n_calib} "
               f"/ HIDE {n_hide} / visible {n_comp - n_test - n_calib - n_hide}", flush=True)
 
+    # R7-1 stress protocol (research/hypotheses_round7.md): one rigid shift per
+    # catalogue component, shared by every view of every fold, so the simulated
+    # misregistered world is consistent.  Truth (TEST) is never displaced.
+    misreg_offsets = None
+    if args.misreg_px > 0:
+        if args.protocol != "component":
+            raise SystemExit("--misreg-px is only defined for --protocol component")
+        misreg_offsets = rc.component_offsets(
+            n_comp, int(args.misreg_px), np.random.default_rng(args.seed + 999))
+        moved = int((np.abs(misreg_offsets[1:]).sum(axis=1) > 0).sum())
+        print(f"[gate] MISREGISTRATION STRESS: shifts <= {int(args.misreg_px)} px "
+              f"for {moved}/{n_comp} components (seed {args.seed + 999})", flush=True)
+
+    want_align = any("align" in arm_channels(a)[1] for a in args.arms)
+
     fields_dir = ROOT / "artifacts" / "real_fields"
     fields_dir.mkdir(parents=True, exist_ok=True)
     results = {arm: {"arm": arm, "spec": ARM_SPEC.get(arm, arm), "folds": []}
@@ -521,6 +561,11 @@ def run(args) -> int:
             feature_ctx = context
             pos_mask = context
         pred_ctx = context
+        if misreg_offsets is not None:
+            # the catalogue the model sees is misregistered (C28); TEST truth is
+            # not part of either view and is never displaced
+            feature_ctx = rc.displace_mask(feature_ctx, lab, misreg_offsets)
+            pred_ctx = rc.displace_mask(pred_ctx, lab, misreg_offsets)
         t_geom = time.time() - t0
         # truth subsets are arm-independent: compute once per fold
         sp_rng = np.random.default_rng(1000 + k)
@@ -532,16 +577,31 @@ def run(args) -> int:
         geom_train = build_geom_channels(feature_ctx)
         if not args.quiet:
             print(f"    [fold {k}] train-view geometry in {time.time()-t0:.0f} s", flush=True)
+        geom_align_train = None
+        if want_align:
+            expr_field = _expression_ridge_field(static)
+            al_mask, al_off = rc.align_traces_to_expression(feature_ctx, expr_field,
+                                                            max_offset=3)
+            geom_align_train = build_geom_channels(al_mask)
+            geom_align_train["align_offset"] = _f16(rc.line_max(al_off, radius=3))
+            if not args.quiet:
+                print(f"    [fold {k}] train-view aligned geometry "
+                      f"(mean |offset| {float(al_off[al_off > 0].mean()) if (al_off > 0).any() else 0:.2f} px) "
+                      f"in {time.time()-t0:.0f} s", flush=True)
         betas: dict[str, tuple] = {}
         names_by_arm: dict[str, list[str]] = {}
         for arm in args.arms:
             ta = time.time()
             names, r5, geo = arm_channels(arm)
-            ch_train = dict(geom_train)
+            if "align" in r5 and geom_align_train is not None:
+                ch_train = dict(geom_align_train)
+            else:
+                ch_train = dict(geom_train)
             if geo:
                 ch_train.update(static)
             if r5:
-                ch_train.update(build_round5_channels(feature_ctx, static, valid, r5))
+                ch_train.update(build_round5_channels(feature_ctx, static, valid,
+                                                      r5 - {"align"}))
             names_now = [nm for nm in names if nm in ch_train]
             idx, y = sample_pixels(pos_mask, valid,
                                    np.random.default_rng(args.seed + k),
@@ -557,19 +617,32 @@ def run(args) -> int:
                 print(f"      [fold {k}] {arm:10s} trained on {idx.size} px "
                       f"({len(names_now)} feats) in {time.time()-ta:.0f} s", flush=True)
         del geom_train
+        if geom_align_train is not None:
+            del geom_align_train
 
         # ---- stage 2: predict with the submission-time context ------------
         geom_pred = build_geom_channels(pred_ctx)
         if not args.quiet:
             print(f"    [fold {k}] pred-view geometry in {time.time()-t0:.0f} s", flush=True)
+        geom_align_pred = None
+        if want_align:
+            expr_field = _expression_ridge_field(static)
+            al_mask, al_off = rc.align_traces_to_expression(pred_ctx, expr_field,
+                                                            max_offset=3)
+            geom_align_pred = build_geom_channels(al_mask)
+            geom_align_pred["align_offset"] = _f16(rc.line_max(al_off, radius=3))
         for arm in args.arms:
             ta = time.time()
             names, r5, geo = arm_channels(arm)
-            ch_pred = dict(geom_pred)
+            if "align" in r5 and geom_align_pred is not None:
+                ch_pred = dict(geom_align_pred)
+            else:
+                ch_pred = dict(geom_pred)
             if geo:
                 ch_pred.update(static)
             if r5:
-                ch_pred.update(build_round5_channels(pred_ctx, static, valid, r5))
+                ch_pred.update(build_round5_channels(pred_ctx, static, valid,
+                                                      r5 - {"align"}))
             names_now = [nm for nm in names_by_arm[arm] if nm in ch_pred]
             beta, mu, sd, n_train = betas[arm]
             pred = predict_full_std(beta, mu, sd, ch_pred, names_now, valid,
@@ -600,6 +673,8 @@ def run(args) -> int:
                   f"dense={row['test_dense_at_t']:.4f} sparse={row['test_sparse_at_t']:.4f} "
                   f"far={'-' if row['test_far_at_t'] is None else format(row['test_far_at_t'], '.4f')} "
                   f"emit={row['n_emit']} ({row['elapsed_s']:.0f} s)", flush=True)
+        if geom_align_pred is not None:
+            del geom_align_pred
         np.savez(fields_dir / f"fold{k}_truth.npz", test=test, sparse=sparse_gt,
                  far=far_gt, **({} if calib is None else {"calib": calib}))
 
@@ -632,6 +707,7 @@ def run(args) -> int:
             "sparse_frac": args.sparse_frac,
             "learner": f"logistic regression, {args.iters} GD iters, lr 0.5, l2 1e-3",
             "n_pos": args.n_pos, "n_neg": args.n_neg,
+            "misreg_px": args.misreg_px,
             "geo_bands": list(GEO_BANDS),
             "metric": "official DTI (radius 3 px, alpha 0.2, beta 0.8), eval_mask=footprint",
             "note": ("raw_* scores use the unthresholded probability field and are "
@@ -702,6 +778,10 @@ def main() -> int:
     ap.add_argument("--n-neg", type=int, default=40000)
     ap.add_argument("--iters", type=int, default=150)
     ap.add_argument("--chunk-rows", type=int, default=256)
+    ap.add_argument("--misreg-px", type=float, default=0.0,
+                    help="R7-1 stress protocol: rigidly displace every non-TEST "
+                         "catalogue component by up to this many px (C28 "
+                         "misregistration simulation); 0 = world as mapped")
     ap.add_argument("--out", default="artifacts/holdout_real.json")
     ap.add_argument("--crop-rows", type=int, default=0,
                     help="smoke-test window height (0 = full grid)")

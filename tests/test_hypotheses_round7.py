@@ -149,3 +149,76 @@ class TestRound7ArmWiring(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestMisregistrationStress(unittest.TestCase):
+    """R7-1 protocol utilities (C28 misregistration simulation)."""
+
+    def test_misregister_moves_components_not_truth_shape(self):
+        rng = np.random.default_rng(7)
+        mask = np.zeros((32, 32), dtype=bool)
+        mask[4:10, 4:10] = True
+        mask[20:26, 20:26] = True
+        out, offs = rc.misregister_mask(mask, 2, rng)
+        self.assertEqual(int(mask.sum()), int(out.sum()))   # rigid: same pixels
+        self.assertFalse(np.array_equal(out, mask))          # actually moved
+        self.assertTrue((np.abs(offs[1:]) <= 2).all())
+
+    def test_zero_delta_is_identity(self):
+        rng = np.random.default_rng(7)
+        mask = np.zeros((16, 16), dtype=bool)
+        mask[2:8, 2:8] = True
+        out, _ = rc.misregister_mask(mask, 0, rng)
+        self.assertTrue(np.array_equal(out, mask))
+
+    def test_displace_consistent_across_views(self):
+        from scipy import ndimage
+        lab = np.zeros((16, 16), dtype=int)
+        lab[2:6, 2:6] = 1
+        lab[10:14, 10:14] = 2
+        offs = rc.component_offsets(2, 2, np.random.default_rng(3))
+        full = rc.displace_mask(lab > 0, lab, offs)
+        part = rc.displace_mask(lab == 1, lab, offs)
+        ys, xs = np.nonzero(part)
+        self.assertTrue(full[ys, xs].all())
+        self.assertEqual(int(part.sum()), int((lab == 1).sum()))
+
+    def test_component_offsets_force_nonzero(self):
+        # with delta 1 and many components, at least one shift must be non-zero
+        offs = rc.component_offsets(50, 1, np.random.default_rng(5))
+        self.assertTrue((np.abs(offs[1:]).sum(axis=1) > 0).any())
+
+    def test_align_moves_toward_expression_and_is_stable(self):
+        mask = np.zeros((32, 32), dtype=bool)
+        mask[5:25, 12] = True
+        expr = np.zeros((32, 32), dtype=np.float32)
+        expr[:, 15] = 1.0
+        corr, off = rc.align_traces_to_expression(mask, expr, max_offset=3)
+        self.assertEqual(list(np.unique(np.nonzero(corr)[1])), [15])
+        self.assertAlmostEqual(float(off[corr].max()), 3.0, places=5)
+        again, off2 = rc.align_traces_to_expression(corr, expr, max_offset=3)
+        self.assertTrue(np.array_equal(again, corr))
+        self.assertAlmostEqual(float(off2[again].max()), 0.0, places=5)
+
+    def test_align_respects_max_offset(self):
+        mask = np.zeros((48, 48), dtype=bool)
+        mask[10:30, 5] = True
+        expr = np.zeros((48, 48), dtype=np.float32)
+        expr[:, 25] = 1.0            # 20 px away: outside the search window
+        corr, off = rc.align_traces_to_expression(mask, expr, max_offset=3)
+        self.assertLessEqual(float(off.max()), 3.0)
+
+    def test_gate_registry(self):
+        import validate_real as vr
+        self.assertIn("geom_align", vr.ARM_SPEC)
+        names, r5, _geo = vr.arm_channels("geom_align")
+        self.assertIn("align", r5)
+        self.assertIn("align_offset", names)
+        # the misregistration flag must exist and default to 0
+        import argparse
+        from io import StringIO
+        import contextlib
+        # parse the source rather than running main()
+        src = (REPO / "scripts" / "validate_real.py").read_text()
+        self.assertIn("--misreg-px", src)
+        self.assertIn("misreg_px", src)

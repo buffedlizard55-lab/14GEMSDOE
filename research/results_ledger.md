@@ -212,6 +212,54 @@ All arms ~0.0001 dense — block protocol too harsh (TEST block has no nearby co
 `artifacts/holdout_round6_horse.json` **written** (4 folds). R6-1 promoted. R6-2/3/5 pending full-grid rerun. No submission slot spent yet in this session — validated field ready for next weekly slot. Next actions: (1) full 4-fold for all6 (R5+R6) to test ensemble, (2) fetch external slip/dilation shapefile for R6-4, (3) upload promoted horse ensemble.
 
 
+## Round-6 remaining arms + session-15 gate record (2026-09-29) — R6-3 and R6-5 PROMOTED, 4 folds
+
+**Command (queue item 3, full-grid validation of the remaining R6 arms):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_xsec geom_condbase geom_shore --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round6_rest.json
+```
+Wall 1,724 s. The `geom` baseline reproduced the pinned 4-fold means exactly
+(0.0385 / 0.0151 / 0.0003 — identical to `holdout_round6_horse.json`), pinning
+protocol equivalence across runs.
+
+| Fold | geom dense / sparse / far | xsec | condbase | shore |
+|------|---------------------------|------|----------|-------|
+| 0 | 0.0381 / 0.0165 / 0.0006 | 0.0427 / 0.0191 / 0.0034 | 0.0431 / 0.0189 / 0.0030 | 0.0497 / 0.0219 / 0.0072 |
+| 1 | 0.0381 / 0.0145 / 0.0006 | 0.0318 / 0.0119 / 0.0008 | 0.0323 / 0.0126 / 0.0011 | 0.0433 / 0.0185 / 0.0029 |
+| 2 | 0.0333 / 0.0142 / 0.0000 | 0.0281 / 0.0140 / 0.0010 | 0.0348 / 0.0163 / 0.0021 | 0.0375 / 0.0169 / 0.0022 |
+| 3 | 0.0444 / 0.0153 / 0.0002 | 0.0444 / 0.0167 / 0.0012 | 0.0486 / 0.0186 / 0.0024 | 0.0502 / 0.0193 / 0.0030 |
+| **Mean** | **0.0385 / 0.0151 / 0.0003** | 0.0367 / 0.0154 / 0.0016 | 0.0397 / 0.0166 / 0.0022 | **0.0452 / 0.0191 / 0.0038** |
+| Wins vs geom (sparse / far) | — | 2/4 / 4/4 | 3/4 / 4/4 | **4/4 / 4/4** |
+| Promote rule (≥3/4 both) | — | **no** (sparse fails) | **PROMOTED** | **PROMOTED** |
+
+* **R6-5 paleo-shoreline (sub-lake enhancement) is the strongest far-protocol
+  single arm in the project** (far 0.0038 ≈ 13× the geom baseline, 4/4 wins on
+  both protocols; dense +0.0067, sparse +0.0040). It is also the arm with the
+  clearest physical story from the label producers (S14: lake sediments obscure
+  non-Holocene ruptures).
+* **R6-3 conductive-base step** meets the rule (3/4 sparse, 4/4 far; far 7×
+  baseline) and is promoted.
+* **R6-2 intersection halos does NOT meet the rule** (sparse 2/4; fold-1 and
+  fold-2 dense fell below geom). Its smoke-crop improvement did not survive the
+  full grid. Recorded as a kill-by-rule, not a crash: the far protocol wins
+  4/4 (0.0016 vs 0.0003), so the mechanism is real but too thin on sparse.
+* Previous session's smoke numbers (800×800 crop, 2 folds) over-rated xsec and
+  under-rated shore; smoke crops are diagnostics only, per their own caveat.
+
+**Session-15 environment record.** The sandbox reset dropped `.venv/`,
+`data/raw/`, `data/processed/` and the gate fields; everything was rebuilt from
+the Quickstart (bridge retry loop after one transient `gh api` stream error;
+all three files SHA-256 verified; `verify_real_data.py` ALL CHECKS PASS).
+`scripts/train_real_full.py` (queue item 5) was rewritten against the current
+gate API and pinned by `tests/test_train_real_full_api.py` (7 tests). The
+leaderboard feed was refreshed (50 rows, DARD 0.3168 top, the 0.1563 cluster
+extradr19/SDCF9/smashi34 unchanged at #28–30). The first all6 4-fold attempt
+was **OOM-killed (exit 137) at fold 2** after folds 0–1 reproduced the interim
+record exactly (all6 0.0675/0.0212/0.0068, 0.0767/0.0268/0.0095); it is being
+re-run with 2 arms per process (`artifacts/holdout_round6_all6.json`).
+
 ## Reading
 
 Most ≥0.14 scores in this ledger are reported for catalogue-oriented approaches,
