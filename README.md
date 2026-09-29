@@ -191,11 +191,15 @@ round-6 gates (`artifacts/holdout_round6_horse.json`,
 **R6-1 horsetail splay, R6-5 paleo-shoreline and R6-3 conductive-base step each
 meet the promote rule** (sparse AND far in ≥3/4 folds vs the same-run geom
 baseline); R6-2 intersection halos is killed by rule. The all6 ensemble gate
-(R5+R6) is in progress. Round-7 hypotheses — grounded in C28
-(misregistration-as-target) and C21 (continuations-as-truth) — are
-pre-registered in `research/hypotheses_round7.md` and gated behind the round-6
-queue. No submission slot is spent; one validated field goes to the next
-weekly slot.
+(R5+R6) completed: 0.0679/0.0221/0.0074 vs horse 0.0624/0.0217/0.0040 — better
+means but sparse wins on only 2/4 folds, so the pre-registered fold-wise rule
+sends the weekly slot to the rebuilt horse ensemble
+(`submissions/GEMS_r5-geom-horse-ensemble_20260929T044943Z_b9d51ebb.tif`,
+uniqueness audit PASS, HUMAN upload pending). Round-7 hypotheses — grounded in
+C28 (misregistration-as-target) and C21 (continuations-as-truth) — were
+pre-registered in `research/hypotheses_round7.md` and gated this session:
+**R7-1, R7-3, R7-5 PROMOTED**, R7-2 diagnostic measured (52.5 % of TEST px are
+continuations), R7-4 killed by the prior.
 
 ## How this repo fulfils the prompt
 
