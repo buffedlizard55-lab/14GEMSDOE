@@ -234,6 +234,19 @@ def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
         for k, v in sd.items():
             if isinstance(v, np.ndarray) and v.shape == context.shape:
                 out[k] = v
+    # R7 (research/hypotheses_round7.md)
+    if "gravtopo" in which:
+        ghg = static.get("iso_grav_anom_hg", None)
+        gslope = static.get("iso_grav_anom_slope", None)
+        if ghg is not None:
+            topo = rc.gravity_topology(ghg, gslope)
+            out["grav_ridge"] = topo["grav_ridge"]
+            out["grav_topo"] = topo["grav_topo"]
+    if "trans" in which:
+        shear = static.get("geod_shearrate", None)
+        dil = static.get("geod_dilaterate", None)
+        if shear is not None and dil is not None:
+            out.update(rc.transtensional_coupling(shear, dil))
     return {k: _f16(v) for k, v in out.items() if v is not None}
 
 
@@ -253,6 +266,9 @@ ARM_SPEC: dict[str, str] = {
     "geom_shore": "geom + geo + R6-5 paleo-shoreline suppression + sub-lake enhancement",
     "geom_slip": "geom + geo + R6-4 slip/dilation tendency (external, if present)",
     "all6": "geom + geo + R5 + R6 (all channels)",
+    # Round 7
+    "geom_gravtopo": "geom + geo + R7-3 gravity-gradient termination/intersection topology",
+    "geom_trans": "geom + geo + R7-5 transtensional shear x extension coupling",
 }
 
 
@@ -263,11 +279,15 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
     geo = arm != "geom"
     if arm == "geom":
         return names, r5, geo
-    for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip"):
-        if arm in ("all", "all6") or arm == f"geom_{extra}":
+    for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip",
+                  "gravtopo", "trans"):
+        if arm == f"geom_{extra}":
             r5.add(extra)
+    if arm == "all":
+        # pinned definition (ARM_SPEC + round-5 record): every round-5 channel
+        r5.update({"ramp", "acc", "tilt", "curv", "gap"})
     if arm == "all6":
-        # all includes everything
+        # all6 = R5 + R6; R7 arms stay separate until gated
         r5.update({"ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip"})
     if "ramp" in r5:
         names.append("ramp_maturity")
@@ -291,6 +311,10 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
         # placeholder: if external raster ever present, its channels will be added dynamically
         # keep name list open; design_matrix will skip missing
         names += ["slip_tendency", "dilation_tendency"]
+    if "gravtopo" in r5:
+        names += ["grav_ridge", "grav_topo"]
+    if "trans" in r5:
+        names.append("trans_coupling")
     if geo:
         names += list(GEO_BANDS)
     return names, r5, geo

@@ -1169,3 +1169,87 @@ def slip_dilation_tendency_field(
     #   rasterize with rasterio.features.rasterize onto competition grid
     #   then compute field = dilation * slip * (1 - catalogue_proximity)
     return {}
+
+
+# ---------------------------------------------------------------------------
+# Round-7 hypothesis channels (research/hypotheses_round7.md)
+# ---------------------------------------------------------------------------
+
+def gravity_topology(
+    grav_hg: np.ndarray,
+    grav_slope: np.ndarray | None = None,
+    *,
+    sigma: float = 1.0,
+    support_px: float = 6.0,
+) -> dict:
+    """R7-3: gravity-gradient termination & intersection topology.
+
+    Faulds et al. 2026 (KB S11, VERIFIED): *"terminating and intersecting
+    gravity gradients respectively defined many of the fault terminations and
+    fault intersections. This was especially important in defining FSS in the
+    many basins of the region, where basin-fill sediments obscure the
+    subsurface architecture"* — the label producers' own basin playbook.
+
+    The operator is ``gems.geoedges.edge_termination_field`` (ridge skeleton of
+    the gradient magnitude, weighted terminations and junctions).  Pure
+    geophysics — no catalogue input, so leak-free under hide-and-recover by
+    construction.
+
+    Returns
+    -------
+    dict with
+      grav_ridge : gradient magnitude along the ridge skeleton (edge strength
+                   where a real geophysical edge exists)
+      grav_topo  : termination field + junction field in [0, 2] (compact
+                   topology maps of where edges stop and cross)
+
+    The caller decides which of these an arm uses.
+    """
+    from gems import geoedges as ge
+
+    base = np.nan_to_num(np.asarray(grav_hg, dtype=np.float32),
+                         nan=0.0, posinf=0.0, neginf=0.0)
+    if grav_slope is not None:
+        base = base + np.nan_to_num(np.asarray(grav_slope, dtype=np.float32),
+                                    nan=0.0, posinf=0.0, neginf=0.0)
+    out = ge.edge_termination_field(base, sigma=sigma, support_px=support_px)
+    skel = out["skeleton"]
+    ridge = np.where(skel, out["edge_mag"], 0.0).astype(np.float32)
+    topo = (out["term_field"] + out["junction_field"]).astype(np.float32)
+    return {"grav_ridge": ridge, "grav_topo": topo}
+
+
+def transtensional_coupling(
+    shear: np.ndarray,
+    dilat: np.ndarray,
+    *,
+    extension_positive: bool = True,
+) -> dict:
+    """R7-5: shear x extension (transtensional) coupling field.
+
+    KB S1/S4/S7 (VERIFIED): systems concentrate in transtensional areas of
+    highest strain rate; step-overs and horsetail terminations show the largest
+    modelled dilatation and Coulomb shear-traction increases.
+
+    ``coupling = relu(unit(shear)) * relu(unit(max(±dilatation, 0)))`` — the
+    *interaction* of excess shear with excess *physical* extension, not either
+    rate alone.  The extension/contraction clip is applied to the physical sign
+    BEFORE scaling, so a below-median contraction can never read as coupling.
+
+    The band tag ("rate of volumetric strain (expansion/contraction)") does not
+    state the sign convention; the default follows the geodetic convention
+    (positive = expansion/extension).  The flag exists so the opposite
+    convention can be ablated without a code change (FLAG #12,
+    hypotheses_round7.md).
+    """
+    s = np.nan_to_num(np.asarray(shear, dtype=np.float32),
+                      nan=0.0, posinf=0.0, neginf=0.0)
+    d = np.nan_to_num(np.asarray(dilat, dtype=np.float32),
+                      nan=0.0, posinf=0.0, neginf=0.0)
+    if not extension_positive:
+        d = -d
+    d_ext = np.maximum(d, 0.0)                    # physical extension only
+    s_rel = np.maximum(robust_unit(s), 0.0)       # excess shear
+    d_rel = np.maximum(robust_unit(d_ext), 0.0)   # excess extension
+    coupling = s_rel * d_rel
+    return {"trans_coupling": coupling.astype(np.float32)}
