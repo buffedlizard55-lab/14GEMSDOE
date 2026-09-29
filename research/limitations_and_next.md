@@ -241,6 +241,76 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
     foreign match fires). Cross-team scored-artifact identity remains the job
     of `scripts/audit_scored_artifacts.py --fetch-scored` (README step 4).
 
+17. **FLAG #14 — the published site could not produce a submission file
+    (2026-09-29, FIXED this session; was invisible to the test suite).**
+    *Reported symptom:* "this site doesn't work, there's no submission file to
+    download, it should be like any of the other GEMDOES".
+    *Root cause, reproduced not guessed:* `docs/js/site.js` assigned
+    `tifBytesNan` without declaring it (the file declared `var tifBytes = null;`
+    only). The file is a strict-mode IIFE, so the assignment threw
+    `ReferenceError: tifBytesNan is not defined` inside the promise chain;
+    `.catch()` turned it into `FAILED: tifBytesNan is not defined` and every
+    download button stayed `disabled`, so no file could be downloaded at all.
+    *Why CI missed it:* nothing in `tests/` executed the site's JavaScript — the
+    builder was only ever exercised by a human opening the page.
+    *Fix (three parts):* (1) the variable is declared and the optional
+    NaN-nodata variant now builds inside its own guarded function, so it can no
+    longer take the required file down with it; (2) the browser build is now
+    deflate-compressed via `CompressionStream` (107 KB instead of 47 MB, the
+    same container shape `rasterio compress="deflate"` writes), and
+    `writeGeoTiffContainer` no longer pushes 47M numbers through a JS array;
+    (3) a finished GeoTIFF is committed at `docs/downloads/` and linked from the
+    top of `docs/index.html`, so a JavaScript-free route to a submission file
+    always exists — the pattern the sibling team sites use.
+    *New guard:* `scripts/check_site_build.mjs` + `tests/test_site_build.py`
+    (15 tests) run the real `payload.js` / `tif_writer.js` / `site.js` under a
+    DOM shim, require `verdict: PASS (15/15 steps)`, read the built file back with
+    rasterio, compare it bit-for-bit with the shipped payload and put it through
+    `gems.raster.check_submission`. `.github/workflows/ci.yml` runs both the
+    Python suite and this check on every push.
+    *Verified:* against the unfixed file the harness prints
+    `buildState = "FAILED: tifBytesNan is not defined"` and `none enabled`;
+    against the fixed file, `verdict: PASS (15/15 steps)`.
+    *Contradiction found and corrected while auditing the page's own claims:*
+    `docs/index.html` advertised `pixels_sha256 aa966e56…` and `51,674 px
+    emission (1.00% footprint)` for a payload that actually ships
+    `pixels_sha256 e96e942f…` with **116,225 px** above 0.0 (`0.947%` of the
+    grid). Those numbers are now rendered from the shipped payload at load time
+    (`data-gems` spans) instead of being typed in, so they cannot drift again.
+    The same stale hash remains in `research/results_ledger.md` rows 375–393 and
+    in the round-6 narrative — both are *historical records* of the earlier
+    payload and are left in place; the round-6 page now carries an explicit
+    HISTORICAL annotation. The ledger tail records the payload being re-sourced
+    to `e96e942f…`, so the two are consistent once the swap is accounted for.
+    *Observation, not a proven identity:* the generated
+    `docs/downloads/*.tif` hashes to `ccbe1de0cfd70cbe…`, and the ledger records
+    the rebuilt upload candidate's container hash as `ccbe1de0cfd7…` — the same
+    12 hex digits. The ledger stores only that prefix, so the full hashes cannot
+    be compared from this repository; recorded as an observation.
+    *Owner action, if any:* none required. Reviewer note: this confirms the
+    standing lesson — an artifact path that no automated test drives will fail
+    silently on the published site.
+
+18. **FLAG #15 — every round-5/6/7 gate row on the site cites an evidence file
+    that is not in the repository (2026-09-29, VERIFIED BY EXECUTION).**
+    `artifacts/*` is gitignored except three whitelisted JSONs, so the cited
+    `artifacts/holdout_round6_horse.json`, `holdout_round6_rest.json`,
+    `artifacts/real_fields/*` and `submissions/GEMS_…tif` are all absent here.
+    Running the gate today stops at the first input:
+    `scripts/validate_real.py` -> `rasterio.errors.RasterioIOError:
+    data/raw/training_labels.tif: No such file or directory` (reproduced
+    2026-09-29). The recorded numbers are not contradicted — they simply cannot
+    be re-derived in this checkout. Consequences to keep in mind when quoting the
+    site: (a) the *only* claim on the site that is fully re-verifiable from the
+    repository alone is the submission file, whose pixels ship inside
+    `docs/js/payload.js` and are hash-checked on every page load and in CI;
+    (b) `docs/index.html` now carries this limitation as a visible note above the
+    status board rather than presenting the round-5/6/7 rows as locally
+    reproducible. Restoration path: `bash scripts/download_competition_data.sh`
+    (DrivenData login) then `python scripts/prepare_data.py`.
+    *Owner action, if any:* none required for the submission path; required
+    before any new hypothesis can be validated on the blocked holdout.
+
 ## C2. Session log — 14GEMSDOE (2026-09-28, round 3)
 
 * **Pass 1 (implement + verify).** R3 arms implemented

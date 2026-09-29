@@ -1,0 +1,56 @@
+name: CI
+
+# Why this workflow exists
+# ------------------------
+# On 2026-09-29 the published site could not produce a submission file: an
+# undeclared variable in docs/js/site.js threw inside a strict-mode IIFE, the
+# promise chain's .catch() swallowed it, every download button stayed disabled
+# and the visitor had nothing to upload — while the Python suite stayed green,
+# because nothing in it executed the site's JavaScript.  This workflow runs
+# both halves: the Python pipeline tests and the headless site-build check.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Python test suite
+        run: python -m pytest tests -q
+
+      - name: Site build check (drives the real browser scripts under a DOM shim)
+        run: node scripts/check_site_build.mjs
+
+      - name: Direct download matches the shipped payload
+        run: python scripts/build_site_download.py --check
+
+      - name: Submission format gate on every shipped .tif
+        run: |
+          set -e
+          for f in docs/downloads/*.tif; do
+            echo "== $f"
+            python scripts/validate_submission.py "$f"
+          done
+
+      - name: Artifact uniqueness audit
+        run: python scripts/check_submission_uniqueness.py

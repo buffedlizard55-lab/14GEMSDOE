@@ -6,21 +6,41 @@ geological **faults missing from the public USGS/INGENIOUS catalogue** in the
 GeoDAWN region — the structures that indicate hidden geothermal resources.
 
 **Live status site (GitHub Pages):** `docs/index.html` in this repo — executive
-summary first, one-click submission `.tif` builder, verified source tables,
-leaderboard feed, artifact audit. **Start there to make a submission.**
+summary first, a submission `.tif` you can download or rebuild in one click,
+verified source tables, leaderboard feed, artifact audit.
+**Start there to make a submission.**
 
 ---
 
 ## ⚡ 60-second submission
 
-1. Open the site → **Build submission.tif** → the file downloads with a unique name.
-2. Copy the **Note** shown beside it (it names the arm, the holdout value and the
-   artifact hash).
+1. Open the site → click **Download \<file-name\>.tif** at the very top of the
+   Executive summary (a finished GeoTIFF is committed at `docs/downloads/`, so this
+   works with JavaScript disabled and with nothing installed). Prefer to make it
+   yourself? **Build submission.tif** rebuilds the identical pixel field in your
+   browser and verifies it against its pinned hash first.
+2. Copy the **Note** shown beside it — it names the arm, this build's `sha8` and the
+   pixel count, so two submissions can never be confused later.
 3. DrivenData → *Submit* → *Make new submission* → choose the file → paste the Note.
-4. The file is **finite everywhere inside the scored footprint** and `0.0` outside.
-   If the form still answers *"Predicted values must be in range [0, 1]"*, see
-   [How to submit §6](docs/how-to-submit.html#rejection) — the observed cause is a
-   NaN or an out-of-range value anywhere in the raster.
+4. The file is **finite everywhere**: values in `[0, 1]`, `0.0` outside the footprint,
+   and **no NaN anywhere**. That last point matters — a real upload attempt on
+   2026-09-28 was rejected with *"Predicted values must be in range [0, 1]"* when the
+   file carried NaN outside the footprint. See
+   [How to submit §6](docs/how-to-submit.html#rejection).
+
+### Verify the file yourself before you upload it
+
+```bash
+python -m pytest tests/test_site_build.py -q   # drives the site's real JavaScript
+node scripts/check_site_build.mjs              # same check, reporting every step
+python scripts/validate_submission.py docs/downloads/*.tif   # the repository's format gate
+```
+
+All three must pass. If a download is ever missing or a button is greyed out, that is a
+bug in this repository, not in your browser — reproduction and root cause for the
+2026-09-29 occurrence are in
+[How to submit §7](docs/how-to-submit.html#incident) and FLAG #14 of
+`research/limitations_and_next.md`.
 
 ---
 

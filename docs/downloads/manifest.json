@@ -1,0 +1,56 @@
+{
+  "built_by": "scripts/build_site_download.py",
+  "bytes": 259215,
+  "file": "GEMS_r5-geom-horse-ensemble_20260929T154852Z_ccbe1de0_site_e96e942f.tif",
+  "grid": {
+    "cols": 3292,
+    "epsg": 32611,
+    "res_m": 100.0,
+    "rows": 3730
+  },
+  "histogram": {
+    "distinct_values": 2,
+    "nan_pixels": 0,
+    "positive_pixels": 116225,
+    "top": [
+      {
+        "pixels": 12162935,
+        "value": 0.0
+      },
+      {
+        "pixels": 116225,
+        "value": 1.0
+      }
+    ],
+    "total_pixels": 12279160
+  },
+  "kind": "real",
+  "note": "14GEMSDOE \u00b7 GEMS_r5-geom-horse-ensemble_20260929T154852Z_ccbe1de0 \u00b7 site download \u00b7 file sha8=ccbe1de0 \u00b7 pixels sha8=e96e942f \u00b7 116,225 px > 0 \u00b7 finite [0,1] no-NaN",
+  "prediction_sha256": "e96e942fc27bcdc3b827d3e7e84e5117e3d0d872134a2b89a33787244cfbb1b4",
+  "rasterio_profile": {
+    "compress": "deflate",
+    "count": 1,
+    "crs": "EPSG:32611",
+    "dtype": "float32",
+    "nodata": null,
+    "res": [
+      100.0,
+      100.0
+    ],
+    "shape": [
+      3730,
+      3292
+    ],
+    "transform": [
+      100.0,
+      0.0,
+      500000.0,
+      0.0,
+      -100.0,
+      4500000.0
+    ]
+  },
+  "sha256": "ccbe1de0cfd70cbe7257c04669195f390ca652fa3a76c51505f461f01a1424c6",
+  "source_file": "GEMS_r5-geom-horse-ensemble_20260929T154852Z_ccbe1de0.tif",
+  "source_payload": "docs/js/payload.js"
+}
