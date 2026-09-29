@@ -99,10 +99,18 @@ def main() -> int:
     ap.add_argument("--sparse-frac", type=float, default=0.0,
                     help="keep 0 = use the full TEST set (slow); >0 subsamples TEST")
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--arms", nargs="*", default=None,
+                    help="restrict to these arms (default: every arm in the gate JSON)")
     args = ap.parse_args()
 
     gate = json.loads(Path(args.gate).read_text())
     arms = [r["arm"] for r in gate["results"]]
+    if args.arms:
+        missing = [a for a in args.arms if a not in arms]
+        if missing:
+            raise SystemExit(f"arms not in the gate JSON: {missing}")
+        arms = [a for a in arms if a in args.arms]
+        print(f"[sweep] restricted to {arms}", flush=True)
     labels = rd.read_labels()
     valid = np.load(ROOT / "data/processed/valid_mask.npy").astype(bool)
     # smoke crops: the gate may have run on a centred window

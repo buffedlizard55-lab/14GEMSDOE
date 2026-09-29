@@ -183,16 +183,25 @@ the target, then predicts with the submission-time context), emission policy
 calibrated on hidden CALIB components only, scored with the official metric on
 `dense`, `sparse(20 %)` and `far` (>1 km from any context trace) truth protocols.
 
-**Status: the first full-grid run reached fold 2 of 4 and was interrupted by a
-sandbox reset** (the snapshot keeps git-tracked files only, so `.venv/`,
-`data/raw/`, `data/processed/` and the saved fields disappeared mid-run).
-`artifacts/holdout_real.json` is therefore *not* written yet. The interim 2-fold
+**Status: the first full-grid run was interrupted by a sandbox reset after 2 of
+4 folds** (the snapshot keeps git-tracked files only, so `.venv/`, `data/raw/`,
+`data/processed/` and the saved fields disappeared mid-run). That interim 2-fold
 table — R5-4 profile curvature winning both protocols in both completed folds,
 every arm improving `far`, calibrated budget ≈ 0.5 % of the footprint — is
 recorded in `research/results_ledger.md` and repeated in
 `research/hypotheses_round5.md` §4. **Nothing is promoted, nothing is killed, no
-submission slot is spent.** Re-run is item 1 of
-`research/limitations_and_next.md` §B.
+submission slot is spent.**
+
+The environment and the rasters are restored (one command block, Quickstart
+step 0), the gate's scoring path now uses `gems.dti_fast` (verified equal to the
+float64 reference to 3.8e-09, 3.3× faster —
+`tests/test_gate_metric_equivalence.py`), and the **full 4-fold run is in
+flight**. Fold 0 and fold 1 arms reproduce the interrupted run's values exactly
+at four decimals, so the metric substitution changed the clock and not the
+numbers. When `artifacts/holdout_real.json` lands, the sequence is: emission
+sweep (`scripts/sweep_real.py`, selection on CALIB only), apply the promote rule
+(beat `geom` on sparse AND far in ≥3 of 4 folds), and only then build a
+submission (`scripts/build_real_submission.py`).
 
 ## How this repo fulfils the prompt
 
