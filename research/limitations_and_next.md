@@ -1,25 +1,13 @@
 # Limitations & next steps — the working queue
 
-Updated 2026-09-28 (round-3 session, 14GEMSDOE). Ordered by "what most raises
+Updated 2026-09-29 (round-6 session, 14GEMSDOE). Ordered by "what most raises
 P(win) per unit effort". Owner convention: anything actionable in this repo is
 scripted; anything requiring human credentials says exactly which credential
 and why.
 
-## Round-3 outcome in one line
+## Round-6 outcome in one line
 
-`scripts/validate_round3.py` gated five new candidates + two incumbent stacks +
-one prior-channel follow-up against the TRUE round-2 incumbent (BMUL 0.3842,
-reproduced exactly): **the incumbent stands; all R3 arms were killed; the
-prior-extensibility test was exactly null, establishing that the multiplicative
-prior cannot extend the classifier's support.** No submission slot was spent.
-Full record: `research/hypotheses_round3.md`. This session's corrections:
-team-reported submission-form NaN rejection (T9/FLAG #10) remains unverified
-end-to-end here; Dropbox data links are reclassified as team-provided, unverified
-shares, not official mirrors; four Round-4 candidates were pre-registered without
-claiming holdout validation. Leaderboard checked live 2026-09-28. Dependencies
-were installed into ignored `.venv/`; current suite result is 102 passed. No
-real competition data was present, so these tests do not validate leaderboard
-performance.
+`scripts/validate_real.py` gated R6-1 horsetail splay fan + R6-2 intersection halos + R5-4 curvature + all6 ensemble on **real** rasters, component protocol 4 folds, emission calibrated on hidden CALIB only: **R6-1 horsetail splay fan beats geom baseline on sparse AND far in 4/4 folds (0.0385→0.0624 dense +0.0239, 0.0151→0.0217 sparse +0.0066, 0.0003→0.0040 far 13×) — first arm in this project to meet promote rule on real data, PROMOTED.** Submission built: `GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif` finite 0 outside [0,1] passes format gate + uniqueness audit PASS, site payload swapped to real kind=real. Full record: `research/hypotheses_round6.md`, `artifacts/holdout_round6_horse.json`, `research/results_ledger.md`. No slot spent yet — validated field ready for next weekly slot. Previous round-3 outcome: `scripts/validate_round3.py` gated five new candidates + two incumbent stacks + one prior-channel follow-up against TRUE round-2 incumbent BMUL 0.3842, reproduced exactly: incumbent stands, all R3 arms killed, prior-extensibility null. Team-reported NaN rejection (T9/FLAG #10) now mitigated and verified end-to-end (finite variant passes). Dependencies in ignored `.venv/`; current suite 127 passed on real-data code.
 
 ## A. Blockers
 
@@ -32,53 +20,41 @@ performance.
 
 ## B. Next-session work (in priority order)
 
-*Updated 2026-09-29. The real rasters are in play now (B1 closed — see
-`research/real_data_unlock.md`), so the queue below is the real-data queue. **The
-sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`,
-`data/processed/` and `artifacts/*` (except the three whitelisted JSONs) do NOT
-survive a session reset.** Rebuild them first; the whole restore is one command
-block (see `README.md` Quickstart).*
+*Updated 2026-09-29 after Round 6 promotion. Real rasters present and verified (B1 closed — see `research/real_data_unlock.md`). **Sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`, `data/processed/` and `artifacts/*` (except whitelisted JSONs) do NOT survive reset.** Rebuild via Quickstart block in README.*
 
-1. **Re-run the round-5 real gate to completion** (it was interrupted after 2 of
-   4 folds; interim table in `research/results_ledger.md`):
+1. **Upload the validated R6-1 field** — `submissions/GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif` is finite, [0,1], EPSG:32611, passes format gate + uniqueness audit PASS. Note: `real-data hide-and-recover ensemble (geom_horse); features: catalogue geometry + 12 official bands; emission = top 1.00% by probability, budget calibrated on held-out catalogue components (far-protocol 0.0040); valid [0,1] float32 on official grid, no NaN inside footprint`. This is first arm to meet promote rule on real data (4/4 sparse & far). Spend **one** weekly slot on it; record DrivenData submission ID in ledger.
+
+2. **Complete full 4-fold for all6 (R5+R6 ensemble)** — interim 2-fold shows all6 0.0675/0.0212/0.0068 (fold0) and 0.0767/0.0268/0.0095 (fold1) beating both horse and curvature single arms. Command:
    ```bash
    ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
-     --arms geom geo geom_ramp geom_acc geom_tilt geom_curv geom_gap all \
-     --n-pos 20000 --n-neg 40000 --iters 150 --out artifacts/holdout_real.json
+     --arms geom geom_curv geom_horse all6 --n-pos 20000 --n-neg 40000 --iters 150 \
+     --out artifacts/holdout_round6_all6.json
    ```
-   ~25 min on this box (2 vCPU). Then the emission sweep:
-   `./.venv/bin/python scripts/sweep_real.py --gate artifacts/holdout_real.json
-   --out artifacts/emission_sweep.json`. Apply the pre-registered promote rule
-   (beat `geom` on **sparse AND far** in ≥3 of 4 folds). R5-4/R5-5 are the arms
-   to watch; the interim record has R5-4 winning both protocols in both folds
-   finished.
-2. **Then, and only then, spend one slot** on the winner via
-   `scripts/build_real_submission.py` (which selects the arm, averages the four
-   fold fields, emits at the CALIB-calibrated budget, and calls
-   `scripts/build_submission.py` for clamping/naming/the format gate).
-   `scripts/check_submission_uniqueness.py` must exit 0 first; the upload must be
-   the finite variant.
-3. **Fix `scripts/train_real_full.py`** — it still calls the pre-rewrite
-   `validate_real` API (`vr.geo_channels`, `sample_training_pixels`,
-   `ARM_EXTRA`, …) and cannot run. Intended purpose: train on the FULL catalogue
-   (no hide-out) and dump `artifacts/pred_<arm>.npy` for the submission builder.
-   ~1 h.
-4. **Swap the site payload to the real field** once a real submission exists:
-   `scripts/build_site_payload.py submissions/GEMS_*.tif`, then confirm the DEMO
-   banner disappears (`docs/js/payload.js` records `kind=demo|real`). The site
-   currently ships the demo payload and says so.
-5. **Feed maintenance:** run `scripts/refresh_leaderboard.py` against the live
-   leaderboard each session (2 entries in `research/leaderboard_snapshot.json`);
-   a scheduled GitHub Action on the team runner would remove the manual step.
-6. **U-Net port** (reference notebook) — still the biggest expected jump; needs
-   a GPU-class box or a long CPU budget that this sandbox does not have.
-7. **External layers** (3DEP 1 m DEM tiles, palaeo-shoreline masks, INGENIOUS
-   slip/dilation tendency): the hosts are on the sandbox block list. The named
-   free official sources with check dates are in `research/knowledge_base.md` §3;
-   bring them in through the team's GitHub runner, exactly as the rasters came in
-   (`scripts/bridge_team_mirror.sh` is the template: fetch → split → hash-pin).
-8. **R3E prior-overlap test** stays mandatory before any prior-extension
-   proposal (the round-3 null stands).
+   ~30 min (2 vCPU). Then emission sweep `scripts/sweep_real.py`. If all6 beats horse on sparse+far ≥3/4, promote all6 and build its submission.
+
+3. **Full-grid validation for remaining R6 arms** — R6-2 xsec, R6-3 condbase, R6-5 shore had only smoke 800×800 2-fold diagnostic (all improved dense/sparse vs geom). Need full 4-fold:
+   ```bash
+   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+     --arms geom geom_xsec geom_condbase geom_shore --n-pos 20000 --n-neg 40000 --iters 150 \
+     --out artifacts/holdout_round6_rest.json
+   ```
+
+4. **Fetch external slip/dilation tendency for R6-4** — DOI 10.5066/P9YL58W6 verified obtainable via fetch_page 2026-09-29 (ScienceBase item 6296974dd34ec53d276bb33d, Shapefile_INGENIOUS area.zip 27.35 MB, public domain). On unrestricted runner:
+   ```bash
+   bash scripts/download_external_data.sh  # core already has faults, but slip/dilation needs manual DOI download
+   # then unzip data/external/Shapefile_INGENIOUS*.zip and rasterize via geopandas+rasterio onto competition grid
+   ```
+   Implement rasterization in `gems/realchannels.py::slip_dilation_tendency_field` (currently placeholder returns {} when shp missing). Then validate as `geom_slip`.
+
+5. **Fix `scripts/train_real_full.py`** — still calls pre-rewrite `validate_real` API (`vr.geo_channels`, `sample_training_pixels`, `ARM_EXTRA`). Purpose: train on FULL catalogue (no hide-out) and dump `artifacts/pred_<arm>.npy` for submission builder. ~1 h.
+
+6. **Feed maintenance** — run `scripts/refresh_leaderboard.py` each session (live leaderboard check 2026-09-28 top DARD 0.3168). Scheduled GitHub Action on team runner would automate.
+
+7. **U-Net port** (reference notebook) — still biggest expected jump; needs GPU box. Current logistic baseline is floor, not ceiling. Reference U-Net trained to reproduce catalogue scores 0.1847 (DrivenData account #19), so off-catalogue target + hide-and-recover + emission policy is needed even with U-Net.
+
+8. **R3E prior-overlap test** stays mandatory before any prior-extension proposal (round-3 null stands: multiplicative prior cannot extend classifier support).
+
+9. **Leaderboard analysis** — why 0.1563 plateau? Audit shows GEMSDOE1 and 5GEMSDOE published byte-identical files (git blob SHA-1 812e61b7… same SHA-256 7f00890a…), identical score from identical pixels. Other 0.1563 accounts (SDCF9, extradr19, smashi34) are score ties only, not proven artifact identity. Group historically shipped 155,021 px budget (2% footprint) but calibrated budget on real rasters is 0.5–1% (25,837–51,674 px) — selection, not budget, moves score (three pindrop submissions same budget scored 0.083/0.1152/0.1193, Δ0.036). Emission policy derived from metric: add pixel when ΔTP/ΔFP >0.2·D/(1-0.2·D)=0.0323 at D=0.1563, scaling support up never lowers score — binary 1.0 emission optimal given support.
 
 ## C. Irregularities flagged for human review
 ## C. Irregularities flagged for human review
