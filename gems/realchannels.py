@@ -1390,3 +1390,174 @@ def displace_mask(mask: np.ndarray, lab: np.ndarray,
     out = np.zeros(mask.shape, dtype=bool)
     out[np.clip(ys + o[:, 0], 0, ny - 1), np.clip(xs + o[:, 1], 0, nx - 1)] = True
     return out
+
+
+def _trace_endpoints(trace: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Endpoint pixels of a trace mask with outward unit vectors in (dy, dx).
+
+    An endpoint has at most one 8-connected trace neighbour (isolated single
+    pixels have no strike and are skipped).  Same definition as
+    ``scripts/continuation_subset.py`` so the diagnostic and the operator agree.
+    """
+    from scipy.ndimage import convolve
+
+    t = np.asarray(trace, dtype=bool)
+    if not t.any():
+        return (np.zeros(0, np.int64), np.zeros(0, np.int64),
+                np.zeros((0, 2), np.float32))
+    nbr = convolve(t.astype(np.uint8), np.ones((3, 3), np.uint8),
+                   mode="constant", cval=0) - t.astype(np.uint8)
+    ys, xs = np.nonzero(t & (nbr <= 1))
+    keep_y, keep_x, dirs = [], [], []
+    for y, x in zip(ys.tolist(), xs.tolist()):
+        d = _outward_direction_tip(t, int(y), int(x))   # (east, south)
+        if d is None or float(d[0]) == 0.0 and float(d[1]) == 0.0:
+            continue
+        keep_y.append(y)
+        keep_x.append(x)
+        dirs.append((float(d[1]), float(d[0])))         # (dy, dx)
+    return (np.asarray(keep_y, np.int64), np.asarray(keep_x, np.int64),
+            np.asarray(dirs, np.float32).reshape(-1, 2))
+
+
+def _robust_z(a: np.ndarray) -> np.ndarray:
+    """(a - median) / (1.4826 * MAD), NaN-safe; constant fields map to 0."""
+    v = np.nan_to_num(np.asarray(a, dtype=np.float32),
+                      nan=0.0, posinf=0.0, neginf=0.0)
+    finite = v[np.isfinite(v)]
+    if finite.size == 0:
+        return np.zeros_like(v)
+    med = float(np.median(finite))
+    mad = float(np.median(np.abs(finite - med)))
+    scale = 1.4826 * mad
+    if scale <= 1e-12:
+        # sparse-ridge case (mostly-constant field): fall back to std, then 0
+        scale = float(np.std(finite))
+    if scale <= 1e-12:
+        return np.zeros_like(v)
+    return (v - med) / scale
+
+
+def continuation_stitches(
+    trace: np.ndarray,
+    rtp: np.ndarray,
+    tmi: np.ndarray,
+    tmi_hg: np.ndarray,
+    grav_hg: np.ndarray,
+    depth_to_base: np.ndarray | None = None,
+    det_elev: np.ndarray | None = None,
+    *,
+    max_len_px: float = 48.0,
+    collinearity_deg: float = 30.0,
+    corridor_halfwidth: int = 3,
+    min_crest: float = 0.10,
+) -> dict:
+    """R7-2: buried continuation stitching through cover.
+
+    ``research/hypotheses_round7.md``: *a potential-field ridge corridor that
+    continues a catalogued trace along strike past its mapped tip or across a
+    mapped gap, especially where basin fill or lake sediments cover the
+    connection (``depth_to_base_surf`` thick, ``det_elev`` flat).  Collinearity
+    tolerance 30°, corridor width ≤ 3 px.*  C21 — continuations past mapped
+    tips are scoring truth; S14 — faults obscured by lake sediments end where
+    expression ends, not where the fault ends.
+
+    Algorithm: from every catalogue tip, walk the crest of the combined
+    potential-field ridge expression (robust-z mean of ``rtp``, ``tmi``,
+    ``tmi_hg``, ``grav_hg``) outward along the tip's own strike.  A step is
+    accepted when the across-corridor crest score (crest minus the flank mean
+    at ±``corridor_halfwidth``) clears ``min_crest`` and the heading stays
+    within ``collinearity_deg`` of the tip's outward direction.  Support decays
+    linearly to ``max_len_px``; landing on another strand (a mapped gap
+    crossing) pins support at 1.  Leak-free under hide-and-recover: the walk
+    starts only at *visible* tips.
+
+    Returns
+    -------
+    dict with
+      stitch_bridge : corridor crest support in [0, 1]
+      stitch_cover  : the same corridor re-weighted by a cover factor
+                      (``depth_to_base_surf`` thick and ``det_elev`` flat —
+                      the "hidden by cover" emphasis of the signature)
+    """
+    ys, xs, dirs = _trace_endpoints(trace)
+    ny, nx = np.asarray(trace, bool).shape
+    bridge = np.zeros((ny, nx), np.float32)
+    cover_out = np.zeros((ny, nx), np.float32)
+    if ys.size == 0:
+        return {"stitch_bridge": bridge, "stitch_cover": cover_out}
+
+    expr = 0.25 * (_robust_z(rtp) + _robust_z(tmi)
+                   + _robust_z(tmi_hg) + _robust_z(grav_hg))
+
+    # cover factor: thick basin fill x flat topography, in [0, 1]
+    if depth_to_base is not None:
+        depth_z = np.clip(_robust_z(depth_to_base), 0.0, 2.0) / 2.0
+    else:
+        depth_z = np.zeros((ny, nx), np.float32)
+    if det_elev is not None:
+        elev = np.nan_to_num(np.asarray(det_elev, np.float32),
+                             nan=0.0, posinf=0.0, neginf=0.0)
+        gy, gx = np.gradient(elev)
+        slope = np.hypot(gy, gx)
+        med = float(np.median(slope[slope > 0])) if (slope > 0).any() else 1.0
+        flat = np.exp(-slope / max(med, 1e-6)).astype(np.float32)
+    else:
+        flat = np.ones((ny, nx), np.float32)
+    cover = depth_z * flat
+
+    cos_lim = float(np.cos(np.deg2rad(collinearity_deg)))
+    half = int(corridor_halfwidth)
+    tmask = np.asarray(trace, bool)
+
+    def crest_at(qy: int, qx: int, hy: float, hx: float) -> float:
+        # across-corridor normal (rotate heading 90 deg); flank samples at +-half
+        nyn, nxn = -hx, hy
+        f1y = int(round(qy + nyn * half)); f1x = int(round(qx + nxn * half))
+        f2y = int(round(qy - nyn * half)); f2x = int(round(qx - nxn * half))
+        if not (0 <= f1y < ny and 0 <= f1x < nx and 0 <= f2y < ny and 0 <= f2x < nx):
+            return -1.0
+        return float(expr[qy, qx] - 0.5 * (expr[f1y, f1x] + expr[f2y, f2x]))
+
+    for ty, tx, d in zip(ys.tolist(), xs.tolist(), dirs.tolist()):
+        oy, ox = float(d[0]), float(d[1])
+        hy, hx = oy, ox
+        py, px = float(ty), float(tx)
+        walked = 0.0
+        for _ in range(int(max_len_px) + 4):
+            if walked >= max_len_px:
+                break
+            cy, cx = int(round(py)), int(round(px))
+            best = None
+            best_s = min_crest
+            for dy in (-2, -1, 0, 1, 2):
+                for dx in (-2, -1, 0, 1, 2):
+                    qy, qx = cy + dy, cx + dx
+                    if not (0 <= qy < ny and 0 <= qx < nx):
+                        continue
+                    vy, vx = qy - ty, qx - tx          # vs the TIP: total
+                    n = float(np.hypot(vy, vx))        # deviation is bounded
+                    if n < 1.0 or n <= walked + 0.49:  # must advance outward
+                        continue
+                    if (vy * oy + vx * ox) / n < cos_lim:   # collinearity cone
+                        continue
+                    s = crest_at(qy, qx, hy, hx)
+                    if s > best_s:
+                        best_s = s
+                        best = (qy, qx, vy / n, vx / n)
+            if best is None:
+                break
+            qy, qx, hy, hx = best
+            walked = float(np.hypot(qy - ty, qx - tx))
+            decay = max(0.0, 1.0 - walked / max_len_px)
+            support = float(np.clip(best_s, 0.0, 1.0)) * decay
+            if tmask[qy, qx] and walked > 3.0:
+                support = max(support, 1.0)           # gap connected: pin at 1
+            if support > bridge[qy, qx]:
+                bridge[qy, qx] = support
+                cover_out[qy, qx] = support * float(cover[qy, qx])
+            if tmask[qy, qx] and walked > 3.0:
+                break
+            py, px = float(qy), float(qx)
+
+    return {"stitch_bridge": bridge, "stitch_cover": cover_out}

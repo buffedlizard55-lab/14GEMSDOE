@@ -268,6 +268,18 @@ def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
             if isinstance(v, np.ndarray) and v.shape == context.shape:
                 put(k, v)
     # R7 (research/hypotheses_round7.md)
+    if "stitch" in which:
+        st = rc.continuation_stitches(
+            context,
+            static.get("rtp", np.zeros(context.shape, np.float32)),
+            static.get("tmi", np.zeros(context.shape, np.float32)),
+            static.get("tmi_hg", np.zeros(context.shape, np.float32)),
+            static.get("iso_grav_anom_hg", np.zeros(context.shape, np.float32)),
+            depth_to_base=static.get("depth_to_base_surf", None),
+            det_elev=static.get("det_elev", None))
+        put("stitch_bridge", st["stitch_bridge"])
+        put("stitch_cover", st["stitch_cover"])
+        del st
     if "gravtopo" in which:
         ghg = static.get("iso_grav_anom_hg", None)
         if ghg is not None:
@@ -303,6 +315,10 @@ ARM_SPEC: dict[str, str] = {
     "geom_gravtopo": "geom + geo + R7-3 gravity-gradient termination/intersection topology",
     "geom_trans": "geom + geo + R7-5 transtensional shear x extension coupling",
     "geom_align": "geom(align) + geo + R7-1 expression-aligned traces (misregistration correction)",
+    "geom_stitch": "geom + geo + R7-2 buried continuation stitching",
+    # Round-7 ensemble (pre-registered amendment 2026-09-29, before its gate):
+    # horse + the R7 operators that had already PROMOTED on their own gates
+    "horse7": "geom(align) + geo + R6-1 horsetail splay + R7-1 align + R7-3 gravtopo + R7-5 trans",
 }
 
 
@@ -314,9 +330,13 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
     if arm == "geom":
         return names, r5, geo
     for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip",
-                  "gravtopo", "trans", "align"):
+                  "gravtopo", "trans", "align", "stitch"):
         if arm == f"geom_{extra}":
             r5.add(extra)
+    if arm == "horse7":
+        # pre-registered composition: horse + the three R7 arms promoted on
+        # their own gates before horse7 was defined (R7-1/3/5)
+        r5.update({"horse", "gravtopo", "trans", "align"})
     if arm == "all":
         # pinned definition (ARM_SPEC + round-5 record): every round-5 channel
         r5.update({"ramp", "acc", "tilt", "curv", "gap"})
@@ -349,6 +369,8 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
         names += ["grav_ridge", "grav_topo"]
     if "trans" in r5:
         names.append("trans_coupling")
+    if "stitch" in r5:
+        names += ["stitch_bridge", "stitch_cover"]
     if "align" in r5:
         # the geometry block itself is rebuilt from the expression-aligned
         # context in run(); this is the extra offset-magnitude channel

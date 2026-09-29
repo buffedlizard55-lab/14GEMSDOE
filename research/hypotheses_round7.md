@@ -230,3 +230,24 @@ uploaded until it beats the current holdout best (post-R6: `all6` or
   stress test and the C28/C21 argument support it. It must not be promoted on
   δ = 0 numbers alone, and it must not be described as "validated" unless the
   δ ≥ 1 condition passes.
+
+## 4. Amendment (2026-09-29, recorded BEFORE any `horse7`/`geom_stitch` gate numbers)
+
+* **`geom_stitch` (R7-2) implemented** as `gems.realchannels.continuation_stitches`:
+  crest-walker on the robust-z mean of `rtp`/`tmi`/`tmi_hg`/`iso_grav_anom_hg`,
+  launched at every *visible* catalogue tip, collinearity cone 30° of the tip's
+  own strike, corridor half-width 3 px (crest minus flank mean at ±3 px),
+  max length 48 px, linear distance decay, gap connections pin support at 1.
+  Channels: `stitch_bridge` (corridor support) and `stitch_cover` (the corridor
+  re-weighted by `depth_to_base_surf`-thick × `det_elev`-flat cover factor).
+  5 unit tests. Its own promote rule is unchanged (beat geom on sparse AND far
+  ≥3/4 folds); the pre-registered continuation-subset numbers will be reported
+  from the same gate.
+* **`horse7` ensemble arm defined** (composition fixed here, before its gate):
+  `horse + R7-1 align + R7-3 gravtopo + R7-5 trans` — exactly the operators
+  that had already PROMOTED on their own gates when this arm was defined.
+  R7-2 `stitch` is deliberately excluded (not yet promoted at definition time).
+  Decision rule (the standing slot rule, `limitations_and_next.md` §B1 / the
+  ranking note above): `horse7` takes the weekly slot only if it beats
+  `geom_horse` on sparse AND far in ≥3/4 folds of a same-run 4-fold gate;
+  otherwise the built horse artifact stands.

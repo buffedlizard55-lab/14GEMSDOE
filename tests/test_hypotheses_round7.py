@@ -257,3 +257,113 @@ class TestContinuationSubset(unittest.TestCase):
         from scripts.continuation_subset import continuation_subset
         cont, iso = continuation_subset(test, visible, tip_px=20.0, angle_deg=30.0)
         self.assertFalse(cont.any())
+
+
+class TestContinuationStitch(unittest.TestCase):
+    """R7-2 buried continuation stitching (gems.realchannels.continuation_stitches)."""
+
+    def _world(self, *, bend_deg=0.0, gap=False, flat_field=False):
+        """Trace row 32 cols 4-20 (optionally + a second strand cols 30-46),
+        potential-field ridge continuing east from the tip (optionally bending)."""
+        import numpy as np
+        from gems import realchannels as rc  # noqa: F401  (import check)
+        n = 96
+        t = np.zeros((n, n), dtype=bool)
+        t[32, 4:21] = True
+        if gap:
+            t[32, 30:47] = True
+        yy, xx = np.mgrid[0:n, 0:n]
+        if flat_field:
+            ridge = np.zeros((n, n), dtype=np.float32)
+        elif bend_deg == 0.0:
+            ridge = np.exp(-((yy - 32) ** 2) / 8.0) * ((xx >= 20) & (xx <= 70))
+        else:
+            # ridge bends by bend_deg degrees past col 40
+            import math
+            k = math.tan(math.radians(bend_deg))
+            line = 32 + np.clip(xx - 40, 0, None) * k
+            ridge = (np.exp(-((yy - line) ** 2) / 8.0)
+                     * ((xx >= 20) & (xx <= 88))).astype(np.float32)
+        depth = (np.exp(-((yy - 32) ** 2) / 200.0)
+                 * np.clip((xx - 16) * 0.5, 0, None)).astype(np.float32)
+        z = np.zeros((n, n), dtype=np.float32)
+        return t, ridge, depth, z
+
+    def _run(self, **kw):
+        import numpy as np
+        from gems import realchannels as rc
+        t, ridge, depth, z = self._world(**kw)
+        return rc.continuation_stitches(t, ridge, ridge, z, z,
+                                        depth_to_base=depth, det_elev=z)
+
+    def test_follows_ridge_past_tip(self):
+        import numpy as np
+        out = self._run()
+        b = out["stitch_bridge"]
+        # the corridor runs east along row 32 past the tip at (32, 20)
+        self.assertTrue(b[32, 25] > 0.5 and b[32, 35] > 0.2, b[32, 20:41])
+        # ...and nowhere off the ridge
+        self.assertLess(float(b[[28, 29, 35, 36]].max()), 0.05)
+
+    def test_stops_when_noncollinear(self):
+        # a 45-degree bend eventually leaves the 30-degree collinearity cone
+        # (measured from the tip's own strike); the corridor must stop there
+        out = self._run(bend_deg=45.0)
+        b = out["stitch_bridge"]
+        self.assertTrue(b[32, 30] > 0.2, "walks while still collinear")
+        # at cols >= 75 the ridge lies >30 deg off the tip strike: no following
+        self.assertLess(float(b[55:, 75:].max()), 0.05)
+
+    def test_connects_mapped_gap(self):
+        out = self._run(gap=True)
+        b = out["stitch_bridge"]
+        # the gap cols 21-29 is bridged
+        self.assertTrue((b[32, 22:29] > 0.2).all(), b[32, 20:31])
+        # landing on the far strand pins high support at the junction
+        self.assertGreater(float(b[32, 30]), float(b[32, 25]))
+
+    def test_flat_field_no_bridge(self):
+        out = self._run(flat_field=True)
+        self.assertLess(float(out["stitch_bridge"].max()), 0.05)
+
+    def test_cover_channel_tracks_cover(self):
+        import numpy as np
+        from gems import realchannels as rc
+        t, ridge, depth, z = self._world()
+        thick = rc.continuation_stitches(t, ridge, ridge, z, z,
+                                         depth_to_base=depth, det_elev=z)
+        thin = rc.continuation_stitches(t, ridge, ridge, z, z,
+                                        depth_to_base=np.zeros_like(depth),
+                                        det_elev=z)
+        rough = rc.continuation_stitches(
+            t, ridge, ridge, z, z, depth_to_base=depth,
+            det_elev=np.tile(np.linspace(0.0, 50.0, 96, dtype=np.float32), (96, 1)))
+        # the corridor itself does not depend on cover
+        np.testing.assert_allclose(thick["stitch_bridge"], thin["stitch_bridge"])
+        # no cover -> no buried-continuation emphasis
+        self.assertEqual(float(thin["stitch_cover"].sum()), 0.0)
+        self.assertGreater(float(thick["stitch_cover"].sum()), 0.0)
+        # steep topography suppresses the cover emphasis relative to flat
+        self.assertLess(float(rough["stitch_cover"][32, 30:60].sum()),
+                        float(thick["stitch_cover"][32, 30:60].sum()))
+
+
+class TestStitchAndHorse7Wiring(unittest.TestCase):
+    def test_geom_stitch_wiring(self):
+        import validate_real as vr
+        names, r5, geo = vr.arm_channels("geom_stitch")
+        self.assertIn("stitch", r5)
+        self.assertIn("stitch_bridge", names)
+        self.assertIn("stitch_cover", names)
+        self.assertIn("geom_stitch", vr.ARM_SPEC)
+
+    def test_horse7_wiring(self):
+        import validate_real as vr
+        names, r5, geo = vr.arm_channels("horse7")
+        self.assertEqual(r5, {"horse", "gravtopo", "trans", "align"})
+        self.assertIn("horse_splay", names)
+        self.assertIn("grav_ridge", names)
+        self.assertIn("trans_coupling", names)
+        self.assertIn("align_offset", names)
+        self.assertNotIn("stitch_bridge", names)  # excluded at definition time
+        self.assertIn("horse7", vr.ARM_SPEC)
