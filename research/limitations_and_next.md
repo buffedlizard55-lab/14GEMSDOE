@@ -33,18 +33,16 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
 
 *Updated 2026-09-29 after Round 6 promotion. Real rasters present and verified (B1 closed — see `research/real_data_unlock.md`). **Sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`, `data/processed/` and `artifacts/*` (except whitelisted JSONs) do NOT survive reset.** Rebuild via Quickstart block in README.*
 
-1. **Upload the validated field(s) — HUMAN ACTION (DrivenData login).** Wait
-   for the all6 gate (`artifacts/holdout_round6_all6.json`, running) and then
-   upload **one** field: `build_real_submission.py` auto-selects by the
-   pre-registered rule among horse/condbase/shore/all6. If speed matters more
-   than the ensemble question, the already-built
-   `submissions/GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif`
-   (finite, [0,1], format gate + uniqueness audit PASS) can go in today; its
-   NOTE is in `artifacts/real_submission_note.txt`. Record the DrivenData
-   submission ID in the ledger. Three promoted arms now exist (R6-1 horse,
-   R6-3 condbase, R6-5 shore) — one submission per entity is scored across
-   both rounds (C8), so **spend slots on the ensemble, not on single arms**,
-   unless the ensemble fails the rule.
+1. **Upload the validated field(s) — HUMAN ACTION (DrivenData login).** NOTE:
+   the round-6 horse TIFF did **not** survive the sandbox reset
+   (`submissions/*` is gitignored) and must be rebuilt before upload. Wait for
+   the all6 gate (`artifacts/holdout_round6_all6.json`, running) and then build
+   **one** field: `build_real_submission.py` auto-selects by the pre-registered
+   rule among the arms in the gate JSON. If all6 is not eligible, re-run
+   `--arms geom geom_horse` (~25 min) to regenerate its fold fields and build
+   the horse field instead. Spend **one** weekly slot on the ensemble-class
+   field, not on single arms (C8: one submission per entity is scored across
+   both rounds). Record the DrivenData submission ID in the ledger.
 
 2. **Complete full 4-fold for all6 (R5+R6 ensemble)** — first attempt OOM-killed
    (exit 137) at fold 2 after reproducing the interim record exactly; re-run as

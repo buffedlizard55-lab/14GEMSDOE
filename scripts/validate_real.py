@@ -189,85 +189,98 @@ def build_geom_channels(context: np.ndarray, window: int = 9) -> dict[str, np.nd
 
 def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
                           valid: np.ndarray, which: set[str]) -> dict[str, np.ndarray]:
-    """Round-5 + Round-6 hypothesis channels (only the ones the arm asked for)."""
+    """Round-5 + Round-6 + Round-7 hypothesis channels (only the arm's set).
+
+    Memory contract (two OOM kills at fold 2 of the all6 gate taught this):
+    every channel is converted to the guarded float16 storage dtype THE MOMENT
+    it is produced (`put`), and large intermediates are deleted eagerly.  The
+    conversion is bit-identical to converting at the end — the design matrix
+    sees the same values — but the float32 peak no longer scales with the
+    number of extras.
+    """
     out: dict[str, np.ndarray] = {}
+
+    def put(name: str, v: np.ndarray) -> None:
+        out[name] = _f16(v)
+
     elev = rc.nan_fill(static.get("det_elev", np.zeros(context.shape, np.float32)))
     elev_slope = static.get("det_elev_slope", None)
     # R5
     if "ramp" in which:
-        out["ramp_maturity"] = rc.ramp_maturity_field(context)
+        put("ramp_maturity", rc.ramp_maturity_field(context))
     if "acc" in which:
-        out["acc_corridor"] = rc.accommodation_corridors(context, elev)
+        put("acc_corridor", rc.accommodation_corridors(context, elev))
     if "tilt" in which:
         vg = np.nan_to_num(static.get("tmi_vg", np.zeros(context.shape, np.float32)), nan=0.0)
         hg = np.nan_to_num(static.get("tmi_hg", np.zeros(context.shape, np.float32)), nan=0.0)
         ta = rc.tilt_angle(vg, hg)
-        out["tilt_angle"] = ta
-        out["tilt_edge"] = rc.line_max(np.abs(ta), radius=2)
+        del vg, hg
+        put("tilt_angle", ta)
+        put("tilt_edge", rc.line_max(np.abs(ta), radius=2))
+        del ta
     if "curv" in which:
         prof, plan = rc.profile_curvature(elev, sigma=1.0)
-        out["profcurv"] = prof
-        out["profcurv_line"] = rc.line_max(np.abs(prof), radius=2)
+        del plan
+        put("profcurv", prof)
+        put("profcurv_line", rc.line_max(np.abs(prof), radius=2))
+        del prof
     if "gap" in which:
         dens = rc.intersection_density(context)["trace_density"]
-        res = rc.completeness_residual(dens, {
-            "elev": elev,
-            "grav_slope": np.nan_to_num(
-                static.get("iso_grav_anom_slope", np.zeros(context.shape, np.float32)), nan=0.0),
-        }, smooth_sigma=32.0)
-        out["gap_residual"] = np.asarray(res["residual"] if isinstance(res, dict) else res,
-                                         dtype=np.float32)
+        gs = np.nan_to_num(
+            static.get("iso_grav_anom_slope", np.zeros(context.shape, np.float32)), nan=0.0)
+        res = rc.completeness_residual(dens, {"elev": elev, "grav_slope": gs},
+                                       smooth_sigma=32.0)
+        del dens, gs
+        put("gap_residual", np.asarray(res["residual"] if isinstance(res, dict) else res,
+                                       dtype=np.float32))
     # R6
     if "horse" in which:
         es = rc.nan_fill(elev_slope) if elev_slope is not None else None
-        out["horse_splay"] = rc.horsetail_splay_field(context, es, elev, radius_px=20.0, half_angle_deg=60.0)
+        put("horse_splay", rc.horsetail_splay_field(context, es, elev,
+                                                    radius_px=20.0, half_angle_deg=60.0))
     if "xsec" in which:
-        shear = static.get("geod_shearrate", None)
-        dil = static.get("geod_dilaterate", None)
-        # also need tmi_hg for weighting optionally
-        out["xsec_halo"] = rc.intersection_halos(context, shear, dil, high_angle_deg=45.0, near_miss_px=20.0, halo_sigma_px=10.0)
+        put("xsec_halo", rc.intersection_halos(context, static.get("geod_shearrate"),
+                                               static.get("geod_dilaterate"),
+                                               high_angle_deg=45.0, near_miss_px=20.0,
+                                               halo_sigma_px=10.0))
     if "condbase" in which:
-        cond = static.get("cond_surf", None)
-        depth = static.get("depth_to_base_surf", None)
-        tmi = static.get("tmi", None)
-        ghg = static.get("iso_grav_anom_hg", None)
-        cb = rc.conductive_base_step(cond, depth, tmi, ghg)
+        cb = rc.conductive_base_step(static.get("cond_surf"), static.get("depth_to_base_surf"),
+                                     static.get("tmi"), static.get("iso_grav_anom_hg"))
         # conductive_base_step returns zeros if missing; handle shape mismatch
         if isinstance(cb, np.ndarray) and cb.shape == context.shape:
-            out["condbase_step"] = cb
+            put("condbase_step", cb)
         elif isinstance(cb, np.ndarray) and cb.size == context.size:
-            out["condbase_step"] = cb.reshape(context.shape)
+            put("condbase_step", cb.reshape(context.shape))
     if "shore" in which:
-        ghg = static.get("iso_grav_anom_hg", None)
-        res = rc.paleo_shoreline_suppression(elev, rc.nan_fill(elev_slope) if elev_slope is not None else None, ghg)
+        res = rc.paleo_shoreline_suppression(
+            elev, rc.nan_fill(elev_slope) if elev_slope is not None else None,
+            static.get("iso_grav_anom_hg"))
         if res:
             if "sublake_enhanced" in res and res["sublake_enhanced"].shape == context.shape:
-                out["sublake_enhanced"] = res["sublake_enhanced"]
+                put("sublake_enhanced", res["sublake_enhanced"])
             if "shoreline_dist" in res and res["shoreline_dist"].shape == context.shape:
-                # invert distance: close to shoreline = low fault prob (suppression), far + sublake = high
-                # we emit the distance as feature; model learns suppression
-                out["shore_dist"] = res["shoreline_dist"]
+                # the model learns suppression from the distance feature
+                put("shore_dist", res["shoreline_dist"])
     if "slip" in which:
         # external data not present in this sandbox run; placeholder returns empty
         sd = rc.slip_dilation_tendency_field(context)
-        # if it ever returns something, add it
         for k, v in sd.items():
             if isinstance(v, np.ndarray) and v.shape == context.shape:
-                out[k] = v
+                put(k, v)
     # R7 (research/hypotheses_round7.md)
     if "gravtopo" in which:
         ghg = static.get("iso_grav_anom_hg", None)
-        gslope = static.get("iso_grav_anom_slope", None)
         if ghg is not None:
-            topo = rc.gravity_topology(ghg, gslope)
-            out["grav_ridge"] = topo["grav_ridge"]
-            out["grav_topo"] = topo["grav_topo"]
+            topo = rc.gravity_topology(ghg, static.get("iso_grav_anom_slope"))
+            put("grav_ridge", topo["grav_ridge"])
+            put("grav_topo", topo["grav_topo"])
     if "trans" in which:
         shear = static.get("geod_shearrate", None)
         dil = static.get("geod_dilaterate", None)
         if shear is not None and dil is not None:
-            out.update(rc.transtensional_coupling(shear, dil))
-    return {k: _f16(v) for k, v in out.items() if v is not None}
+            for k, v in rc.transtensional_coupling(shear, dil).items():
+                put(k, v)
+    return out
 
 
 ARM_SPEC: dict[str, str] = {
