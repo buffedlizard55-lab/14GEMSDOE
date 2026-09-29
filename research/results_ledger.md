@@ -292,3 +292,42 @@ alone do not establish reuse. The audit now blocks exact TIFF and prediction-arr
 hash duplicates among local artifacts, while reporting rounded-score and
 truncated-ID collisions for review. Keep a full prediction hash and submission
 ID for every future upload; do not use leaderboard scores as uniqueness keys.
+
+---
+
+## Round-7 gates 4 — R7-3 and R7-5 PROMOTED (2026-09-29)
+
+**Command (gate 4, `/tmp/run_gates4.sh`, exit 0, wall ~46 min):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_gravtopo geom_trans --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round7.json
+```
+`geom` baseline reproduced the pinned means again (fold rows identical to
+`holdout_round6_rest.json`). File: `artifacts/holdout_round7.json`.
+
+| Fold | geom dense / sparse / far | geom_gravtopo (R7-3) | geom_trans (R7-5) |
+|------|---------------------------|----------------------|-------------------|
+| 0 | 0.0381 / 0.0165 / 0.0006 | 0.0410 / 0.0183 / 0.0033 | 0.0429 / 0.0201 / 0.0038 |
+| 1 | 0.0381 / 0.0145 / 0.0006 | 0.0329 / 0.0133 / 0.0014 | 0.0364 / 0.0136 / 0.0017 |
+| 2 | 0.0333 / 0.0142 / 0.0000 | 0.0335 / 0.0158 / 0.0020 | 0.0374 / 0.0177 / 0.0034 |
+| 3 | 0.0444 / 0.0153 / 0.0002 | 0.0482 / 0.0180 / 0.0024 | 0.0487 / 0.0184 / 0.0032 |
+| Wins vs geom (sparse / far) | — | **3/4 / 4/4 → PROMOTED** | **3/4 / 4/4 → PROMOTED** |
+
+Both fail fold 1 on dense/sparse (the 5513-conflict fold); both win far on all
+four folds. `geom_trans` is the stronger arm (fold-0 sparse +22 %, far ≈6×
+geom). Prior UPDATE: match-scale *cross-aspect gravity-direction coherence*
+(`prior_contrast_hits.md` P1, 3/3 matches) was implemented as R7-3's
+topology term and PROMOTED here. FLAG #12 (dilatation sign) stands.
+
+## R7-2 continuation subset diagnostic (2026-09-29)
+
+**Command:** `./.venv/bin/python scripts/continuation_subset.py --gate
+artifacts/holdout_round6_rest.json --arms geom_shore geom_condbase --out
+artifacts/continuation_subset_r6rest.json` (no re-training; split ids + fold
+fields). **52.5 % of TEST pixels belong to continuation components** (hidden
+component with an endpoint within 20 px of a visible endpoint, strikes within
+30°). Recovery of that class is ~2.5× the isolated class (shore: cont 0.0471
+vs iso 0.0193; condbase: cont 0.0420 vs 0.0162). The C21 continuation class is
+the mass of the truth population; the isolated remainder is where R7-2's
+bridge must reach. Suite: 157 tests (3 new).
