@@ -19,6 +19,7 @@
   <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
   <a href="hypotheses-round5.html">Hypotheses (round 5)</a>
   <a href="hypotheses-round6.html">Hypotheses (round 6)</a>
+  <a href="hypotheses-round7.html">Hypotheses (round 7)</a>
   <a href="audit.html">Artifact audit</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
@@ -105,24 +106,34 @@ not proven. A repeated four-decimal leaderboard score — including 0.1563 — d
 <strong>not</strong> prove identical predictions. We now hash prediction arrays
 separately from TIFF containers and treat score ties as provenance warnings.
 No candidate is eligible for a slot until it beats the real spatially-blocked
-holdout. <strong>Round 6 breaks the plateau:</strong> R6-1 horsetail splay fan
-beats the geom baseline on sparse AND far in 4/4 folds (0.0385→0.0624 dense,
-0.0151→0.0217 sparse, 0.0003→0.0040 far, 13× far). The validated field is built
+holdout. <strong>Round 6 breaks the plateau:</strong> three arms now meet the
+promote rule on real data — R6-1 horsetail splay (4/4 sparse &amp; far),
+R6-5 paleo-shoreline (4/4 both, far ≈ 13× baseline) and R6-3 conductive-base
+step (3/4 &amp; 4/4). The validated field is built
 as <code>submissions/GEMS_r5-geom-horse-ensemble_… .tif</code> (finite, 0 outside,
-passes format gate). <a href="strategy.html">Strategy</a> ·
-<a href="hypotheses-round6.html">Round-6 validated hypotheses →</a>.</p>
+passes format gate); the all6 ensemble gate is finishing before the next slot
+goes to the best field. <a href="strategy.html">Strategy</a> ·
+<a href="hypotheses-round6.html">Round-6 validated hypotheses →</a> ·
+<a href="hypotheses-round7.html">Round-7 hypotheses →</a>.</p>
 </div>
 
-<h2>Round 6 — first real-data promotion (2026-09-29)</h2>
+<h2>Round 6 — three real-data promotions (2026-09-29)</h2>
 <div class="card">
-<p>Five new hypotheses distinct from R1–R5 (see <a href="hypotheses-round6.html">round-6 page</a>). Top candidate <strong>R6-1 horsetail splay fan</strong> — catalogue tips → 120° fan radius 0.5–2 km, weight (1-d/R)·exp(-Δθ²/2σ²), slope-modulated — targets minor faults with minimal surface rupture that Faulds et al. 2026 says are "difficult to recognize even with high-resolution lidar" (KB S14). Validated on real rasters, component protocol 4 folds, emission calibrated on hidden CALIB only:</p>
+<p>Five new hypotheses distinct from R1–R5 (see <a href="hypotheses-round6.html">round-6 page</a>). Validated on real rasters, component protocol 4 folds, emission calibrated on hidden CALIB only; promote rule = beat geom on sparse AND far in ≥3/4 folds:</p>
 <div class="grid2">
   <div class="stat"><div class="k">Winner</div><div class="v">geom_horse (R6-1)</div>
-    <div class="s">dense 0.0385→0.0624 (+0.0239), sparse 0.0151→0.0217 (+0.0066), far 0.0003→0.0040 (+0.0037), 4/4 folds wins on both sparse and far — meets promote rule, first arm to do so on real data</div></div>
+    <div class="s">dense 0.0385→0.0624 (+0.0239), sparse 0.0151→0.0217 (+0.0066), far 0.0003→0.0040 (+0.0037), 4/4 folds wins on both sparse and far — first arm to meet the promote rule on real data</div></div>
+  <div class="stat"><div class="k">Also promoted</div><div class="v">geom_shore (R6-5) · geom_condbase (R6-3)</div>
+    <div class="s">shore 0.0452/0.0191/0.0038 (4/4 sparse &amp; far — far ≈ 13× baseline, strongest far arm of the project); condbase 0.0397/0.0166/0.0022 (3/4 sparse, 4/4 far). R6-2 xsec killed by rule (sparse 2/4) despite far 4/4</div></div>
   <div class="stat"><div class="k">Runner-up</div><div class="v">all6 (R5+R6 ensemble)</div>
-    <div class="s">interim 2-fold: 0.0675/0.0212/0.0068 (fold0) and 0.0767/0.0268/0.0095 (fold1) — beats horse and curvature single arms, suggesting combination best; full 4-fold pending</div></div>
+    <div class="s">interim 2-fold: 0.0675/0.0212/0.0068 (fold0) and 0.0767/0.0268/0.0095 (fold1) — beats horse and curvature single arms on all three protocols; full 4-fold re-running after an OOM at fold 2 (the first two folds reproduced exactly)</div></div>
 </div>
-<p class="src">Full gate: <code>artifacts/holdout_round6_horse.json</code>, fields in <code>artifacts/real_fields/</code>, submission <code>GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif</code> (finite, [0,1], EPSG:32611). No slot spent yet — field ready for next weekly slot. Other R6 arms (xsec, condbase, shore) improve in smoke crop; full-grid rerun pending. External slip/dilation source verified: DOI 10.5066/P9YL58W6 (USGS ScienceBase, 27 MB shapefile, public domain).</p>
+<p class="src">Full gates: <code>artifacts/holdout_round6_horse.json</code>, <code>artifacts/holdout_round6_rest.json</code>, fields in <code>artifacts/real_fields/</code>, submission <code>GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif</code> (finite, [0,1], EPSG:32611, official-economics budget q 0.0225). No slot spent yet — the artifact is the single upload candidate. External slip/dilation source verified: DOI 10.5066/P9YL58W6 (USGS ScienceBase, 27 MB shapefile, public domain).</p>
+</div>
+
+<h2>Round 7 — the problem statement told us where the truth is (2026-09-29)</h2>
+<div class="card">
+<p>Two official statements reframe the hidden truth: <strong>C28</strong> — "portions of the existing fault data may be misaligned from the true location of the surface fault, which is the prediction target" — and <strong>C21</strong> — continuations past mapped tips and splays are scoring truth. No R1–R6 arm models misregistration or buried continuation. Five candidates pre-registered (<a href="hypotheses-round7.html">round-7 page</a>): <strong>R7-1 expression-aligned traces</strong> (misregistration correction, validated via a new <code>--misreg-px</code> stress protocol), <strong>R7-2 buried continuation stitching</strong>, <strong>R7-3 gravity-gradient termination/intersection topology</strong> (the label producers' own basin playbook — KB S11 — re-tested on real data after a synthetic-only kill), <strong>R7-4 strain-budget deficit</strong>, <strong>R7-5 transtensional coupling</strong>. R7-3/R7-5/R7-1 operators implemented with 20 unit tests; gated this session: <strong>R7-1, R7-2, R7-3, R7-5 PROMOTED</strong> (far 4/4 each; R7-1 also wins the δ=2 stress 4/4; R7-2's bridge lifts the isolated subset +19 %), R7-4 killed by the prior. Three ensemble attempts (all6, horse7 v1, horse7 v2 at 0.0721/0.0224/0.0075 — far nearly double horse) all fail the fold-wise sparse rule (2/4 each) — the horse arm keeps the weekly slot, at the official-marginal-economics budget (q 0.0225; TEST dense 0.0699).</p>
 </div>
 
 <h2>Round 2 — the blocked holdout has already decided (2026-09-28)</h2>
@@ -208,8 +219,8 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
     <td><span class="pill ok">PRESENT · HASH-VERIFIED</span></td>
     <td class="src"><code>scripts/bridge_team_mirror.sh</code> → 418,912,844 B features sha256 4371c82e…, 60,988 catalogue px, 5,167,373 footprint — <a href="data.html">verified</a></td></tr>
 <tr><td>Pipeline (features → hide-and-recover → holdout → submission)</td>
-    <td><span class="pill ok">127 TESTS PASS</span></td>
-    <td class="src">Full suite including real-channel tests, DTI fast, submission gate — <code>pytest tests -q</code> 2026-09-29</td></tr>
+    <td><span class="pill ok">154 TESTS PASS</span></td>
+    <td class="src">Full suite including real-channel tests, DTI fast, submission gate, round-7 channels, deployment-API contract — <code>pytest tests -q</code> 2026-09-29</td></tr>
 <tr><td>Round-2 hypothesis gate (9 arms, blocked holdout)</td>
     <td><span class="pill ok">RUN</span></td>
     <td class="src"><code>artifacts/holdout_round2.json</code> — BLEND-MUL promoted, N1/N3/GEO-ONLY/BLEND/BLEND-ADD killed; synthetic forward model only</td></tr>
@@ -222,6 +233,12 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
 <tr><td>Round-6 real-data gate (R6-1 horsetail splay)</td>
     <td><span class="pill ok">RUN · 4 FOLDS · PROMOTED</span></td>
     <td class="src"><code>artifacts/holdout_round6_horse.json</code> — geom_horse beats geom on sparse AND far in 4/4 folds (0.0385→0.0624 dense, 0.0151→0.0217 sparse, 0.0003→0.0040 far) — <a href="hypotheses-round6.html">round-6 page</a></td></tr>
+<tr><td>Round-6 remaining arms (xsec, condbase, shore)</td>
+    <td><span class="pill ok">RUN · 4 FOLDS · 2 PROMOTED</span></td>
+    <td class="src"><code>artifacts/holdout_round6_rest.json</code> — R6-5 shore 4/4 sparse &amp; far (far ≈ 13× baseline), R6-3 condbase 3/4 &amp; 4/4 PROMOTED; R6-2 xsec killed by rule (sparse 2/4)</td></tr>
+<tr><td>Round-7 gates (gravtopo, trans, align ±misregistration)</td>
+    <td><span class="pill warn">RUNNING</span></td>
+    <td class="src">Pre-registration <code>research/hypotheses_round7.md</code> — R7-1 misregistration stress protocol new this session — <a href="hypotheses-round7.html">round-7 page</a></td></tr>
 <tr><td>Artifact uniqueness audit</td>
     <td><span class="pill ok">PASS</span></td>
     <td class="src"><code>scripts/check_submission_uniqueness.py</code> — no duplicate TIFF/prediction arrays; score ties are warnings only</td></tr>

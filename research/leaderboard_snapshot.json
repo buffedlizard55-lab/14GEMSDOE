@@ -1013,5 +1013,1019 @@
         "last_submission": "3d 1h ago"
       }
     ]
+  },
+  {
+    "fetched_utc": "2026-09-29T02:18:57.816966+00:00",
+    "source_url": "https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/",
+    "fetched_live": false,
+    "n_rows": 50,
+    "top": [
+      {
+        "rank": 1,
+        "users": [
+          "DARD",
+          "DARD"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/e38a608bd5f3da0a7ee79a34896955fa.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.3168
+      },
+      {
+        "rank": 2,
+        "users": [
+          "alexoktaba",
+          "alexoktaba"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/151a1590e2cbd0037a74334aa2c12c42.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2993
+      },
+      {
+        "rank": 3,
+        "users": [
+          "joeyfezster",
+          "joeyfezster"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/e2bedb3a3b004340531b316094a000d8.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2872
+      },
+      {
+        "rank": 4,
+        "users": [
+          "HardcoreTechGod",
+          "HardcoreTechGod"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/783c0efd3c6726ea4e17799970ed3aaa.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2854
+      },
+      {
+        "rank": 5,
+        "users": [
+          "mzoorob",
+          "mzoorob"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/1550837da571a8b35b47f15dc5d6fc7e.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2843
+      },
+      {
+        "rank": 6,
+        "users": [
+          "GrigorSargsyan",
+          "GrigorSargsyan"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/38a4c059b729108b33fa8f95d8a2af9b.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2742
+      },
+      {
+        "rank": 7,
+        "users": [
+          "exposed",
+          "exposed"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/6090c7b54aeaa76c5ec4153fae697e7f.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2584
+      },
+      {
+        "rank": 8,
+        "users": [
+          "op01",
+          "op01"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/7c4a782e6d722a8a8e0918ebaba5af36.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2489
+      },
+      {
+        "rank": 9,
+        "users": [
+          "tchu",
+          "tchu"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/8dbfea916e2c2b6fce0fe40a04805932.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.246
+      },
+      {
+        "rank": 10,
+        "users": [
+          "ndavis7",
+          "ndavis7"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/6824d6fbc7666f37b1729d1b2362ff6d.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2368
+      },
+      {
+        "rank": 11,
+        "users": [
+          "xiaofanhu",
+          "xiaofanhu"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2e4740d25937497544ab16457dc696bc.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2367
+      },
+      {
+        "rank": 12,
+        "users": [
+          "rariwa",
+          "masterozone0617"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/c7f502beee8201f264e17bb8bf7f01bd.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2321
+      },
+      {
+        "rank": 13,
+        "users": [
+          "ad3002",
+          "ad3002"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/d598804995cb3d851dc8a06734b31a1b.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2297
+      },
+      {
+        "rank": 14,
+        "users": [
+          "hiii12345",
+          "hiii12345"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/be1c4ad8c1498e58097364dc2b0f6a24.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2262
+      },
+      {
+        "rank": 15,
+        "users": [
+          "oshbocker",
+          "oshbocker"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/9fb8be3023c15fc1f30fa689cfb609ab.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2224
+      },
+      {
+        "rank": 16,
+        "users": [
+          "jgaines",
+          "jgaines"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/a2618ed956918f362fb67dca34255dc4.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.2184
+      },
+      {
+        "rank": 17,
+        "users": [
+          "moongrega",
+          "moongrega"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/ea50dd4227482df8169cf005134c0324.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.218
+      },
+      {
+        "rank": 18,
+        "users": [
+          "hudsonenterprises",
+          "hudsonenterprises"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/76eaa4025e6b6c68636094d97ccb5a91.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1907
+      },
+      {
+        "rank": 19,
+        "users": [
+          "hall4jm",
+          "hall4jm"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/291f98421456a2bc4c3f1c452ab76ed4.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1851
+      },
+      {
+        "rank": 20,
+        "users": [
+          "doegemsDrivendata",
+          "doegemsDrivendata"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/98895442e8938f67d33f181008c37116.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1847
+      },
+      {
+        "rank": 21,
+        "users": [
+          "nsabaj",
+          "nsabaj"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/fc7000e1345211ab1e7aa646f0ecff31.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1744
+      },
+      {
+        "rank": 22,
+        "users": [
+          "kpomazi",
+          "kpomazi"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2667678c42c2c0555ee32a9fa26cb4a8.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1722
+      },
+      {
+        "rank": 23,
+        "users": [
+          "Scotty77",
+          "Scotty77"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/29a8b32faf35c1e66a4612e496cf0463.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1682
+      },
+      {
+        "rank": 24,
+        "users": [
+          "dmitry_v",
+          "dmitry_v"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2596af49ec39273e0d4f3135b2a1eaf1.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1672
+      },
+      {
+        "rank": 25,
+        "users": [
+          "Ndabenhle",
+          "Ndabenhle"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/6d9a55913bee51bf74e8b634642da97c.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1664
+      },
+      {
+        "rank": 26,
+        "users": [
+          "VictorCallejas",
+          "VictorCallejas"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/9601fed45ff767436a4d8c44482f20a9.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1629
+      },
+      {
+        "rank": 27,
+        "users": [
+          "fishnchips",
+          "fishnchips"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/0c62e4c73f45e817d665b7f0f052cd21.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1587
+      },
+      {
+        "rank": 28,
+        "users": [
+          "extradr19",
+          "extradr19"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/ca71632153810e832565044d85bbb841.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1563
+      },
+      {
+        "rank": 29,
+        "users": [
+          "SDCF9",
+          "SDCF9"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/a001cb6a77a2c4ed8315a0f074a259aa.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1563
+      },
+      {
+        "rank": 30,
+        "users": [
+          "smashi34",
+          "smashi34"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2db57f0c65cdf3cb8aa461c63de4a40d.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1563
+      },
+      {
+        "rank": 31,
+        "users": [
+          "Ehimen777",
+          "Ehimen777"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/74cccbd06552058ad230ef775574f616.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1554
+      },
+      {
+        "rank": 32,
+        "users": [
+          "Aero",
+          "Aero"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/39df6fdee6e6d31520f214d43e06739e.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.15
+      },
+      {
+        "rank": 33,
+        "users": [
+          "GeoTrace",
+          "GeoTrace"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/93761e343130bfda64df2be49d9e9c06.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1498
+      },
+      {
+        "rank": 34,
+        "users": [
+          "mlandry",
+          "mlandry"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/f35361ee62e3c7c48be38dfabc5f05c4.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1481
+      },
+      {
+        "rank": 35,
+        "users": [
+          "Milieunomics",
+          "Milieunomics"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/e63d4af4f5798f25b629ad137b9c1eda.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1466
+      },
+      {
+        "rank": 36,
+        "users": [
+          "wbg1",
+          "wbg1"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/afdb8a5b9c33312167bd17cddc03726d.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1461
+      },
+      {
+        "rank": 37,
+        "users": [
+          "kbrodt",
+          "kbrodt"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/f26579971dfa559e3b5663c5cda88678.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1456
+      },
+      {
+        "rank": 38,
+        "users": [
+          "BrandenKMurray",
+          "BrandenKMurray"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/9c0efcd3ac950851e389ef01a94392c4.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.145
+      },
+      {
+        "rank": 39,
+        "users": [
+          "syntropy-digital",
+          "syntropy-digital"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/a1c73cd828b5c49e0fbd5f11259a3812.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1433
+      },
+      {
+        "rank": 40,
+        "users": [
+          "Waltz157",
+          "Waltz157"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/0b748bc98d590ceb8edca1c701ae8eb3.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1422
+      },
+      {
+        "rank": 41,
+        "users": [
+          "Beacon",
+          "Beacon"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/18e4cf0fbab1a50fc6297822c69b086e.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1407
+      },
+      {
+        "rank": 42,
+        "users": [
+          "Milieu",
+          "Milieu"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/348ec531c023ea0a5d3c8975aa8c4beb.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1401
+      },
+      {
+        "rank": 43,
+        "users": [
+          "jfper21",
+          "jfper21"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/672b5fcb3957c20347610e04aa20b35b.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.138
+      },
+      {
+        "rank": 44,
+        "users": [
+          "joano",
+          "joano"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/56859c6138d40344959a31723bb3eb48.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.135
+      },
+      {
+        "rank": 45,
+        "users": [
+          "vladee",
+          "ahome"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/67e62dcb9f13aa10dd8509c6bd7c1447.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.135
+      },
+      {
+        "rank": 46,
+        "users": [
+          "Ehimenathan",
+          "Ehimenathan"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/6ab2741111df3aa35d3cbc03bf50e002.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1264
+      },
+      {
+        "rank": 47,
+        "users": [
+          "jorgeschmidt",
+          "jorgeschmidt"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/63a390006d78c8a0a5fabc0323daf785.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1256
+      },
+      {
+        "rank": 48,
+        "users": [
+          "mtrpdx",
+          "mtrpdx"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/ef2d57756d75e7ef3dda0b4c5c60970c.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1219
+      },
+      {
+        "rank": 49,
+        "users": [
+          "smrtdoog5",
+          "smrtdoog5"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2a4c519a587911f88e1221afc4a02f1e.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1193
+      },
+      {
+        "rank": 50,
+        "users": [
+          "ahkarl13",
+          "ahkarl13"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/9cd4ec9516184973e92362e1c9a2949e.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1148
+      }
+    ],
+    "watchlist": [
+      {
+        "rank": 28,
+        "users": [
+          "extradr19",
+          "extradr19"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/ca71632153810e832565044d85bbb841.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1563
+      },
+      {
+        "rank": 29,
+        "users": [
+          "SDCF9",
+          "SDCF9"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/a001cb6a77a2c4ed8315a0f074a259aa.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1563
+      },
+      {
+        "rank": 30,
+        "users": [
+          "smashi34",
+          "smashi34"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2db57f0c65cdf3cb8aa461c63de4a40d.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1563
+      },
+      {
+        "rank": 36,
+        "users": [
+          "wbg1",
+          "wbg1"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/afdb8a5b9c33312167bd17cddc03726d.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1461
+      },
+      {
+        "rank": 49,
+        "users": [
+          "smrtdoog5",
+          "smrtdoog5"
+        ],
+        "display": "[![](https://secure.gravatar.com/avatar/2a4c519a587911f88e1221afc4a02f1e.jpg?s=64&d=404&r=g)](https://www.drivendata.org",
+        "score": 0.1193
+      }
+    ],
+    "note": "Top-50 rows read from the live public leaderboard on 2026-09-29 via the Arena fetch tool (session-15 feed maintenance; rows 1-50 read directly in three chunks, page text reconstructed and parsed with scripts/refresh_leaderboard.py --html-file). fetched_live=false is an artifact of the --html-file path: the page was fetched live through the Arena fetch tool because sandbox TLS blocks drivendata.org (FLAG #1)."
+  },
+  {
+    "fetched_utc": "2026-09-29T05:05:00Z",
+    "source_url": "https://www.drivendata.org/competitions/306/competition-doe-gems/leaderboard/",
+    "fetched_live": true,
+    "note": "Top-50 rows read live via the Arena fetch tool on 2026-09-29T05:05Z (session 15GEMSDOE pass-2 verification; sandbox TLS to drivendata.org still blocked - scripts/refresh_leaderboard.py keeps the snapshot). Changes since the 09-29 snapshot: joeyfezster 0.2806 -> 0.2872 (now #3), op01 0.2489 (#8), tchu 0.2460 (#9), ndavis7 0.2368 (#10, 5 submissions), moongrega 0.2296 (#14), kpomazi 0.1873 (#19), hall4jm 0.1851 (#20). The 0.1563 plateau is UNCHANGED: exactly three accounts at #28-30 (extradr19 3 subs, SDCF9 3 subs, smashi34 2 subs) - no new tied entrant. Score ties are not artifact identity: duplication is decided by prediction-array SHA-256 (scripts/check_submission_uniqueness.py, research/artifact_audit.md). Our group has spent no submission slot; the validated horse ensemble is built and awaiting the HUMAN upload.",
+    "n_rows": 50,
+    "top": [
+      {
+        "rank": 1,
+        "users": [
+          "DARD"
+        ],
+        "display": "DARD",
+        "score": 0.3168,
+        "n_submissions": 11
+      },
+      {
+        "rank": 2,
+        "users": [
+          "alexoktaba"
+        ],
+        "display": "alexoktaba",
+        "score": 0.2993,
+        "n_submissions": 16
+      },
+      {
+        "rank": 3,
+        "users": [
+          "joeyfezster"
+        ],
+        "display": "joeyfezster",
+        "score": 0.2872,
+        "n_submissions": 15
+      },
+      {
+        "rank": 4,
+        "users": [
+          "HardcoreTechGod"
+        ],
+        "display": "HardcoreTechGod",
+        "score": 0.2854,
+        "n_submissions": 6
+      },
+      {
+        "rank": 5,
+        "users": [
+          "mzoorob"
+        ],
+        "display": "mzoorob",
+        "score": 0.2843,
+        "n_submissions": 18
+      },
+      {
+        "rank": 6,
+        "users": [
+          "GrigorSargsyan"
+        ],
+        "display": "GrigorSargsyan",
+        "score": 0.2742,
+        "n_submissions": 7
+      },
+      {
+        "rank": 7,
+        "users": [
+          "exposed"
+        ],
+        "display": "exposed",
+        "score": 0.2584,
+        "n_submissions": 15
+      },
+      {
+        "rank": 8,
+        "users": [
+          "op01"
+        ],
+        "display": "op01",
+        "score": 0.2489,
+        "n_submissions": 3
+      },
+      {
+        "rank": 9,
+        "users": [
+          "tchu"
+        ],
+        "display": "tchu",
+        "score": 0.246,
+        "n_submissions": 13
+      },
+      {
+        "rank": 10,
+        "users": [
+          "ndavis7"
+        ],
+        "display": "ndavis7",
+        "score": 0.2368,
+        "n_submissions": 5
+      },
+      {
+        "rank": 11,
+        "users": [
+          "xiaofanhu"
+        ],
+        "display": "xiaofanhu",
+        "score": 0.2367,
+        "n_submissions": 3
+      },
+      {
+        "rank": 12,
+        "users": [
+          "rariwa",
+          "masterozone0617"
+        ],
+        "display": "Batik Shirt Brothers",
+        "score": 0.2321,
+        "n_submissions": 13
+      },
+      {
+        "rank": 13,
+        "users": [
+          "ad3002"
+        ],
+        "display": "ad3002",
+        "score": 0.2297,
+        "n_submissions": 14
+      },
+      {
+        "rank": 14,
+        "users": [
+          "moongrega"
+        ],
+        "display": "moongrega",
+        "score": 0.2296,
+        "n_submissions": 13
+      },
+      {
+        "rank": 15,
+        "users": [
+          "hiii12345"
+        ],
+        "display": "hiii12345",
+        "score": 0.2262,
+        "n_submissions": 8
+      },
+      {
+        "rank": 16,
+        "users": [
+          "oshbocker"
+        ],
+        "display": "oshbocker",
+        "score": 0.2224,
+        "n_submissions": 18
+      },
+      {
+        "rank": 17,
+        "users": [
+          "jgaines"
+        ],
+        "display": "jgaines",
+        "score": 0.2184,
+        "n_submissions": 15
+      },
+      {
+        "rank": 18,
+        "users": [
+          "hudsonenterprises"
+        ],
+        "display": "hudsonenterprises",
+        "score": 0.1907,
+        "n_submissions": 5
+      },
+      {
+        "rank": 19,
+        "users": [
+          "kpomazi"
+        ],
+        "display": "kpomazi",
+        "score": 0.1873,
+        "n_submissions": 5
+      },
+      {
+        "rank": 20,
+        "users": [
+          "hall4jm"
+        ],
+        "display": "hall4jm",
+        "score": 0.1851,
+        "n_submissions": 8
+      },
+      {
+        "rank": 21,
+        "users": [
+          "doegemsDrivendata"
+        ],
+        "display": "doegemsDrivendata",
+        "score": 0.1847,
+        "n_submissions": 5
+      },
+      {
+        "rank": 22,
+        "users": [
+          "nsabaj"
+        ],
+        "display": "nsabaj",
+        "score": 0.1744,
+        "n_submissions": 3
+      },
+      {
+        "rank": 23,
+        "users": [
+          "Scotty77"
+        ],
+        "display": "Scotty77",
+        "score": 0.1682,
+        "n_submissions": 6
+      },
+      {
+        "rank": 24,
+        "users": [
+          "dmitry_v"
+        ],
+        "display": "dmitry_v",
+        "score": 0.1672,
+        "n_submissions": 5
+      },
+      {
+        "rank": 25,
+        "users": [
+          "Ndabenhle"
+        ],
+        "display": "Ndabenhle",
+        "score": 0.1664,
+        "n_submissions": 4
+      },
+      {
+        "rank": 26,
+        "users": [
+          "VictorCallejas"
+        ],
+        "display": "VictorCallejas",
+        "score": 0.1629,
+        "n_submissions": 1
+      },
+      {
+        "rank": 27,
+        "users": [
+          "fishnchips"
+        ],
+        "display": "fishnchips",
+        "score": 0.1587,
+        "n_submissions": 7
+      },
+      {
+        "rank": 28,
+        "users": [
+          "extradr19"
+        ],
+        "display": "extradr19",
+        "score": 0.1563,
+        "n_submissions": 3
+      },
+      {
+        "rank": 29,
+        "users": [
+          "SDCF9"
+        ],
+        "display": "SDCF9",
+        "score": 0.1563,
+        "n_submissions": 3
+      },
+      {
+        "rank": 30,
+        "users": [
+          "smashi34"
+        ],
+        "display": "smashi34",
+        "score": 0.1563,
+        "n_submissions": 2
+      },
+      {
+        "rank": 31,
+        "users": [
+          "Ehimen777"
+        ],
+        "display": "Ehimen777",
+        "score": 0.1554,
+        "n_submissions": 4
+      },
+      {
+        "rank": 32,
+        "users": [
+          "Aero"
+        ],
+        "display": "Aero",
+        "score": 0.15,
+        "n_submissions": 5
+      },
+      {
+        "rank": 33,
+        "users": [
+          "GeoTrace"
+        ],
+        "display": "GeoTrace",
+        "score": 0.1498,
+        "n_submissions": 6
+      },
+      {
+        "rank": 34,
+        "users": [
+          "mlandry"
+        ],
+        "display": "mlandry",
+        "score": 0.1481,
+        "n_submissions": 5
+      },
+      {
+        "rank": 35,
+        "users": [
+          "Milieunomics"
+        ],
+        "display": "Milieunomics",
+        "score": 0.1466,
+        "n_submissions": 10
+      },
+      {
+        "rank": 36,
+        "users": [
+          "wbg1"
+        ],
+        "display": "wbg1",
+        "score": 0.1461,
+        "n_submissions": 4
+      },
+      {
+        "rank": 37,
+        "users": [
+          "kbrodt"
+        ],
+        "display": "kbrodt",
+        "score": 0.1456,
+        "n_submissions": 10
+      },
+      {
+        "rank": 38,
+        "users": [
+          "BrandenKMurray"
+        ],
+        "display": "BrandenKMurray",
+        "score": 0.145,
+        "n_submissions": 5
+      },
+      {
+        "rank": 39,
+        "users": [
+          "syntropy-digital"
+        ],
+        "display": "syntropy-digital",
+        "score": 0.1433,
+        "n_submissions": 5
+      },
+      {
+        "rank": 40,
+        "users": [
+          "Waltz157"
+        ],
+        "display": "Waltz157",
+        "score": 0.1422,
+        "n_submissions": 10
+      },
+      {
+        "rank": 41,
+        "users": [
+          "Beacon"
+        ],
+        "display": "Beacon",
+        "score": 0.1407,
+        "n_submissions": 7
+      },
+      {
+        "rank": 42,
+        "users": [
+          "Milieu"
+        ],
+        "display": "Milieu",
+        "score": 0.1401,
+        "n_submissions": 6
+      },
+      {
+        "rank": 43,
+        "users": [
+          "jfper21"
+        ],
+        "display": "jfper21",
+        "score": 0.138,
+        "n_submissions": 4
+      },
+      {
+        "rank": 44,
+        "users": [
+          "joano"
+        ],
+        "display": "joano",
+        "score": 0.135,
+        "n_submissions": 5
+      },
+      {
+        "rank": 45,
+        "users": [
+          "vladee",
+          "ahome"
+        ],
+        "display": "zeaal",
+        "score": 0.135,
+        "n_submissions": 12
+      },
+      {
+        "rank": 46,
+        "users": [
+          "Ehimenathan"
+        ],
+        "display": "Ehimenathan",
+        "score": 0.1264,
+        "n_submissions": 6
+      },
+      {
+        "rank": 47,
+        "users": [
+          "jorgeschmidt"
+        ],
+        "display": "jorgeschmidt",
+        "score": 0.1256,
+        "n_submissions": 10
+      },
+      {
+        "rank": 48,
+        "users": [
+          "mtrpdx"
+        ],
+        "display": "mtrpdx",
+        "score": 0.1219,
+        "n_submissions": 7
+      },
+      {
+        "rank": 49,
+        "users": [
+          "smrtdoog5"
+        ],
+        "display": "smrtdoog5",
+        "score": 0.1193,
+        "n_submissions": 2
+      },
+      {
+        "rank": 50,
+        "users": [
+          "ahkarl13"
+        ],
+        "display": "ahkarl13",
+        "score": 0.1148,
+        "n_submissions": 6
+      }
+    ],
+    "watchlist": [
+      {
+        "rank": 28,
+        "users": [
+          "extradr19"
+        ],
+        "display": "extradr19",
+        "score": 0.1563,
+        "n_submissions": 3
+      },
+      {
+        "rank": 29,
+        "users": [
+          "SDCF9"
+        ],
+        "display": "SDCF9",
+        "score": 0.1563,
+        "n_submissions": 3
+      },
+      {
+        "rank": 30,
+        "users": [
+          "smashi34"
+        ],
+        "display": "smashi34",
+        "score": 0.1563,
+        "n_submissions": 2
+      },
+      {
+        "rank": 36,
+        "users": [
+          "wbg1"
+        ],
+        "display": "wbg1",
+        "score": 0.1461,
+        "n_submissions": 4
+      },
+      {
+        "rank": 49,
+        "users": [
+          "smrtdoog5"
+        ],
+        "display": "smrtdoog5",
+        "score": 0.1193,
+        "n_submissions": 2
+      }
+    ]
   }
 ]

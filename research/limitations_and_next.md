@@ -1,13 +1,24 @@
 # Limitations & next steps — the working queue
 
-Updated 2026-09-29 (round-6 session, 14GEMSDOE). Ordered by "what most raises
+Updated 2026-09-29 (session-15 continuation). Ordered by "what most raises
 P(win) per unit effort". Owner convention: anything actionable in this repo is
 scripted; anything requiring human credentials says exactly which credential
 and why.
 
-## Round-6 outcome in one line
+## Current outcome in one line
 
-`scripts/validate_real.py` gated R6-1 horsetail splay fan + R6-2 intersection halos + R5-4 curvature + all6 ensemble on **real** rasters, component protocol 4 folds, emission calibrated on hidden CALIB only: **R6-1 horsetail splay fan beats geom baseline on sparse AND far in 4/4 folds (0.0385→0.0624 dense +0.0239, 0.0151→0.0217 sparse +0.0066, 0.0003→0.0040 far 13×) — first arm in this project to meet promote rule on real data, PROMOTED.** Submission built: `GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif` finite 0 outside [0,1] passes format gate + uniqueness audit PASS, site payload swapped to real kind=real. Full record: `research/hypotheses_round6.md`, `artifacts/holdout_round6_horse.json`, `research/results_ledger.md`. No slot spent yet — validated field ready for next weekly slot. Previous round-3 outcome: `scripts/validate_round3.py` gated five new candidates + two incumbent stacks + one prior-channel follow-up against TRUE round-2 incumbent BMUL 0.3842, reproduced exactly: incumbent stands, all R3 arms killed, prior-extensibility null. Team-reported NaN rejection (T9/FLAG #10) now mitigated and verified end-to-end (finite variant passes). Dependencies in ignored `.venv/`; current suite 127 passed on real-data code.
+Session 15 rebuilt the reset environment (hash-verified), fixed the deployment
+path (`train_real_full.py` + tests), refreshed the leaderboard feed, completed
+the round-6 full-grid gate: **R6-3 condbase and R6-5 shore PROMOTED** (shore
+4/4 sparse & far, far 13× baseline; condbase 3/4 & 4/4) and **R6-2 xsec
+killed-by-rule** (sparse 2/4); the **all6 ensemble 4-fold gate is re-running**
+(folds 0–1: all6 0.0675/0.0212/0.0068, 0.0767/0.0268/0.0095, beating horse and
+curv on all three protocols — first attempt OOM-killed at fold 2). Round-7
+hypotheses pre-registered (`research/hypotheses_round7.md`), R7-3/R7-5 channels
+implemented + 20 unit tests, R7-1 misregistration operator + `--misreg-px`
+stress protocol implemented (amendment: 0.02/px displacement penalty, recorded
+before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
+`research/results_ledger.md`. Suite 154 passed.
 
 ## A. Blockers
 
@@ -22,35 +33,89 @@ and why.
 
 *Updated 2026-09-29 after Round 6 promotion. Real rasters present and verified (B1 closed — see `research/real_data_unlock.md`). **Sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`, `data/processed/` and `artifacts/*` (except whitelisted JSONs) do NOT survive reset.** Rebuild via Quickstart block in README.*
 
-1. **Upload the validated R6-1 field** — `submissions/GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif` is finite, [0,1], EPSG:32611, passes format gate + uniqueness audit PASS. Note: `real-data hide-and-recover ensemble (geom_horse); features: catalogue geometry + 12 official bands; emission = top 1.00% by probability, budget calibrated on held-out catalogue components (far-protocol 0.0040); valid [0,1] float32 on official grid, no NaN inside footprint`. This is first arm to meet promote rule on real data (4/4 sparse & far). Spend **one** weekly slot on it; record DrivenData submission ID in ledger.
+1. **Upload the validated artifact — HUMAN ACTION (DrivenData login).**
+   **READY:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`
+   (horse 4-fold ensemble, official-economics budget q 0.0225, TEST dense
+   0.0699; uniqueness audit PASS; zero uploads of these pixels). All ensemble
+   alternatives (all6, horse7 v1, horse7 v2) were decided by the pre-registered
+   fold-wise sparse rule and lost; the artifact is the single upload candidate.
+   Spend **one** weekly slot (C8: one submission per entity is scored across
+   both rounds). Record the DrivenData submission ID in the ledger.
 
-2. **Complete full 4-fold for all6 (R5+R6 ensemble)** — interim 2-fold shows all6 0.0675/0.0212/0.0068 (fold0) and 0.0767/0.0268/0.0095 (fold1) beating both horse and curvature single arms. Command:
-   ```bash
-   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
-     --arms geom geom_curv geom_horse all6 --n-pos 20000 --n-neg 40000 --iters 150 \
-     --out artifacts/holdout_round6_all6.json
-   ```
-   ~30 min (2 vCPU). Then emission sweep `scripts/sweep_real.py`. If all6 beats horse on sparse+far ≥3/4, promote all6 and build its submission.
+2. ~~Complete full 4-fold for all6~~ **DONE (2026-09-29):** all6 4-fold
+   0.0679/0.0221/0.0074 vs horse 0.0624/0.0217/0.0040 — sparse wins 2/4 →
+   all6 NOT eligible (fold-wise rule). horse7 (horse + R7-1/3/5) then failed
+   the same rule twice (v1 2/4, protocol-v2 2/4). Recorded failure mode:
+   fold-wise sparse consistency on budget-drift folds. See
+   `research/results_ledger.md` gates 7 and 9.
 
-3. **Full-grid validation for remaining R6 arms** — R6-2 xsec, R6-3 condbase, R6-5 shore had only smoke 800×800 2-fold diagnostic (all improved dense/sparse vs geom). Need full 4-fold:
-   ```bash
-   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
-     --arms geom geom_xsec geom_condbase geom_shore --n-pos 20000 --n-neg 40000 --iters 150 \
-     --out artifacts/holdout_round6_rest.json
-   ```
+3. ~~Full-grid validation for remaining R6 arms~~ **DONE (2026-09-29):**
+   `artifacts/holdout_round6_rest.json`. R6-5 shore PROMOTED (4/4 sparse & far),
+   R6-3 condbase PROMOTED (3/4 sparse, 4/4 far), R6-2 xsec killed-by-rule
+   (sparse 2/4; far 4/4 but thin). Full table in `research/results_ledger.md`.
 
-4. **Fetch external slip/dilation tendency for R6-4** — DOI 10.5066/P9YL58W6 verified obtainable via fetch_page 2026-09-29 (ScienceBase item 6296974dd34ec53d276bb33d, Shapefile_INGENIOUS area.zip 27.35 MB, public domain). On unrestricted runner:
+4. **Fetch external slip/dilation tendency for R6-4** — DOI 10.5066/P9YL58W6
+   verified obtainable (ScienceBase item 6296974dd34ec53d276bb33d,
+   Shapefile_INGENIOUS area.zip 27.35 MB, public domain). Still needs an
+   unrestricted runner (sandbox TLS blocks sciencebase.gov — FLAG #1):
    ```bash
    bash scripts/download_external_data.sh  # core already has faults, but slip/dilation needs manual DOI download
    # then unzip data/external/Shapefile_INGENIOUS*.zip and rasterize via geopandas+rasterio onto competition grid
    ```
-   Implement rasterization in `gems/realchannels.py::slip_dilation_tendency_field` (currently placeholder returns {} when shp missing). Then validate as `geom_slip`.
+   Implement rasterization in `gems/realchannels.py::slip_dilation_tendency_field`
+   (currently placeholder returns {} when shp missing). Then validate as
+   `geom_slip`.
 
-5. **Fix `scripts/train_real_full.py`** — still calls pre-rewrite `validate_real` API (`vr.geo_channels`, `sample_training_pixels`, `ARM_EXTRA`). Purpose: train on FULL catalogue (no hide-out) and dump `artifacts/pred_<arm>.npy` for submission builder. ~1 h.
+5. ~~Fix `scripts/train_real_full.py`~~ **DONE (2026-09-29):** rewritten against
+   the post-rewrite gate API (hide-and-recover train view
+   `labels & ~hide`, deploy view = full catalogue, CALIB-calibrated emission);
+   `tests/test_train_real_full_api.py` (7 tests) pins the API contract so a
+   future gate-side rename breaks tests, not the deployment path. Smoke it on
+   the real grid once the gates free the CPU:
+   `./.venv/bin/python scripts/train_real_full.py --arms all6 geom_horse`.
 
-6. **Feed maintenance** — run `scripts/refresh_leaderboard.py` each session (live leaderboard check 2026-09-28 top DARD 0.3168). Scheduled GitHub Action on team runner would automate.
+6. ~~Feed maintenance~~ **DONE (2026-09-29):** 50 rows refreshed via the Arena
+   fetch tool (FLAG #1 path: `refresh_leaderboard.py --html-file`). Top DARD
+   0.3168; the 0.1563 cluster (extradr19/SDCF9/smashi34) unchanged at #28–30;
+   joeyfezster 0.2872 new #3. Snapshot `research/leaderboard_snapshot.json`
+   history n=3.
+
+6b. **Round-7 gate (in progress).** Pre-registration:
+   `research/hypotheses_round7.md`. Commands queued behind the all6 re-run:
+   ```bash
+   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+     --arms geom geom_gravtopo geom_trans --n-pos 20000 --n-neg 40000 --iters 150 \
+     --out artifacts/holdout_round7.json
+   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+     --arms geom geom_align --n-pos 20000 --n-neg 40000 --iters 150 \
+     --out artifacts/holdout_round7_align_d0.json
+   ./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+     --arms geom geom_align --n-pos 20000 --n-neg 40000 --iters 150 \
+     --misreg-px 2 --out artifacts/holdout_round7_align_d2.json
+   ```
+   Promote rule unchanged (≥3/4 wins on sparse AND far vs same-run geom); for
+   R7-1 additionally the δ=2 stress condition must pass and δ=0 must not lose.
+   R7-2 stitching and R7-4 strain-deficit channels are not yet implemented
+   (queue item 6c). R7-3 is N1's physics re-tested on real data (the round-2
+   synthetic kill is void as evidence, directive 4).
 
 7. **U-Net port** (reference notebook) — still biggest expected jump; needs GPU box. Current logistic baseline is floor, not ceiling. Reference U-Net trained to reproduce catalogue scores 0.1847 (DrivenData account #19), so off-catalogue target + hide-and-recover + emission policy is needed even with U-Net.
+
+8. **R8 pre-registration candidates (2026-09-29, for the next session's
+   3–5 hypotheses):** (a) **band-6 depth feature** — FLAG #11 resolution shows
+   `tc` is the top-of-crustal magnetic source depth estimate (km, smooth
+   regional structure), not an edge raster; use it as a long-wavelength
+   structural-level feature (and its edges stay available). (b) **budget-matched
+   sparse comparison for ensembles** — the three ensemble misses are all
+   budget-drift artifacts; a pre-registered rule comparing arms at matched
+   CALIB budgets would isolate channel value from emission drift (do NOT
+   retro-fit the old rule). (c) **sparse-stable ensemble emission** — a
+   constrained CALIB policy (maximize dense subject to sparse ≥ bench) tested
+   as a NEW policy family. (d) R6-4 slip/dilation (blocked on external data —
+   see item 4).
+9. **GitHub push + PR #9 update** — blocked on an invalid `GH_TOKEN`
+   (2026-09-29, mid-session expiry: the session's commits are local; push
+   `arena/01a0eae6-14gemsdoe` and sync the PR once GitHub is reconnected).
 
 8. **R3E prior-overlap test** stays mandatory before any prior-extension proposal (round-3 null stands: multiplicative prior cannot extend classifier support).
 
@@ -122,6 +187,55 @@ and why.
     in range [0, 1]"). Mechanism inferred, not disclosed. Mitigated: finite
     default emission in the site builder and `build_submission.py`. Needs one
     real finite-file upload to confirm the fix end-to-end.
+14. **FLAG #11 — `tc` band tag conflict — RESOLVED 2026-09-29 (data-driven).**
+    The file's per-band `description` tag says "Tilt angle or total curvature"
+    while the official provided-features list (C27, [provided
+    features](https://www.drivendata.org/competitions/306/competition-doe-gems/page/967/#provided-features))
+    names "top-of-crustal magnetic source depth estimate" and no other tag
+    matches it. Measurements on the actual band (index 6, `gems.realdata.
+    read_band(6)`): min 2.953, max 88.567, median 18.482, std 4.418,
+    **fraction of pixels < 0 = 0.000**, pct1..99 = 7.7..29.1. A tilt-angle
+    response is bounded at exactly ±90° and MUST change sign over a dipolar
+    magnetic survey; total curvature sign-changes at contacts. A depth
+    estimate is strictly positive — and 3–89 km with median ~18.5 km is the
+    published range of top-of-crustal magnetic-source / Curie-style depths for
+    the Great Basin. Supporting checks: corr(band6, band15 basement depth) =
+    0.21 (weak — band 6 is NOT a re-skinned sediment thickness, which would
+    correlate ~1 after unit scaling); RMS|∇|/std = 0.107 vs 0.021 for band 15
+    (local-wavenumber depth maps are speckled — expected). **Conclusion: band
+    6 is the top-of-crustal magnetic source depth estimate in km; the GDAL
+    description is a mistaken generic fallback.** Current usage (`tc` as an
+    edge-strength raster) remains valid under either reading and is unchanged;
+    using band 6 as a *depth* feature is now a pre-registrable R8 candidate.
+    (Note: the official figure asset `gems_tc_tmi.png` uses "tc" for total
+    radiometric counts — the figure caption's 16th named GeoDAWN product, not
+    necessarily inside `training_features.tif`; no band tag mentions
+    radiometrics. That naming coincidence is not evidence about band 6.)
+15. **FLAG #12 — `geod_dilaterate` sign convention is not stated.** The tag
+    says "rate of volumetric strain (expansion/contraction)" without declaring
+    which sign is extension. R7-5 defaults to the geodetic convention
+    (positive = extension) and exposes `extension_positive=False` for the
+    ablation; a strictly contracting field must never read as coupling
+    (tests pin this).
+
+16. **FLAG #13 — uniqueness-gate F7 design gap (found by executing the
+    documented flow, fixed 2026-09-29).** The README step-5 order is
+    build → `check_submission_uniqueness.py` (exit 0) →
+    `build_site_payload.py <the built tif>`; the site payload therefore
+    *necessarily* ends up carrying the pixels of the artifact whose manifest
+    sits in `submissions/`. The original F7 hard-failed on any payload↔manifest
+    pixel-hash match — including the payload's own source — so the documented
+    end state could never pass, and `tests/test_submission_uniqueness.py::
+    test_script_runs_on_the_real_repo` (exit 0 on the real repo) only held
+    while `submissions/` was empty (a reset artifact). Fixed on principle, not
+    convenience: F7 now permits exactly one match — the manifest of the tif the
+    payload header declares as its `Source:` — and still hard-fails when the
+    payload pins the pixels of any *other* built artifact (the historical
+    "site pins identical hash" failure mode, 5GEMSDOE row). F1/F8 are
+    untouched: two artifacts with identical prediction arrays can never be
+    built at all. Two unit tests pin both sides (payload-sourced match passes;
+    foreign match fires). Cross-team scored-artifact identity remains the job
+    of `scripts/audit_scored_artifacts.py --fetch-scored` (README step 4).
 
 ## C2. Session log — 14GEMSDOE (2026-09-28, round 3)
 
@@ -177,6 +291,35 @@ and why.
 * **Environment reset (2026-09-29).** The workspace came back with tracked files
   only. `data/raw/` (419 MB), `data/processed/`, `.venv/` and the gate fields had
   to be rebuilt. This is now documented in README Quickstart step 0.
+
+## C2c. Session log — 14GEMSDOE (2026-09-29, session 15, continuation)
+
+* **Pass 1 (rebuild + verify).** Environment and data rebuilt from the
+  Quickstart after the sandbox reset; one transient `gh api` stream error
+  handled by a retry loop; all three rasters SHA-256 verified;
+  `verify_real_data.py` ALL CHECKS PASS (incl. the GDAL-order transform
+  comparison fix from session 14). Suite 127/127 on the restored checkout.
+* **Pass 2 (queue items).** `train_real_full.py` rewritten against the current
+  gate API (the stale calls `vr.geo_channels`/`ARM_EXTRA`/`stack_matrix`/
+  `fit_model`/`predict_full`/`dilate_valid` were a crash waiting to happen)
+  with the two-view hide-and-recover design; 7 regression tests pin the
+  contract. Leaderboard feed refreshed (Arena fetch path). The all6 4-fold gate
+  reproduced the interim record exactly on folds 0–1 and was OOM-killed at
+  fold 2 (exit 137) — re-queued as a 2-arm process. Round-6 remaining-arms gate
+  completed: R6-5 shore and R6-3 condbase PROMOTED, R6-2 xsec killed-by-rule.
+* **Pass 3 (round 7 + review pass).** R7 pre-registration written from the two
+  unused official statements (C28 misregistration-as-target, C21
+  continuations-as-truth) plus the label producers' own basin playbook (S11);
+  R7-3/R7-5 implemented in `realchannels` + gate registry with 13 tests; R7-1
+  alignment operator + `--misreg-px` stress protocol implemented with 7 tests.
+  The first R7-1 smoke exposed over-sliding (mean |offset| 3.57 px on an
+  injected 2 px misregistration); the operator was amended with a fixed
+  0.02/px displacement penalty BEFORE any gate numbers, and the amendment is
+  recorded in the pre-registration. A latent bug in `transtensional_coupling`
+  (standardisation forgetting the physical dilatation sign — below-median
+  contraction read as coupling) was caught by unit tests and fixed by clipping
+  on physical sign before scaling. `all`/`all6` arm definitions were pinned
+  back to their recorded semantics (protocol-drift fix). Suite 154/154.
 
 ## D. Standing decisions (do not relitigate without new evidence)
 

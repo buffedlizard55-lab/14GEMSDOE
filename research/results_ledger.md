@@ -212,6 +212,54 @@ All arms ~0.0001 dense — block protocol too harsh (TEST block has no nearby co
 `artifacts/holdout_round6_horse.json` **written** (4 folds). R6-1 promoted. R6-2/3/5 pending full-grid rerun. No submission slot spent yet in this session — validated field ready for next weekly slot. Next actions: (1) full 4-fold for all6 (R5+R6) to test ensemble, (2) fetch external slip/dilation shapefile for R6-4, (3) upload promoted horse ensemble.
 
 
+## Round-6 remaining arms + session-15 gate record (2026-09-29) — R6-3 and R6-5 PROMOTED, 4 folds
+
+**Command (queue item 3, full-grid validation of the remaining R6 arms):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_xsec geom_condbase geom_shore --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round6_rest.json
+```
+Wall 1,724 s. The `geom` baseline reproduced the pinned 4-fold means exactly
+(0.0385 / 0.0151 / 0.0003 — identical to `holdout_round6_horse.json`), pinning
+protocol equivalence across runs.
+
+| Fold | geom dense / sparse / far | xsec | condbase | shore |
+|------|---------------------------|------|----------|-------|
+| 0 | 0.0381 / 0.0165 / 0.0006 | 0.0427 / 0.0191 / 0.0034 | 0.0431 / 0.0189 / 0.0030 | 0.0497 / 0.0219 / 0.0072 |
+| 1 | 0.0381 / 0.0145 / 0.0006 | 0.0318 / 0.0119 / 0.0008 | 0.0323 / 0.0126 / 0.0011 | 0.0433 / 0.0185 / 0.0029 |
+| 2 | 0.0333 / 0.0142 / 0.0000 | 0.0281 / 0.0140 / 0.0010 | 0.0348 / 0.0163 / 0.0021 | 0.0375 / 0.0169 / 0.0022 |
+| 3 | 0.0444 / 0.0153 / 0.0002 | 0.0444 / 0.0167 / 0.0012 | 0.0486 / 0.0186 / 0.0024 | 0.0502 / 0.0193 / 0.0030 |
+| **Mean** | **0.0385 / 0.0151 / 0.0003** | 0.0367 / 0.0154 / 0.0016 | 0.0397 / 0.0166 / 0.0022 | **0.0452 / 0.0191 / 0.0038** |
+| Wins vs geom (sparse / far) | — | 2/4 / 4/4 | 3/4 / 4/4 | **4/4 / 4/4** |
+| Promote rule (≥3/4 both) | — | **no** (sparse fails) | **PROMOTED** | **PROMOTED** |
+
+* **R6-5 paleo-shoreline (sub-lake enhancement) is the strongest far-protocol
+  single arm in the project** (far 0.0038 ≈ 13× the geom baseline, 4/4 wins on
+  both protocols; dense +0.0067, sparse +0.0040). It is also the arm with the
+  clearest physical story from the label producers (S14: lake sediments obscure
+  non-Holocene ruptures).
+* **R6-3 conductive-base step** meets the rule (3/4 sparse, 4/4 far; far 7×
+  baseline) and is promoted.
+* **R6-2 intersection halos does NOT meet the rule** (sparse 2/4; fold-1 and
+  fold-2 dense fell below geom). Its smoke-crop improvement did not survive the
+  full grid. Recorded as a kill-by-rule, not a crash: the far protocol wins
+  4/4 (0.0016 vs 0.0003), so the mechanism is real but too thin on sparse.
+* Previous session's smoke numbers (800×800 crop, 2 folds) over-rated xsec and
+  under-rated shore; smoke crops are diagnostics only, per their own caveat.
+
+**Session-15 environment record.** The sandbox reset dropped `.venv/`,
+`data/raw/`, `data/processed/` and the gate fields; everything was rebuilt from
+the Quickstart (bridge retry loop after one transient `gh api` stream error;
+all three files SHA-256 verified; `verify_real_data.py` ALL CHECKS PASS).
+`scripts/train_real_full.py` (queue item 5) was rewritten against the current
+gate API and pinned by `tests/test_train_real_full_api.py` (7 tests). The
+leaderboard feed was refreshed (50 rows, DARD 0.3168 top, the 0.1563 cluster
+extradr19/SDCF9/smashi34 unchanged at #28–30). The first all6 4-fold attempt
+was **OOM-killed (exit 137) at fold 2** after folds 0–1 reproduced the interim
+record exactly (all6 0.0675/0.0212/0.0068, 0.0767/0.0268/0.0095); it is being
+re-run with 2 arms per process (`artifacts/holdout_round6_all6.json`).
+
 ## Reading
 
 Most ≥0.14 scores in this ledger are reported for catalogue-oriented approaches,
@@ -244,3 +292,201 @@ alone do not establish reuse. The audit now blocks exact TIFF and prediction-arr
 hash duplicates among local artifacts, while reporting rounded-score and
 truncated-ID collisions for review. Keep a full prediction hash and submission
 ID for every future upload; do not use leaderboard scores as uniqueness keys.
+
+---
+
+## Round-7 gates 4 — R7-3 and R7-5 PROMOTED (2026-09-29)
+
+**Command (gate 4, `/tmp/run_gates4.sh`, exit 0, wall ~46 min):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_gravtopo geom_trans --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round7.json
+```
+`geom` baseline reproduced the pinned means again (fold rows identical to
+`holdout_round6_rest.json`). File: `artifacts/holdout_round7.json`.
+
+| Fold | geom dense / sparse / far | geom_gravtopo (R7-3) | geom_trans (R7-5) |
+|------|---------------------------|----------------------|-------------------|
+| 0 | 0.0381 / 0.0165 / 0.0006 | 0.0410 / 0.0183 / 0.0033 | 0.0429 / 0.0201 / 0.0038 |
+| 1 | 0.0381 / 0.0145 / 0.0006 | 0.0329 / 0.0133 / 0.0014 | 0.0364 / 0.0136 / 0.0017 |
+| 2 | 0.0333 / 0.0142 / 0.0000 | 0.0335 / 0.0158 / 0.0020 | 0.0374 / 0.0177 / 0.0034 |
+| 3 | 0.0444 / 0.0153 / 0.0002 | 0.0482 / 0.0180 / 0.0024 | 0.0487 / 0.0184 / 0.0032 |
+| Wins vs geom (sparse / far) | — | **3/4 / 4/4 → PROMOTED** | **3/4 / 4/4 → PROMOTED** |
+
+Both fail fold 1 on dense/sparse (the 5513-conflict fold); both win far on all
+four folds. `geom_trans` is the stronger arm (fold-0 sparse +22 %, far ≈6×
+geom). Prior UPDATE: match-scale *cross-aspect gravity-direction coherence*
+(`prior_contrast_hits.md` P1, 3/3 matches) was implemented as R7-3's
+topology term and PROMOTED here. FLAG #12 (dilatation sign) stands.
+
+## R7-2 continuation subset diagnostic (2026-09-29)
+
+**Command:** `./.venv/bin/python scripts/continuation_subset.py --gate
+artifacts/holdout_round6_rest.json --arms geom_shore geom_condbase --out
+artifacts/continuation_subset_r6rest.json` (no re-training; split ids + fold
+fields). **52.5 % of TEST pixels belong to continuation components** (hidden
+component with an endpoint within 20 px of a visible endpoint, strikes within
+30°). Recovery of that class is ~2.5× the isolated class (shore: cont 0.0471
+vs iso 0.0193; condbase: cont 0.0420 vs 0.0162). The C21 continuation class is
+the mass of the truth population; the isolated remainder is where R7-2's
+bridge must reach. Suite: 157 tests (3 new).
+
+## Round-7 gates 5–7 + all6 decision (2026-09-29) — R7-1 PROMOTED, all6 ineligible for the slot
+
+**R7-1 `geom_align` decision (pre-registered rule: win δ=2 and not lose δ=0):**
+- δ=0 (`artifacts/holdout_round7_align_d0.json`, no --misreg-px → default 0):
+  sparse 3/4 (0.0176/0.0132/0.0149/0.0168 vs geom 0.0165/0.0145/0.0142/0.0153),
+  far **4/4** (0.0064/0.0016/0.0020/0.0037 — fold-0 far 0.0064 best single far yet).
+  Not lost ✓
+- δ=2 (`artifacts/holdout_round7_align_d2.json`, `--misreg-px 2` protocol stress:
+  one rigid shift per catalogue component, shared by every view of every fold;
+  TEST truth never displaced; baseline sees the same misregistered world):
+  sparse **4/4** (0.0188/0.0175/0.0170/0.0174), far **4/4** (0.0070/0.0033/0.0040/
+  0.0060). Wins ✓
+→ **R7-1 PROMOTED.** Interpretation caveat: the stress trains both arms on the
+displaced world but only geom_align models/corrects the displacement; a
+correction-only-on-the-align-side asymmetry is part of the arm design.
+
+**GATE 7 `all6` vs horse (pre-registered: all6 needs sparse AND far ≥3/4
+fold wins; else the slot goes to the rebuilt horse ensemble — §B1):**
+`artifacts/holdout_round6_all6.json` (exit 0 — the incremental `_f16` memory
+fix held through all 4 folds):
+
+| Fold | all6 dense / sparse / far | horse (pinned, ledger above) | all6 wins? |
+|------|---------------------------|------------------------------|------------|
+| 0 | 0.0676 / 0.0214 / 0.0068 | 0.0627 / 0.0211 / 0.0041 | S+F |
+| 1 | 0.0766 / 0.0268 / 0.0094 | 0.0659 / 0.0233 / 0.0041 | S+F |
+| 2 | 0.0594 / 0.0193 / 0.0069 | 0.0494 / 0.0206 / 0.0019 | F only |
+| 3 | 0.0680 / 0.0207 / 0.0063 | 0.0715 / 0.0215 / 0.0059 | F only |
+| **Mean** | **0.0679 / 0.0221 / 0.0074** | **0.0624 / 0.0217 / 0.0040** | **sparse 2/4, far 4/4** |
+
+**Decision: all6 FAILS the sparse ≥3/4 rule (2/4) despite better means — the
+fold-wise rule stands. Submission field = rebuilt `geom_horse` 4-fold ensemble**
+(horse gate re-run: `artifacts/holdout_round6_horse.json`, repinning the
+pinned rows). If a future all6-class arm adds a sparse-stable term (R7-2
+bridge is the candidate), re-test under the same rule.
+
+## Submission artifact rebuilt after the reset (2026-09-29) — horse ensemble, HUMAN upload pending
+
+The round-6 horse TIFF (`GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif`)
+and its manifest were lost in the workspace reset (`submissions/` is
+gitignored); the site payload (`docs/js/payload.js`, committed in PR #8)
+survived with `pixels_sha256=aa966e56…`. Rebuilt byte-identically from the
+re-pinned gate (`artifacts/holdout_round6_horse.json`, all 4 folds reproduce
+the pinned rows exactly):
+
+- **Command:** `./.venv/bin/python scripts/build_real_submission.py --gate
+  artifacts/holdout_round6_horse.json --arm geom_horse`
+- **Artifact:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T044943Z_b9d51ebb.tif`
+  — tif sha256 `b9d51ebbde12…` (identical container hash to the lost file:
+  same bytes), prediction sha256 `aa966e5672db…`, 51,674 px emitted
+  (top 1.00%, CALIB-median budget), validate_submission PASS, [0,1] finite.
+- **Zero uploads of these pixels exist** (leaderboard n=3 unchanged; no slot
+  spent). One upload is planned per §B1. "Never re-upload byte-identical"
+  protects uploads, not rebuilds after loss — recorded here so the rebuild is
+  never mistaken for a second artifact (F8 would have caught two manifests).
+- **Uniqueness audit:** `check_submission_uniqueness.py` → **PASS** after the
+  F7 design-gap fix (FLAG #13) and the documented payload re-source
+  (`build_site_payload.py submissions/GEMS_..._044943Z_b9d51ebb.tif`).
+  F5 warnings retained by design (score 0.1563 ties ≠ artifact identity).
+- Payload pixels unchanged (aa966e56); only the header `Source:` name moved
+  from the lost 01:28 filename to the rebuilt one.
+
+## Round-7 gate 8 (2026-09-29) — R7-2 PROMOTED; horse7 fails the sparse rule, horse artifact stands
+
+**Command (`/tmp/run_gates5.sh`, exit 0, wall ~44 min):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_stitch geom_horse horse7 --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round7_stitch_horse7.json
+```
+`geom` and `geom_horse` reproduce the pinned fold rows exactly (protocol
+equivalence across the 5th consecutive gate). File:
+`artifacts/holdout_round7_stitch_horse7.json`.
+
+| Fold | geom | geom_stitch (R7-2) | geom_horse | horse7 |
+|------|------|--------------------|-----------|--------|
+| 0 | 0.0381/0.0165/0.0006 | 0.0435/0.0192/0.0037 | 0.0627/0.0211/0.0041 | 0.0681/0.0184/0.0080 |
+| 1 | 0.0381/0.0145/0.0006 | 0.0333/0.0131/0.0011 | 0.0659/0.0233/0.0041 | 0.0754/0.0266/0.0073 |
+| 2 | 0.0333/0.0142/0.0000 | 0.0359/0.0171/0.0018 | 0.0494/0.0206/0.0019 | 0.0723/0.0192/0.0097 |
+| 3 | 0.0444/0.0153/0.0002 | 0.0487/0.0178/0.0019 | 0.0715/0.0215/0.0059 | 0.0748/0.0220/0.0062 |
+| **Mean** | 0.0385/0.0151/0.0003 | **0.0403/0.0168/0.0021** | 0.0624/0.0217/0.0040 | **0.0727/0.0215/0.0078** |
+| Wins vs bench | — | **sparse 3/4, far 4/4 → R7-2 PROMOTED** | — | **sparse 2/4, far 4/4 → slot rule FAILS** |
+
+**R7-2 pre-registered continuation-subset report** (same gate, split ids + fold
+fields, `artifacts/continuation_subset_r7stitch*.json`; subset = TEST
+components with an endpoint within 20 px of a visible endpoint and strike
+within 30°; 52.5 % of TEST px):
+
+| arm | subset dense | continuation | isolated |
+|-----|--------------|--------------|----------|
+| geom | 0.0385 | 0.0427 | 0.0138 |
+| geom_stitch | 0.0403 | 0.0428 | **0.0164** (+19 %) |
+| geom_horse | 0.0623 | 0.0565 | 0.0272 |
+| horse7 | 0.0727 | 0.0610 | 0.0294 |
+
+The bridge's gain is in the *isolated* remainder, not the 20-px continuation
+window — its 48-px walk reaches past the diagnostic's tip window exactly as the
+earlier subset analysis predicted ("the isolated remainder is where R7-2's
+bridge must reach"). All five round-7 hypotheses are now decided: R7-1/2/3/5
+PROMOTED, R7-4 killed.
+
+**horse7 decision:** mean dense +0.0103 and far nearly double vs horse, but
+sparse loses on folds 0 and 2 (−0.0027, −0.0014; CALIB drifted to topk:0.02 on
+those folds — the wider budget dilutes sparse-at-t). The pre-registered
+fold-wise rule is not bent for better means (same outcome as all6). **The
+built horse artifact remains the single upload candidate** (b9d51ebb /
+pred aa966e56, uniqueness audit PASS, zero uploads). Next ensemble attempt
+should target sparse stability (e.g. a sparse-constrained CALIB policy) rather
+than more channels.
+
+## Protocol-v2 gate 9 (2026-09-29) — horse7 fails again; artifact emission by official economics (76116a29)
+
+**Command (`/tmp/run_gates6.sh`, exit 0, wall ~73 min):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_horse horse7 geom_stitch --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_v2_horse7.json
+```
+Protocol v2 (pre-registered §5): fine budget grid + mean(dense, sparse-view)
+CALIB criterion. v2 tightens every budget (geom 0.0025–0.0037; horse
+0.0046–0.0083) and the v2 bench rows are v2 records (v1 pins stay v1).
+
+| Fold | geom_horse v2 | horse7 v2 | sparse/far wins |
+|------|---------------|-----------|-----------------|
+| 0 | 0.0506/0.0212/0.0026 (q 0.0056) | 0.0644/0.0214/0.0064 (q 0.0101) | S+F |
+| 1 | 0.0617/0.0234/0.0035 (q 0.0083) | 0.0755/0.0266/0.0073 (q 0.0101) | S+F |
+| 2 | 0.0467/0.0205/0.0017 (q 0.0046) | 0.0728/0.0197/0.0097 (q 0.0184) | F only |
+| 3 | 0.0610/0.0240/0.0048 (q 0.0056) | 0.0759/0.0217/0.0067 (q 0.0124) | F only |
+| **Mean** | 0.0550/0.0223/0.0031 | **0.0721/0.0224/0.0075** | **sparse 2/4, far 4/4** |
+
+**Decision (pre-registered §5 rule): horse7 FAILS sparse 2/4 → the horse
+artifact stands.** Third consecutive ensemble miss on the same rule (all6 v1,
+horse7 v1, horse7 v2); the misses are always the folds where the chosen budget
+widens (v2: folds 2–3 drift to q 0.018/0.012). Recorded as the standing
+failure mode: fold-wise sparse consistency, not mean quality.
+
+**Artifact-emission decision (documented deviation from the §5 parenthetical,
+made on the standing prompt's explicit emission guidance — "metric pays for
+recall; add pixel when ΔTP/ΔFP > 0.2·D/(1−0.2·D)"):** the clause said "rebuilt
+from the v2 fields only if the v2 emission changes its pixels" — it would
+(0.0056 → 28.7k px). The clause's premise (that the v2 mean-criterion emission
+is the better-calibrated upload) is **falsified by the v2 numbers themselves**:
+the v2 criterion is a robustness compromise for arm comparisons and trades the
+leaderboard proxy down (v2-horse fold-dense 0.0550 vs v1 0.0624). The artifact
+budget therefore follows the official marginal economics: fine-grid
+dense-optimal on CALIB, per-fold optima [0.0225, 0.0225, 0.0184, 0.0225],
+median **q = 0.022492** (116,225 px). Post-decision verification (TEST dense,
+NOT used in the choice): q 0.0056 → 0.0540; q 0.0100 (v1 artifact) → 0.0657;
+**q 0.0225 (chosen) → 0.0699, best on all four folds.**
+
+- **Artifact:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`
+  — sha256 `76116a293d9c…`, prediction sha256 `e96e942fc27b…` (≠ v1's
+  `aa966e56…`; F8 clean — both manifests legal, zero uploads of either),
+  top 2.25 % emission, override provenance in the NOTE. **This is now the
+  single upload candidate**; the v1 artifact (b9d51ebb) is superseded, never
+  uploaded, kept for provenance. Uniqueness audit **PASS**; payload re-sourced
+  (site one-click builder now yields 76116a29).
+- Exact command: `./.venv/bin/python scripts/build_real_submission.py --gate
+  artifacts/holdout_v2_horse7.json --arm geom_horse --budget 0.022492`

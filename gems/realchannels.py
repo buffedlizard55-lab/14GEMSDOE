@@ -1169,3 +1169,395 @@ def slip_dilation_tendency_field(
     #   rasterize with rasterio.features.rasterize onto competition grid
     #   then compute field = dilation * slip * (1 - catalogue_proximity)
     return {}
+
+
+# ---------------------------------------------------------------------------
+# Round-7 hypothesis channels (research/hypotheses_round7.md)
+# ---------------------------------------------------------------------------
+
+def gravity_topology(
+    grav_hg: np.ndarray,
+    grav_slope: np.ndarray | None = None,
+    *,
+    sigma: float = 1.0,
+    support_px: float = 6.0,
+) -> dict:
+    """R7-3: gravity-gradient termination & intersection topology.
+
+    Faulds et al. 2026 (KB S11, VERIFIED): *"terminating and intersecting
+    gravity gradients respectively defined many of the fault terminations and
+    fault intersections. This was especially important in defining FSS in the
+    many basins of the region, where basin-fill sediments obscure the
+    subsurface architecture"* — the label producers' own basin playbook.
+
+    The operator is ``gems.geoedges.edge_termination_field`` (ridge skeleton of
+    the gradient magnitude, weighted terminations and junctions).  Pure
+    geophysics — no catalogue input, so leak-free under hide-and-recover by
+    construction.
+
+    Returns
+    -------
+    dict with
+      grav_ridge : gradient magnitude along the ridge skeleton (edge strength
+                   where a real geophysical edge exists)
+      grav_topo  : termination field + junction field in [0, 2] (compact
+                   topology maps of where edges stop and cross)
+
+    The caller decides which of these an arm uses.
+    """
+    from gems import geoedges as ge
+
+    base = np.nan_to_num(np.asarray(grav_hg, dtype=np.float32),
+                         nan=0.0, posinf=0.0, neginf=0.0)
+    if grav_slope is not None:
+        base = base + np.nan_to_num(np.asarray(grav_slope, dtype=np.float32),
+                                    nan=0.0, posinf=0.0, neginf=0.0)
+    out = ge.edge_termination_field(base, sigma=sigma, support_px=support_px)
+    skel = out["skeleton"]
+    ridge = np.where(skel, out["edge_mag"], 0.0).astype(np.float32)
+    topo = (out["term_field"] + out["junction_field"]).astype(np.float32)
+    return {"grav_ridge": ridge, "grav_topo": topo}
+
+
+def transtensional_coupling(
+    shear: np.ndarray,
+    dilat: np.ndarray,
+    *,
+    extension_positive: bool = True,
+) -> dict:
+    """R7-5: shear x extension (transtensional) coupling field.
+
+    KB S1/S4/S7 (VERIFIED): systems concentrate in transtensional areas of
+    highest strain rate; step-overs and horsetail terminations show the largest
+    modelled dilatation and Coulomb shear-traction increases.
+
+    ``coupling = relu(unit(shear)) * relu(unit(max(±dilatation, 0)))`` — the
+    *interaction* of excess shear with excess *physical* extension, not either
+    rate alone.  The extension/contraction clip is applied to the physical sign
+    BEFORE scaling, so a below-median contraction can never read as coupling.
+
+    The band tag ("rate of volumetric strain (expansion/contraction)") does not
+    state the sign convention; the default follows the geodetic convention
+    (positive = expansion/extension).  The flag exists so the opposite
+    convention can be ablated without a code change (FLAG #12,
+    hypotheses_round7.md).
+    """
+    s = np.nan_to_num(np.asarray(shear, dtype=np.float32),
+                      nan=0.0, posinf=0.0, neginf=0.0)
+    d = np.nan_to_num(np.asarray(dilat, dtype=np.float32),
+                      nan=0.0, posinf=0.0, neginf=0.0)
+    if not extension_positive:
+        d = -d
+    d_ext = np.maximum(d, 0.0)                    # physical extension only
+    s_rel = np.maximum(robust_unit(s), 0.0)       # excess shear
+    d_rel = np.maximum(robust_unit(d_ext), 0.0)   # excess extension
+    coupling = s_rel * d_rel
+    return {"trans_coupling": coupling.astype(np.float32)}
+
+
+def misregister_mask(mask: np.ndarray, delta_px: int, rng: np.random.Generator
+                     ) -> tuple[np.ndarray, np.ndarray]:
+    """R7-1 stress protocol: rigidly translate each component by <= delta_px.
+
+    Simulates the C28 condition ("portions of the existing fault data may be
+    misaligned from the true location of the surface fault"): every mapped
+    component is displaced by a random integer vector (uniform direction,
+    magnitude in [1, delta_px]; a redraw forces a non-zero shift).
+
+    Returns (shifted_mask, offsets) where offsets is an (n+1, 2) int array of
+    (dy, dx) per component id (id 0 unused).
+    """
+    m = int(delta_px)
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3), dtype=int))
+    if n == 0 or m <= 0:
+        return mask.copy(), np.zeros((n + 1, 2), dtype=int)
+    ys, xs = np.nonzero(mask)
+    cids = lab[ys, xs]
+    dy = rng.integers(-m, m + 1, size=n + 1)
+    dx = rng.integers(-m, m + 1, size=n + 1)
+    zero = (dy == 0) & (dx == 0)
+    zero[0] = False
+    if zero.any():                       # one redraw; if still zero, accept
+        dy[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+        dx[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+    ny, nx = mask.shape
+    nys = np.clip(ys + dy[cids], 0, ny - 1)
+    nxs = np.clip(xs + dx[cids], 0, nx - 1)
+    out = np.zeros(mask.shape, dtype=bool)
+    out[nys, nxs] = True
+    offsets = np.stack([dy, dx], axis=1)
+    return out, offsets
+
+
+def align_traces_to_expression(
+    context: np.ndarray,
+    expression: np.ndarray,
+    *,
+    max_offset: int = 3,
+    penalty_per_px: float = 0.02,
+) -> tuple[np.ndarray, np.ndarray]:
+    """R7-1: per-component rigid alignment of catalogue traces to expression.
+
+    C28 (VERIFIED problem description): *"portions of the existing fault data
+    may be misaligned from the true location of the surface fault, which is the
+    prediction target."*  For every connected component of ``context``, search
+    integer shifts in [-max_offset, max_offset]^2 (the metric kernel is 3 px)
+    and pick the shift maximising ``mean expression under the trace``
+    − ``penalty_per_px`` · |shift|.  The (0, 0) shift competes on equal terms,
+    so a well-registered trace is left alone.
+
+    The displacement penalty (amended 2026-09-29 after a crop smoke showed
+    mean |offset| exceeding the injected misregistration on noisy expression —
+    recorded BEFORE any gate numbers, not tuned on results) keeps the operator
+    from sliding traces to expression noise: a 3 px move must buy > 0.06 mean
+    expression (bands are robust-scaled to ~[−1, 1]).
+
+    Leak-free under hide-and-recover: only the (visible) context mask and
+    geophysical expression are read; hidden components are not in ``context``.
+
+    Returns (corrected_mask, offset_mag) with offset_mag the per-pixel shift
+    magnitude of the owning component (0 off-trace), *before* any credit
+    pooling — the caller pools it (e.g. via line_max) for the metric kernel.
+    """
+    mask = np.asarray(context, dtype=bool)
+    expr = np.nan_to_num(np.asarray(expression, dtype=np.float32),
+                         nan=0.0, posinf=0.0, neginf=0.0)
+    lab, n = ndimage.label(mask, structure=np.ones((3, 3), dtype=int))
+    offset_mag = np.zeros(mask.shape, dtype=np.float32)
+    if n == 0:
+        return mask.copy(), offset_mag
+    ys, xs = np.nonzero(mask)
+    cids = lab[ys, xs]
+    ny, nx = mask.shape
+    m = int(max_offset)
+    shifts = [(dy, dx) for dy in range(-m, m + 1) for dx in range(-m, m + 1)]
+    counts = np.bincount(cids, minlength=n + 1).astype(np.float64)
+    # score[component, shift] = mean expression under the shifted component
+    scores = np.full((n + 1, len(shifts)), -np.inf, dtype=np.float64)
+    for k, (dy, dx) in enumerate(shifts):
+        sy = np.clip(ys + dy, 0, ny - 1)
+        sx = np.clip(xs + dx, 0, nx - 1)
+        sums = np.bincount(cids, weights=expr[sy, sx], minlength=n + 1)
+        scores[:, k] = sums / np.maximum(counts, 1.0)
+    # penalised objective; the extra 1e-6/px makes exact ties resolve toward
+    # the smallest displacement (expression ridges are commonly invariant along
+    # strike, and an arbitrary along-strike slide would displace trace ends)
+    dist = np.hypot([s[0] for s in shifts], [s[1] for s in shifts])
+    objective = scores - (float(penalty_per_px) + 1e-6) * dist[None, :]
+    pick = np.argmax(objective, axis=1)
+    best_dy = np.array([shifts[p][0] for p in pick], dtype=np.int64)
+    best_dx = np.array([shifts[p][1] for p in pick], dtype=np.int64)
+    nys = np.clip(ys + best_dy[cids], 0, ny - 1)
+    nxs = np.clip(xs + best_dx[cids], 0, nx - 1)
+    corrected = np.zeros(mask.shape, dtype=bool)
+    corrected[nys, nxs] = True
+    mag = np.hypot(best_dy[cids], best_dx[cids]).astype(np.float32)
+    offset_mag[nys, nxs] = mag
+    return corrected, offset_mag
+
+
+def component_offsets(n_comp: int, delta_px: int, rng: np.random.Generator
+                      ) -> np.ndarray:
+    """One rigid (dy, dx) shift per component id in 1..n_comp, |shift| <= delta.
+
+    Shared by every view of the same fold so the simulated misregistered world
+    is consistent (a component is displaced identically in the training and
+    prediction contexts).  Non-zero shifts are forced when possible.
+    """
+    m = int(delta_px)
+    dy = rng.integers(-m, m + 1, size=n_comp + 1)
+    dx = rng.integers(-m, m + 1, size=n_comp + 1)
+    zero = (dy == 0) & (dx == 0)
+    zero[0] = False
+    if zero.any():
+        dy[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+        dx[zero] = rng.integers(-m, m + 1, size=int(zero.sum()))
+    return np.stack([dy, dx], axis=1)
+
+
+def displace_mask(mask: np.ndarray, lab: np.ndarray,
+                  offsets: np.ndarray) -> np.ndarray:
+    """Move every masked pixel by its component's offset (see component_offsets).
+
+    ``lab`` is the component label array of the FULL catalogue, so any subset
+    (training view, prediction view) is displaced consistently.
+    """
+    ys, xs = np.nonzero(mask)
+    if ys.size == 0:
+        return mask.copy()
+    o = offsets[lab[ys, xs]]
+    ny, nx = mask.shape
+    out = np.zeros(mask.shape, dtype=bool)
+    out[np.clip(ys + o[:, 0], 0, ny - 1), np.clip(xs + o[:, 1], 0, nx - 1)] = True
+    return out
+
+
+def _trace_endpoints(trace: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Endpoint pixels of a trace mask with outward unit vectors in (dy, dx).
+
+    An endpoint has at most one 8-connected trace neighbour (isolated single
+    pixels have no strike and are skipped).  Same definition as
+    ``scripts/continuation_subset.py`` so the diagnostic and the operator agree.
+    """
+    from scipy.ndimage import convolve
+
+    t = np.asarray(trace, dtype=bool)
+    if not t.any():
+        return (np.zeros(0, np.int64), np.zeros(0, np.int64),
+                np.zeros((0, 2), np.float32))
+    nbr = convolve(t.astype(np.uint8), np.ones((3, 3), np.uint8),
+                   mode="constant", cval=0) - t.astype(np.uint8)
+    ys, xs = np.nonzero(t & (nbr <= 1))
+    keep_y, keep_x, dirs = [], [], []
+    for y, x in zip(ys.tolist(), xs.tolist()):
+        d = _outward_direction_tip(t, int(y), int(x))   # (east, south)
+        if d is None or float(d[0]) == 0.0 and float(d[1]) == 0.0:
+            continue
+        keep_y.append(y)
+        keep_x.append(x)
+        dirs.append((float(d[1]), float(d[0])))         # (dy, dx)
+    return (np.asarray(keep_y, np.int64), np.asarray(keep_x, np.int64),
+            np.asarray(dirs, np.float32).reshape(-1, 2))
+
+
+def _robust_z(a: np.ndarray) -> np.ndarray:
+    """(a - median) / (1.4826 * MAD), NaN-safe; constant fields map to 0."""
+    v = np.nan_to_num(np.asarray(a, dtype=np.float32),
+                      nan=0.0, posinf=0.0, neginf=0.0)
+    finite = v[np.isfinite(v)]
+    if finite.size == 0:
+        return np.zeros_like(v)
+    med = float(np.median(finite))
+    mad = float(np.median(np.abs(finite - med)))
+    scale = 1.4826 * mad
+    if scale <= 1e-12:
+        # sparse-ridge case (mostly-constant field): fall back to std, then 0
+        scale = float(np.std(finite))
+    if scale <= 1e-12:
+        return np.zeros_like(v)
+    return (v - med) / scale
+
+
+def continuation_stitches(
+    trace: np.ndarray,
+    rtp: np.ndarray,
+    tmi: np.ndarray,
+    tmi_hg: np.ndarray,
+    grav_hg: np.ndarray,
+    depth_to_base: np.ndarray | None = None,
+    det_elev: np.ndarray | None = None,
+    *,
+    max_len_px: float = 48.0,
+    collinearity_deg: float = 30.0,
+    corridor_halfwidth: int = 3,
+    min_crest: float = 0.10,
+) -> dict:
+    """R7-2: buried continuation stitching through cover.
+
+    ``research/hypotheses_round7.md``: *a potential-field ridge corridor that
+    continues a catalogued trace along strike past its mapped tip or across a
+    mapped gap, especially where basin fill or lake sediments cover the
+    connection (``depth_to_base_surf`` thick, ``det_elev`` flat).  Collinearity
+    tolerance 30°, corridor width ≤ 3 px.*  C21 — continuations past mapped
+    tips are scoring truth; S14 — faults obscured by lake sediments end where
+    expression ends, not where the fault ends.
+
+    Algorithm: from every catalogue tip, walk the crest of the combined
+    potential-field ridge expression (robust-z mean of ``rtp``, ``tmi``,
+    ``tmi_hg``, ``grav_hg``) outward along the tip's own strike.  A step is
+    accepted when the across-corridor crest score (crest minus the flank mean
+    at ±``corridor_halfwidth``) clears ``min_crest`` and the heading stays
+    within ``collinearity_deg`` of the tip's outward direction.  Support decays
+    linearly to ``max_len_px``; landing on another strand (a mapped gap
+    crossing) pins support at 1.  Leak-free under hide-and-recover: the walk
+    starts only at *visible* tips.
+
+    Returns
+    -------
+    dict with
+      stitch_bridge : corridor crest support in [0, 1]
+      stitch_cover  : the same corridor re-weighted by a cover factor
+                      (``depth_to_base_surf`` thick and ``det_elev`` flat —
+                      the "hidden by cover" emphasis of the signature)
+    """
+    ys, xs, dirs = _trace_endpoints(trace)
+    ny, nx = np.asarray(trace, bool).shape
+    bridge = np.zeros((ny, nx), np.float32)
+    cover_out = np.zeros((ny, nx), np.float32)
+    if ys.size == 0:
+        return {"stitch_bridge": bridge, "stitch_cover": cover_out}
+
+    expr = 0.25 * (_robust_z(rtp) + _robust_z(tmi)
+                   + _robust_z(tmi_hg) + _robust_z(grav_hg))
+
+    # cover factor: thick basin fill x flat topography, in [0, 1]
+    if depth_to_base is not None:
+        depth_z = np.clip(_robust_z(depth_to_base), 0.0, 2.0) / 2.0
+    else:
+        depth_z = np.zeros((ny, nx), np.float32)
+    if det_elev is not None:
+        elev = np.nan_to_num(np.asarray(det_elev, np.float32),
+                             nan=0.0, posinf=0.0, neginf=0.0)
+        gy, gx = np.gradient(elev)
+        slope = np.hypot(gy, gx)
+        med = float(np.median(slope[slope > 0])) if (slope > 0).any() else 1.0
+        flat = np.exp(-slope / max(med, 1e-6)).astype(np.float32)
+    else:
+        flat = np.ones((ny, nx), np.float32)
+    cover = depth_z * flat
+
+    cos_lim = float(np.cos(np.deg2rad(collinearity_deg)))
+    half = int(corridor_halfwidth)
+    tmask = np.asarray(trace, bool)
+
+    def crest_at(qy: int, qx: int, hy: float, hx: float) -> float:
+        # across-corridor normal (rotate heading 90 deg); flank samples at +-half
+        nyn, nxn = -hx, hy
+        f1y = int(round(qy + nyn * half)); f1x = int(round(qx + nxn * half))
+        f2y = int(round(qy - nyn * half)); f2x = int(round(qx - nxn * half))
+        if not (0 <= f1y < ny and 0 <= f1x < nx and 0 <= f2y < ny and 0 <= f2x < nx):
+            return -1.0
+        return float(expr[qy, qx] - 0.5 * (expr[f1y, f1x] + expr[f2y, f2x]))
+
+    for ty, tx, d in zip(ys.tolist(), xs.tolist(), dirs.tolist()):
+        oy, ox = float(d[0]), float(d[1])
+        hy, hx = oy, ox
+        py, px = float(ty), float(tx)
+        walked = 0.0
+        for _ in range(int(max_len_px) + 4):
+            if walked >= max_len_px:
+                break
+            cy, cx = int(round(py)), int(round(px))
+            best = None
+            best_s = min_crest
+            for dy in (-2, -1, 0, 1, 2):
+                for dx in (-2, -1, 0, 1, 2):
+                    qy, qx = cy + dy, cx + dx
+                    if not (0 <= qy < ny and 0 <= qx < nx):
+                        continue
+                    vy, vx = qy - ty, qx - tx          # vs the TIP: total
+                    n = float(np.hypot(vy, vx))        # deviation is bounded
+                    if n < 1.0 or n <= walked + 0.49:  # must advance outward
+                        continue
+                    if (vy * oy + vx * ox) / n < cos_lim:   # collinearity cone
+                        continue
+                    s = crest_at(qy, qx, hy, hx)
+                    if s > best_s:
+                        best_s = s
+                        best = (qy, qx, vy / n, vx / n)
+            if best is None:
+                break
+            qy, qx, hy, hx = best
+            walked = float(np.hypot(qy - ty, qx - tx))
+            decay = max(0.0, 1.0 - walked / max_len_px)
+            support = float(np.clip(best_s, 0.0, 1.0)) * decay
+            if tmask[qy, qx] and walked > 3.0:
+                support = max(support, 1.0)           # gap connected: pin at 1
+            if support > bridge[qy, qx]:
+                bridge[qy, qx] = support
+                cover_out[qy, qx] = support * float(cover[qy, qx])
+            if tmask[qy, qx] and walked > 3.0:
+                break
+            py, px = float(qy), float(qx)
+
+    return {"stitch_bridge": bridge, "stitch_cover": cover_out}

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 7 — hypotheses grounded in the problem statement — 14GEMSDOE</title>
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+<header><nav class="nav">
+  <span class="brand">14GEMSDOE <span class="tag">GEMS PRIZE</span></span>
+  <a href="index.html">Executive summary</a>
+  <a href="how-to-submit.html">How to submit</a>
+  <a href="strategy.html">Strategy</a>
+  <a href="hypotheses.html">Hypotheses (round 1)</a>
+  <a href="hypotheses-round2.html">Hypotheses (round 2)</a>
+  <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
+  <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
+  <a href="hypotheses-round5.html">Hypotheses (round 5)</a>
+  <a href="hypotheses-round6.html">Hypotheses (round 6)</a>
+  <a href="hypotheses-round7.html" class="active">Hypotheses (round 7)</a>
+  <a href="audit.html">Artifact audit</a>
+  <a href="data.html">Data &amp; sources</a>
+  <a href="leaderboard.html">Leaderboard</a>
+  <a href="methods.html">Methods</a>
+</nav></header>
+
+<main>
+<h1>Round 7 — the problem statement told us where the truth is</h1>
+<p class="lede">Two official statements reframe what the hidden labels contain. <strong>C28</strong> (problem description): <em>"portions of the existing fault data may be misaligned from the true location of the surface fault, which is the prediction target"</em> — the scored truth is the <em>true</em> trace, not the catalogued raster. <strong>C21</strong> (staff): a "new fault" <em>can</em> be "newly mapped geometry of an existing fault system — a continuation past a mapped tip, a splay, a parallel strand". No arm in R1–R6 models misregistration or buried continuation. Round 7 starts there. <strong>No submission slot is spent by any round-7 arm until it beats the holdout best.</strong></p>
+
+<div class="note"><strong>Re-test notice:</strong> R7-3 is N1's physics (gravity-gradient terminations/intersections, the label producers' own basin playbook — KB S11). N1's only evidence is a <em>synthetic-model kill</em>, which the session-14 directives state is not evidence. It has never run against the real rasters. A null on real data kills it for good.</div>
+
+<h2>The five candidates (ranked by expected hidden-truth DTI ÷ cost)</h2>
+<table>
+<tr><th>#</th><th>Hypothesis — layers → transform</th><th>Physical signature</th><th>Why a missing fault leaves it</th><th>Difference from everything already run</th><th>Gate?</th></tr>
+<tr><td><strong>R7-1</strong></td><td><strong>Expression-aligned traces (misregistration correction).</strong> Catalogue context + <code>det_elev_slope</code> (19) + <code>tmi_hg</code> (3) + <code>iso_grav_anom_hg</code> (18) + <code>tc</code> (6, edge strength only — FLAG #11). Per component: search ±3 px (the metric kernel) for the shift maximising mean expression under the trace, minus 0.02/px displacement penalty; move the trace; emit at corrected positions.</td><td>A coherent expression ridge within ±3 px of the mapped trace, at a systematic offset. The offset field itself is a feature.</td><td>C28: portions of the catalogue are misaligned from the true surface fault, which <em>is</em> the prediction target. The masked known-fault raster covers the <em>catalogued</em> pixels (C11); the corrected pixels are neither masked nor catalogue — they are scoring truth. C21 confirms corrected geometry counts.</td><td>No arm estimates a catalogue→expression offset; every R1–R6 geometry channel treats the mapped trace as exact and terminal.</td><td>stress only: <code>--misreg-px</code> δ∈{0,1,2,3}; must win at δ≥1 and not lose at δ=0</td></tr>
+<tr><td><strong>R7-2</strong></td><td><strong>Buried continuation stitching.</strong> <code>rtp</code>/<code>tmi</code>/<code>tmi_hg</code>/<code>iso_grav_anom_hg</code> + <code>depth_to_base_surf</code> + catalogue endpoints/strike. Ridge-corridor bridge continuing a trace along strike past its tip or across a gap through cover (collinearity ≤30°, width ≤3 px).</td><td>Potential-field ridge corridor connecting collinear trace segments where basin/lake fill covers the connection.</td><td>C21: continuations past a mapped tip are scoring truth. S14: faults without Holocene rupture are obscured by lake sediments. Gold et al. 2013 (JGR): a concealed Walker Lane fault traces only between discontinuous scarps via lidar + aeromagnetics.</td><td>R6-1 emits an isotropic splay fan at tips, no ridge following; relay_corridors bridges across-strike; R3D links surface curvature scarplets, not potential-field ridges through cover.</td><td>direct + continuation subset (hidden components continuing a visible trace)</td></tr>
+<tr><td><strong>R7-3</strong></td><td><strong>Gravity-gradient termination &amp; intersection topology.</strong> <code>iso_grav_anom_hg</code> (18) + <code>iso_grav_anom_slope</code> (5) + <code>iso_grav_anom_vg</code> (11). Ridge skeleton of the gradient field; weighted terminations + junctions (<code>gems/geoedges.py</code>), compact topology maps.</td><td>Where gravity edges <em>stop</em> and <em>cross</em> — fault terminations and intersections seen through basin fill.</td><td>S11 (Faulds et al. 2026, VERIFIED): "terminating and intersecting gravity gradients respectively defined many of the fault terminations and fault intersections… especially important in defining FSS in the many basins, where basin-fill sediments obscure the subsurface architecture." The label-source authors' own method.</td><td>N1's physics re-tested (see re-test notice). R6-2 halos need catalogue junctions — nothing where the catalogue is blank. R4A cross-field topology never implemented.</td><td>direct</td></tr>
+<tr><td><strong>R7-4</strong></td><td><strong>Kinematic strain-budget deficit.</strong> <code>geod_shearrate</code> (7) + <code>geod_dilaterate</code> (8) + <code>geod_2ndinv</code> (4) + visible catalogue strikes. Per-pixel deficit between the geodetic strain tensor and what nearby mapped strikes could accommodate.</td><td>Strain the mapped faults cannot explain (high deficit × high second invariant).</td><td>Gold et al. 2013 (VERIFIED): including the concealed Grizzly Valley fault in the regional strain budget "may reduce the discrepancy between geodetic and geologic deformation rates" — concealed faults are exactly where the budget fails to close.</td><td>R5-5 regresses fault <em>density</em> against relief/strain predictors; N2 made raw strain-band lineaments with no catalogue-kinematic term; R6-4 is external stress tendency (unfetched).</td><td>direct</td></tr>
+<tr><td><strong>R7-5</strong></td><td><strong>Transtensional coupling.</strong> <code>geod_shearrate</code> (7) × relu(<code>geod_dilaterate</code> (8)) — excess shear × excess <em>physical</em> extension (clip before scaling; FLAG #12 sign convention).</td><td>Where shear and extension interact — the transtensional setting of the highest-temperature systems.</td><td>S1/S4/S7 (VERIFIED): systems concentrate in transtensional high-strain areas; step-overs/terminations show the largest modelled dilatation and Coulomb shear-traction increases; transfer zones host 24% of Walker Lane classified systems.</td><td><code>geod_*</code> bands entered earlier arms only as raw standardised features; no arm forms the shear×dilatation interaction.</td><td>direct</td></tr>
+</table>
+
+<h2>Pre-registered gate (in progress 2026-09-29)</h2>
+<ol>
+<li><strong>Arms:</strong> <code>geom_gravtopo</code> (R7-3), <code>geom_trans</code> (R7-5) — run 1; <code>geom_align</code> (R7-1) at δ=0 and δ=2 — runs 2–3. Each = geom + geo + its channel(s).</li>
+<li><strong>Protocol:</strong> unchanged component hide-and-recover, 4 folds, emission calibrated on hidden CALIB only; <code>geom</code> in every run as the same-run baseline.</li>
+<li><strong>Promote rule:</strong> beat geom on sparse AND far in ≥3/4 folds. For R7-1 additionally: win at δ=2 and not lose at δ=0 (its δ=0 numbers are neutral-to-negative <em>by construction</em> — the gate truth is the catalogue raster, and R7-1's target pixels lie off it by design).</li>
+<li><strong>Amendment (recorded before gate numbers):</strong> alignment objective carries a fixed 0.02/px displacement penalty after a crop smoke showed unpenalised over-sliding (mean |offset| 3.57 px on an injected 2 px misregistration → 2.80 px penalised). Not tuned on any gate result.</li>
+</ol>
+
+<h2>Results (2026-09-29)</h2>
+<p>Component protocol, 4 folds, bench <code>geom</code> 4-fold 0.0385/0.0151/0.0003 (reproduced exactly in every gate). Promote rule: sparse AND far wins ≥3/4 folds vs bench.</p>
+<table><thead><tr><th>Hypothesis</th><th>Arm</th><th>Result</th><th>Evidence</th></tr></thead><tbody>
+<tr><td><strong>R7-1</strong> expression-aligned traces</td><td><code>geom_align</code></td><td class="promoted">PROMOTED</td>
+<td>δ=0: sparse 3/4, far 4/4 (fold-0 far 0.0064 — best single far). δ=2 stress (<code>--misreg-px 2</code>, per-component shifts shared across views, TEST truth never displaced): sparse <strong>4/4</strong>, far <strong>4/4</strong>. Rule (win δ=2, not lose δ=0) met. <code>artifacts/holdout_round7_align_d0.json</code>, <code>..._align_d2.json</code></td></tr>
+<tr><td><strong>R7-2</strong> buried continuation stitching</td><td><code>geom_stitch</code></td><td class="promoted">PROMOTED</td>
+<td>sparse 3/4, far <strong>4/4</strong> (0.0037/0.0011/0.0018/0.0019). Pre-registered continuation-subset report: continuation +0.0001, <strong>isolated +19 %</strong> (0.0138→0.0164) — the 48-px crest walk reaches past the 20-px tip window into the buried remainder, as predicted. Subset diagnostic: <strong>52.5 % of TEST px are continuations</strong>. <code>artifacts/holdout_round7_stitch_horse7.json</code>, <code>artifacts/continuation_subset_r7stitch.json</code></td></tr>
+<tr><td><strong>R7-3</strong> gravity-gradient termination/intersection topology</td><td><code>geom_gravtopo</code></td><td class="promoted">PROMOTED</td>
+<td>sparse 3/4, far <strong>4/4</strong> (0.0033/0.0014/0.0020/0.0024). Match-scale cross-aspect gravity-direction coherence prior (3/3 matches) lands on real data. <code>artifacts/holdout_round7.json</code></td></tr>
+<tr><td><strong>R7-4</strong> strain-budget deficit</td><td>—</td><td>KILLED (prior)</td>
+<td>5/5 of the author's differential-stress operator spectrum is reproduced by domain-pinned operators (catalogue-prior session). No incremental information to mine.</td></tr>
+<tr><td><strong>R7-5</strong> transtensional shear×extension coupling</td><td><code>geom_trans</code></td><td class="promoted">PROMOTED</td>
+<td>sparse 3/4 (fold 0 +22 %), far <strong>4/4</strong> (0.0038/0.0017/0.0034/0.0032 — best far mean of any arm). FLAG #12 (dilatation sign) stands. <code>artifacts/holdout_round7.json</code></td></tr>
+</tbody></table>
+<p><strong>Ensemble decision (pre-registered §B1):</strong> all6 4-fold 0.0679/0.0221/0.0074 vs horse 0.0624/0.0217/0.0040 — all6 wins far 4/4 but sparse only 2/4. The pre-registered <code>horse7</code> ensemble (horse + R7-1/3/5, composition frozen before its gate) then reached 0.0727/0.0215/0.0078 — far nearly double, dense +0.0103 — but again lost sparse on 2/4 folds (the CALIB budget drifted to topk:0.02 on those folds). A third attempt under pre-registered <em>protocol v2</em> (fine budget grid + sparse-aware CALIB criterion — §5 of the pre-registration, aimed exactly at that failure mode) reached 0.0721/0.0224/0.0075 and still lost sparse on 2/4 folds (budget drift to q 0.018/0.012 on the losing folds). Three misses, one rule: <strong>the fold-wise sparse rule is not bent for better means; the slot stays on the horse arm</strong>. The upload artifact is <code>GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif</code> — horse fields at the official-marginal-economics budget (fine-grid CALIB dense-optimal, q = 0.0225): TEST dense 0.0699 vs 0.0657 at the old budget and 0.0540 at the v2 mean-criterion budget. Uniqueness audit PASS; zero uploads.</p>
+<p class="src">Gate artifacts: <code>artifacts/holdout_round7.json</code>, <code>artifacts/holdout_round7_align_d0.json</code>, <code>artifacts/holdout_round7_align_d2.json</code>, <code>artifacts/holdout_round6_all6.json</code>. Pre-registration of record: <code>research/hypotheses_round7.md</code> (incl. honesty statement and FLAG #11 (RESOLVED 2026-09-29: band 6 <code>tc</code> is the top-of-crustal magnetic source depth estimate in km — strictly positive values rule out the "tilt angle or total curvature" fallback tag; used as edge strength all along, now a depth-feature R8 candidate)).</p>
+
+<h2>Round-6 close-out (same session)</h2>
+<div class="grid2">
+  <div class="stat"><div class="k">Promoted</div><div class="v">R6-5 shore · R6-3 condbase</div>
+    <div class="s">shore 0.0452/0.0191/0.0038 (4/4 sparse &amp; far, far ≈ 13× baseline); condbase 0.0397/0.0166/0.0022 (3/4 sparse, 4/4 far) — <code>artifacts/holdout_round6_rest.json</code></div></div>
+  <div class="stat"><div class="k">Killed by rule</div><div class="v">R6-2 xsec</div>
+    <div class="s">sparse 2/4 despite far 4/4 — the smoke-crop improvement did not survive the full grid; recorded as kill-by-rule</div></div>
+</div>
+</main>
+
+<footer>
+  Built for the <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">GEMS Prize Challenge</a> ·
+  every claim on this site links to its source; numbers without sources are labelled as team-reported ·
+  repository: <code>buffedlizard55-lab/14GEMSDOE</code>
+</footer>
+<script src="js/payload.js"></script>
+<script src="js/tif_writer.js"></script>
+<script src="js/site.js"></script>
+</body>
+</html>

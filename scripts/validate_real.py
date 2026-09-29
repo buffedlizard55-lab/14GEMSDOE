@@ -136,6 +136,26 @@ def _f16(a: np.ndarray) -> np.ndarray:
     return np.clip(x, -30000.0, 30000.0).astype(np.float16)
 
 
+def _expression_ridge_field(static: dict[str, np.ndarray]) -> np.ndarray:
+    """Ridge-strength expression field for R7-1 trace alignment.
+
+    Mean of the three independent ridge-strength bands (detrended-elevation
+    slope, TMI horizontal gradient, isostatic-gravity horizontal gradient).
+    All three are already robust-scaled to ~[-1, 1]; their mean is a relative
+    expression score, which is all the alignment operator needs.
+    """
+    z = None
+    for nm in ("det_elev_slope", "tmi_hg", "iso_grav_anom_hg"):
+        v = static.get(nm)
+        if v is None:
+            continue
+        v = np.nan_to_num(np.asarray(v, dtype=np.float32), nan=0.0)
+        z = v.copy() if z is None else z + v
+    if z is None:
+        raise ValueError("no expression bands in static channels")
+    return z / 3.0
+
+
 def build_geom_channels(context: np.ndarray, window: int = 9) -> dict[str, np.ndarray]:
     """Catalogue-geometry channels, computed from the CONTEXT mask only.
 
@@ -169,72 +189,110 @@ def build_geom_channels(context: np.ndarray, window: int = 9) -> dict[str, np.nd
 
 def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
                           valid: np.ndarray, which: set[str]) -> dict[str, np.ndarray]:
-    """Round-5 + Round-6 hypothesis channels (only the ones the arm asked for)."""
+    """Round-5 + Round-6 + Round-7 hypothesis channels (only the arm's set).
+
+    Memory contract (two OOM kills at fold 2 of the all6 gate taught this):
+    every channel is converted to the guarded float16 storage dtype THE MOMENT
+    it is produced (`put`), and large intermediates are deleted eagerly.  The
+    conversion is bit-identical to converting at the end — the design matrix
+    sees the same values — but the float32 peak no longer scales with the
+    number of extras.
+    """
     out: dict[str, np.ndarray] = {}
+
+    def put(name: str, v: np.ndarray) -> None:
+        out[name] = _f16(v)
+
     elev = rc.nan_fill(static.get("det_elev", np.zeros(context.shape, np.float32)))
     elev_slope = static.get("det_elev_slope", None)
     # R5
     if "ramp" in which:
-        out["ramp_maturity"] = rc.ramp_maturity_field(context)
+        put("ramp_maturity", rc.ramp_maturity_field(context))
     if "acc" in which:
-        out["acc_corridor"] = rc.accommodation_corridors(context, elev)
+        put("acc_corridor", rc.accommodation_corridors(context, elev))
     if "tilt" in which:
         vg = np.nan_to_num(static.get("tmi_vg", np.zeros(context.shape, np.float32)), nan=0.0)
         hg = np.nan_to_num(static.get("tmi_hg", np.zeros(context.shape, np.float32)), nan=0.0)
         ta = rc.tilt_angle(vg, hg)
-        out["tilt_angle"] = ta
-        out["tilt_edge"] = rc.line_max(np.abs(ta), radius=2)
+        del vg, hg
+        put("tilt_angle", ta)
+        put("tilt_edge", rc.line_max(np.abs(ta), radius=2))
+        del ta
     if "curv" in which:
         prof, plan = rc.profile_curvature(elev, sigma=1.0)
-        out["profcurv"] = prof
-        out["profcurv_line"] = rc.line_max(np.abs(prof), radius=2)
+        del plan
+        put("profcurv", prof)
+        put("profcurv_line", rc.line_max(np.abs(prof), radius=2))
+        del prof
     if "gap" in which:
         dens = rc.intersection_density(context)["trace_density"]
-        res = rc.completeness_residual(dens, {
-            "elev": elev,
-            "grav_slope": np.nan_to_num(
-                static.get("iso_grav_anom_slope", np.zeros(context.shape, np.float32)), nan=0.0),
-        }, smooth_sigma=32.0)
-        out["gap_residual"] = np.asarray(res["residual"] if isinstance(res, dict) else res,
-                                         dtype=np.float32)
+        gs = np.nan_to_num(
+            static.get("iso_grav_anom_slope", np.zeros(context.shape, np.float32)), nan=0.0)
+        res = rc.completeness_residual(dens, {"elev": elev, "grav_slope": gs},
+                                       smooth_sigma=32.0)
+        del dens, gs
+        put("gap_residual", np.asarray(res["residual"] if isinstance(res, dict) else res,
+                                       dtype=np.float32))
     # R6
     if "horse" in which:
         es = rc.nan_fill(elev_slope) if elev_slope is not None else None
-        out["horse_splay"] = rc.horsetail_splay_field(context, es, elev, radius_px=20.0, half_angle_deg=60.0)
+        put("horse_splay", rc.horsetail_splay_field(context, es, elev,
+                                                    radius_px=20.0, half_angle_deg=60.0))
     if "xsec" in which:
-        shear = static.get("geod_shearrate", None)
-        dil = static.get("geod_dilaterate", None)
-        # also need tmi_hg for weighting optionally
-        out["xsec_halo"] = rc.intersection_halos(context, shear, dil, high_angle_deg=45.0, near_miss_px=20.0, halo_sigma_px=10.0)
+        put("xsec_halo", rc.intersection_halos(context, static.get("geod_shearrate"),
+                                               static.get("geod_dilaterate"),
+                                               high_angle_deg=45.0, near_miss_px=20.0,
+                                               halo_sigma_px=10.0))
     if "condbase" in which:
-        cond = static.get("cond_surf", None)
-        depth = static.get("depth_to_base_surf", None)
-        tmi = static.get("tmi", None)
-        ghg = static.get("iso_grav_anom_hg", None)
-        cb = rc.conductive_base_step(cond, depth, tmi, ghg)
+        cb = rc.conductive_base_step(static.get("cond_surf"), static.get("depth_to_base_surf"),
+                                     static.get("tmi"), static.get("iso_grav_anom_hg"))
         # conductive_base_step returns zeros if missing; handle shape mismatch
         if isinstance(cb, np.ndarray) and cb.shape == context.shape:
-            out["condbase_step"] = cb
+            put("condbase_step", cb)
         elif isinstance(cb, np.ndarray) and cb.size == context.size:
-            out["condbase_step"] = cb.reshape(context.shape)
+            put("condbase_step", cb.reshape(context.shape))
     if "shore" in which:
-        ghg = static.get("iso_grav_anom_hg", None)
-        res = rc.paleo_shoreline_suppression(elev, rc.nan_fill(elev_slope) if elev_slope is not None else None, ghg)
+        res = rc.paleo_shoreline_suppression(
+            elev, rc.nan_fill(elev_slope) if elev_slope is not None else None,
+            static.get("iso_grav_anom_hg"))
         if res:
             if "sublake_enhanced" in res and res["sublake_enhanced"].shape == context.shape:
-                out["sublake_enhanced"] = res["sublake_enhanced"]
+                put("sublake_enhanced", res["sublake_enhanced"])
             if "shoreline_dist" in res and res["shoreline_dist"].shape == context.shape:
-                # invert distance: close to shoreline = low fault prob (suppression), far + sublake = high
-                # we emit the distance as feature; model learns suppression
-                out["shore_dist"] = res["shoreline_dist"]
+                # the model learns suppression from the distance feature
+                put("shore_dist", res["shoreline_dist"])
     if "slip" in which:
         # external data not present in this sandbox run; placeholder returns empty
         sd = rc.slip_dilation_tendency_field(context)
-        # if it ever returns something, add it
         for k, v in sd.items():
             if isinstance(v, np.ndarray) and v.shape == context.shape:
-                out[k] = v
-    return {k: _f16(v) for k, v in out.items() if v is not None}
+                put(k, v)
+    # R7 (research/hypotheses_round7.md)
+    if "stitch" in which:
+        st = rc.continuation_stitches(
+            context,
+            static.get("rtp", np.zeros(context.shape, np.float32)),
+            static.get("tmi", np.zeros(context.shape, np.float32)),
+            static.get("tmi_hg", np.zeros(context.shape, np.float32)),
+            static.get("iso_grav_anom_hg", np.zeros(context.shape, np.float32)),
+            depth_to_base=static.get("depth_to_base_surf", None),
+            det_elev=static.get("det_elev", None))
+        put("stitch_bridge", st["stitch_bridge"])
+        put("stitch_cover", st["stitch_cover"])
+        del st
+    if "gravtopo" in which:
+        ghg = static.get("iso_grav_anom_hg", None)
+        if ghg is not None:
+            topo = rc.gravity_topology(ghg, static.get("iso_grav_anom_slope"))
+            put("grav_ridge", topo["grav_ridge"])
+            put("grav_topo", topo["grav_topo"])
+    if "trans" in which:
+        shear = static.get("geod_shearrate", None)
+        dil = static.get("geod_dilaterate", None)
+        if shear is not None and dil is not None:
+            for k, v in rc.transtensional_coupling(shear, dil).items():
+                put(k, v)
+    return out
 
 
 ARM_SPEC: dict[str, str] = {
@@ -253,6 +311,14 @@ ARM_SPEC: dict[str, str] = {
     "geom_shore": "geom + geo + R6-5 paleo-shoreline suppression + sub-lake enhancement",
     "geom_slip": "geom + geo + R6-4 slip/dilation tendency (external, if present)",
     "all6": "geom + geo + R5 + R6 (all channels)",
+    # Round 7
+    "geom_gravtopo": "geom + geo + R7-3 gravity-gradient termination/intersection topology",
+    "geom_trans": "geom + geo + R7-5 transtensional shear x extension coupling",
+    "geom_align": "geom(align) + geo + R7-1 expression-aligned traces (misregistration correction)",
+    "geom_stitch": "geom + geo + R7-2 buried continuation stitching",
+    # Round-7 ensemble (pre-registered amendment 2026-09-29, before its gate):
+    # horse + the R7 operators that had already PROMOTED on their own gates
+    "horse7": "geom(align) + geo + R6-1 horsetail splay + R7-1 align + R7-3 gravtopo + R7-5 trans",
 }
 
 
@@ -263,11 +329,19 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
     geo = arm != "geom"
     if arm == "geom":
         return names, r5, geo
-    for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip"):
-        if arm in ("all", "all6") or arm == f"geom_{extra}":
+    for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip",
+                  "gravtopo", "trans", "align", "stitch"):
+        if arm == f"geom_{extra}":
             r5.add(extra)
+    if arm == "horse7":
+        # pre-registered composition: horse + the three R7 arms promoted on
+        # their own gates before horse7 was defined (R7-1/3/5)
+        r5.update({"horse", "gravtopo", "trans", "align"})
+    if arm == "all":
+        # pinned definition (ARM_SPEC + round-5 record): every round-5 channel
+        r5.update({"ramp", "acc", "tilt", "curv", "gap"})
     if arm == "all6":
-        # all includes everything
+        # all6 = R5 + R6; R7 arms stay separate until gated
         r5.update({"ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip"})
     if "ramp" in r5:
         names.append("ramp_maturity")
@@ -291,6 +365,16 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
         # placeholder: if external raster ever present, its channels will be added dynamically
         # keep name list open; design_matrix will skip missing
         names += ["slip_tendency", "dilation_tendency"]
+    if "gravtopo" in r5:
+        names += ["grav_ridge", "grav_topo"]
+    if "trans" in r5:
+        names.append("trans_coupling")
+    if "stitch" in r5:
+        names += ["stitch_bridge", "stitch_cover"]
+    if "align" in r5:
+        # the geometry block itself is rebuilt from the expression-aligned
+        # context in run(); this is the extra offset-magnitude channel
+        names.append("align_offset")
     if geo:
         names += list(GEO_BANDS)
     return names, r5, geo
@@ -340,14 +424,22 @@ def score_field(pred: np.ndarray, gt: np.ndarray, valid: np.ndarray,
 
 
 def calibrate_policy(field: np.ndarray, calib: np.ndarray, valid: np.ndarray,
-                     seed: int = 11, frac: float = 0.30, radius_px: float = 3.0
-                     ) -> dict:
+                     seed: int = 11, frac: float = 0.30, radius_px: float = 3.0,
+                     sparse_frac: float = 0.20, v1: bool = False) -> dict:
     """Choose the emission policy on the hidden CALIB components only.
 
     Policies are the two families that can move this metric: a probability
     threshold (emit everything above t) and a top-q budget by probability
     (emit the q·|valid| highest pixels).  Selection is on a 30 % subsample of
     CALIB for cost; the chosen policy is re-scored on the full CALIB set.
+
+    Protocol v2 (research/hypotheses_round7.md §5, pre-registered 2026-09-29):
+    a fine top-q grid (0.0025 -> 0.05, 16 log-spaced budgets) and the criterion
+    mean(CALIB dense DTI, CALIB sparse-view DTI) — the sparse view is
+    ``sample_truth(calib, sparse_frac)``, the same operator as the TEST sparse
+    protocol — with exact ties resolved to the smaller emitted budget.  The
+    coarse-grid dense-only v1 behaviour is kept behind ``v1=True`` so archived
+    gates stay reproducible.
     """
     if calib is None or not calib.any():
         return {"policy": "thresh", "param": 0.5, "calib_dti": None}
@@ -357,18 +449,44 @@ def calibrate_policy(field: np.ndarray, calib: np.ndarray, valid: np.ndarray,
     sub = np.zeros(calib.size, dtype=bool)
     sub[take] = True
     sub = sub.reshape(calib.shape)
+    if v1:
+        topk_grid = (0.005, 0.01, 0.02, 0.05)
+    else:
+        topk_grid = tuple(float(f"{q:.6g}") for q in np.geomspace(0.0025, 0.05, 16))
     policies = ([("thresh", t) for t in (0.5, 0.7, 0.9, 0.95, 0.99)]
-                + [("topk", q) for q in (0.005, 0.01, 0.02, 0.05)])
-    best = None
+                + [("topk", q) for q in topk_grid])
+    if v1:
+        best = None
+        for pol, par in policies:
+            pred = emit_policy(field, pol, par, valid)
+            d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
+            if best is None or d > best[2]:
+                best = (pol, par, d)
+        pol, par, _ = best
+        pred = emit_policy(field, pol, par, valid)
+        full = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
+        return {"policy": pol, "param": float(par), "calib_dti": float(full)}
+
+    sub_sparse = sample_truth(sub, sparse_frac, np.random.default_rng(seed + 7))
+    best = None   # (criterion_and_tiebreak, policy, param, dense, sparse)
     for pol, par in policies:
         pred = emit_policy(field, pol, par, valid)
-        d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
-        if best is None or d > best[2]:
-            best = (pol, par, d)
-    pol, par, _ = best
+        d_d = gdti.dti(pred, sub, radius_px=radius_px, eval_mask=valid)["dti"]
+        d_s = gdti.dti(pred, sub_sparse, radius_px=radius_px, eval_mask=valid)["dti"]
+        crit = 0.5 * (d_d + d_s)
+        n_emit = float(pred.sum()) / float(valid.sum())
+        # strict > keeps the smaller emitted budget on exact ties
+        key = (crit, -n_emit)
+        if best is None or key > best[0]:
+            best = (key, pol, par, d_d, d_s)
+    _, pol, par, _, _ = best
     pred = emit_policy(field, pol, par, valid)
-    full = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
-    return {"policy": pol, "param": float(par), "calib_dti": float(full)}
+    full_d = gdti.dti(pred, calib, radius_px=radius_px, eval_mask=valid)["dti"]
+    full_s = gdti.dti(pred, sample_truth(calib, sparse_frac,
+                                         np.random.default_rng(seed + 7)),
+                      radius_px=radius_px, eval_mask=valid)["dti"]
+    return {"policy": pol, "param": float(par), "calib_dti": float(0.5 * (full_d + full_s)),
+            "calib_dense_dti": float(full_d), "calib_sparse_dti": float(full_s)}
 
 
 def emit_policy(field: np.ndarray, policy: str, param: float,
@@ -473,7 +591,26 @@ def run(args) -> int:
         print(f"[gate] protocol=component comps={n_comp} TEST {n_test} / CALIB {n_calib} "
               f"/ HIDE {n_hide} / visible {n_comp - n_test - n_calib - n_hide}", flush=True)
 
-    fields_dir = ROOT / "artifacts" / "real_fields"
+    # R7-1 stress protocol (research/hypotheses_round7.md): one rigid shift per
+    # catalogue component, shared by every view of every fold, so the simulated
+    # misregistered world is consistent.  Truth (TEST) is never displaced.
+    misreg_offsets = None
+    if args.misreg_px > 0:
+        if args.protocol != "component":
+            raise SystemExit("--misreg-px is only defined for --protocol component")
+        misreg_offsets = rc.component_offsets(
+            n_comp, int(args.misreg_px), np.random.default_rng(args.seed + 999))
+        moved = int((np.abs(misreg_offsets[1:]).sum(axis=1) > 0).sum())
+        print(f"[gate] MISREGISTRATION STRESS: shifts <= {int(args.misreg_px)} px "
+              f"for {moved}/{n_comp} components (seed {args.seed + 999})", flush=True)
+
+    want_align = any("align" in arm_channels(a)[1] for a in args.arms)
+
+    # smoke-crop runs must never write into the deployment field cache: a
+    # cropped field saved as fold{k}_{arm}.npy would poison the submission
+    # builder (real fields are full-grid only)
+    fields_dir = (ROOT / "artifacts" / "real_fields_smoke" if sl is not None
+                  else ROOT / "artifacts" / "real_fields")
     fields_dir.mkdir(parents=True, exist_ok=True)
     results = {arm: {"arm": arm, "spec": ARM_SPEC.get(arm, arm), "folds": []}
                for arm in args.arms}
@@ -497,6 +634,11 @@ def run(args) -> int:
             feature_ctx = context
             pos_mask = context
         pred_ctx = context
+        if misreg_offsets is not None:
+            # the catalogue the model sees is misregistered (C28); TEST truth is
+            # not part of either view and is never displaced
+            feature_ctx = rc.displace_mask(feature_ctx, lab, misreg_offsets)
+            pred_ctx = rc.displace_mask(pred_ctx, lab, misreg_offsets)
         t_geom = time.time() - t0
         # truth subsets are arm-independent: compute once per fold
         sp_rng = np.random.default_rng(1000 + k)
@@ -508,16 +650,31 @@ def run(args) -> int:
         geom_train = build_geom_channels(feature_ctx)
         if not args.quiet:
             print(f"    [fold {k}] train-view geometry in {time.time()-t0:.0f} s", flush=True)
+        geom_align_train = None
+        if want_align:
+            expr_field = _expression_ridge_field(static)
+            al_mask, al_off = rc.align_traces_to_expression(feature_ctx, expr_field,
+                                                            max_offset=3)
+            geom_align_train = build_geom_channels(al_mask)
+            geom_align_train["align_offset"] = _f16(rc.line_max(al_off, radius=3))
+            if not args.quiet:
+                print(f"    [fold {k}] train-view aligned geometry "
+                      f"(mean |offset| {float(al_off[al_off > 0].mean()) if (al_off > 0).any() else 0:.2f} px) "
+                      f"in {time.time()-t0:.0f} s", flush=True)
         betas: dict[str, tuple] = {}
         names_by_arm: dict[str, list[str]] = {}
         for arm in args.arms:
             ta = time.time()
             names, r5, geo = arm_channels(arm)
-            ch_train = dict(geom_train)
+            if "align" in r5 and geom_align_train is not None:
+                ch_train = dict(geom_align_train)
+            else:
+                ch_train = dict(geom_train)
             if geo:
                 ch_train.update(static)
             if r5:
-                ch_train.update(build_round5_channels(feature_ctx, static, valid, r5))
+                ch_train.update(build_round5_channels(feature_ctx, static, valid,
+                                                      r5 - {"align"}))
             names_now = [nm for nm in names if nm in ch_train]
             idx, y = sample_pixels(pos_mask, valid,
                                    np.random.default_rng(args.seed + k),
@@ -533,26 +690,40 @@ def run(args) -> int:
                 print(f"      [fold {k}] {arm:10s} trained on {idx.size} px "
                       f"({len(names_now)} feats) in {time.time()-ta:.0f} s", flush=True)
         del geom_train
+        if geom_align_train is not None:
+            del geom_align_train
 
         # ---- stage 2: predict with the submission-time context ------------
         geom_pred = build_geom_channels(pred_ctx)
         if not args.quiet:
             print(f"    [fold {k}] pred-view geometry in {time.time()-t0:.0f} s", flush=True)
+        geom_align_pred = None
+        if want_align:
+            expr_field = _expression_ridge_field(static)
+            al_mask, al_off = rc.align_traces_to_expression(pred_ctx, expr_field,
+                                                            max_offset=3)
+            geom_align_pred = build_geom_channels(al_mask)
+            geom_align_pred["align_offset"] = _f16(rc.line_max(al_off, radius=3))
         for arm in args.arms:
             ta = time.time()
             names, r5, geo = arm_channels(arm)
-            ch_pred = dict(geom_pred)
+            if "align" in r5 and geom_align_pred is not None:
+                ch_pred = dict(geom_align_pred)
+            else:
+                ch_pred = dict(geom_pred)
             if geo:
                 ch_pred.update(static)
             if r5:
-                ch_pred.update(build_round5_channels(pred_ctx, static, valid, r5))
+                ch_pred.update(build_round5_channels(pred_ctx, static, valid,
+                                                      r5 - {"align"}))
             names_now = [nm for nm in names_by_arm[arm] if nm in ch_pred]
             beta, mu, sd, n_train = betas[arm]
             pred = predict_full_std(beta, mu, sd, ch_pred, names_now, valid,
                                     args.chunk_rows)
             del ch_pred
             np.save(fields_dir / f"fold{k}_{arm}.npy", pred.astype(np.float16))
-            pol = calibrate_policy(pred, calib, valid, seed=100 + k)
+            pol = calibrate_policy(pred, calib, valid, seed=100 + k,
+                                   sparse_frac=args.sparse_frac, v1=args.calib_v1)
             emitted = emit_policy(pred, pol["policy"], pol["param"], valid)
             row = {
                 "fold": k, "arm": arm, "n_features": len(names_now),
@@ -561,6 +732,8 @@ def run(args) -> int:
                 "raw_calib": None if calib is None else score_field(pred, calib, valid)["dti"],
                 "calib_policy": pol["policy"], "calib_param": pol["param"],
                 "calib_dti": pol["calib_dti"],
+                "calib_dense_dti": pol.get("calib_dense_dti"),
+                "calib_sparse_dti": pol.get("calib_sparse_dti"),
                 "test_dense_at_t": score_field(emitted, test, valid)["dti"],
                 "test_sparse_at_t": score_field(emitted, sparse_gt, valid)["dti"],
                 "test_far_at_t": (score_field(emitted, far_gt, valid)["dti"]
@@ -576,6 +749,8 @@ def run(args) -> int:
                   f"dense={row['test_dense_at_t']:.4f} sparse={row['test_sparse_at_t']:.4f} "
                   f"far={'-' if row['test_far_at_t'] is None else format(row['test_far_at_t'], '.4f')} "
                   f"emit={row['n_emit']} ({row['elapsed_s']:.0f} s)", flush=True)
+        if geom_align_pred is not None:
+            del geom_align_pred
         np.savez(fields_dir / f"fold{k}_truth.npz", test=test, sparse=sparse_gt,
                  far=far_gt, **({} if calib is None else {"calib": calib}))
 
@@ -608,6 +783,7 @@ def run(args) -> int:
             "sparse_frac": args.sparse_frac,
             "learner": f"logistic regression, {args.iters} GD iters, lr 0.5, l2 1e-3",
             "n_pos": args.n_pos, "n_neg": args.n_neg,
+            "misreg_px": args.misreg_px,
             "geo_bands": list(GEO_BANDS),
             "metric": "official DTI (radius 3 px, alpha 0.2, beta 0.8), eval_mask=footprint",
             "note": ("raw_* scores use the unthresholded probability field and are "
@@ -674,10 +850,17 @@ def main() -> int:
     ap.add_argument("--far-px", type=float, default=10.0,
                     help="far-test distance (px) from any context trace")
     ap.add_argument("--sparse-frac", type=float, default=0.20)
+    ap.add_argument("--calib-v1", action="store_true",
+                    help="use the archived v1 emission calibration (coarse grid, "
+                         "dense-only criterion) instead of pre-registered v2")
     ap.add_argument("--n-pos", type=int, default=20000)
     ap.add_argument("--n-neg", type=int, default=40000)
     ap.add_argument("--iters", type=int, default=150)
     ap.add_argument("--chunk-rows", type=int, default=256)
+    ap.add_argument("--misreg-px", type=float, default=0.0,
+                    help="R7-1 stress protocol: rigidly displace every non-TEST "
+                         "catalogue component by up to this many px (C28 "
+                         "misregistration simulation); 0 = world as mapped")
     ap.add_argument("--out", default="artifacts/holdout_real.json")
     ap.add_argument("--crop-rows", type=int, default=0,
                     help="smoke-test window height (0 = full grid)")

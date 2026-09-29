@@ -142,15 +142,19 @@ def ridge_skeleton(field: np.ndarray, *, sigma: float = 1.0,
     if not strong.any():
         strong = nms & (mag >= float(cand.max()))
     lab, n = ndimage.label(weak, structure=_EIGHT)
-    keep = np.zeros_like(weak)
-    for cid in range(1, n + 1):
-        comp = lab == cid
-        if comp.sum() < min_length_px:
-            continue
-        if (comp & strong).any():
-            keep |= comp
-    if not keep.any():
+    # keep components that (a) contain at least one strong pixel and (b) have
+    # >= min_length_px pixels.  Vectorised via bincount/isin: the previous
+    # per-component loop was O(n_components x grid) and unusable at the
+    # competition grid size.  Same predicate, same result.
+    sizes = np.bincount(lab.ravel())
+    strong_ids = np.unique(lab[strong])
+    strong_ids = strong_ids[strong_ids > 0]
+    if strong_ids.size == 0 or n == 0:
         return np.zeros(shape, dtype=bool)
+    keep_ids = strong_ids[sizes[strong_ids] >= min_length_px]
+    if keep_ids.size == 0:
+        return np.zeros(shape, dtype=bool)
+    keep = np.isin(lab, keep_ids)
     return skeletonize(keep).astype(bool)
 
 
