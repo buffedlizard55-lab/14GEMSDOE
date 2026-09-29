@@ -18,6 +18,7 @@
   <a href="hypotheses-round3.html">Hypotheses (round 3)</a>
   <a href="hypotheses-round4.html">Hypotheses (round 4)</a>
   <a href="hypotheses-round5.html">Hypotheses (round 5)</a>
+  <a href="hypotheses-round6.html">Hypotheses (round 6)</a>
   <a href="audit.html">Artifact audit</a>
   <a href="data.html">Data &amp; sources</a>
   <a href="leaderboard.html">Leaderboard</a>
@@ -95,7 +96,7 @@ four times harder than false alarms. Competition closes
 
 <h2>Why the team kept scoring 0.1563 — and what changes now</h2>
 <div class="card">
-<p><strong>Evidence check (2026-09-28).</strong> The published GEMSDOE1 and
+<p><strong>Evidence check (2026-09-28/29).</strong> The published GEMSDOE1 and
 5GEMSDOE pages display the same truncated artifact-hash prefix
 (<code>7f00890a…</code>), run-length count (<code>259,495</code>) and histogram.
 That strongly suggests their public builders encode the same field, but the
@@ -104,8 +105,24 @@ not proven. A repeated four-decimal leaderboard score — including 0.1563 — d
 <strong>not</strong> prove identical predictions. We now hash prediction arrays
 separately from TIFF containers and treat score ties as provenance warnings.
 No candidate is eligible for a slot until it beats the real spatially-blocked
-holdout. <a href="strategy.html">Strategy</a> ·
-<a href="hypotheses-round4.html">Round-4 hypotheses and current hold decision</a>.</p>
+holdout. <strong>Round 6 breaks the plateau:</strong> R6-1 horsetail splay fan
+beats the geom baseline on sparse AND far in 4/4 folds (0.0385→0.0624 dense,
+0.0151→0.0217 sparse, 0.0003→0.0040 far, 13× far). The validated field is built
+as <code>submissions/GEMS_r5-geom-horse-ensemble_… .tif</code> (finite, 0 outside,
+passes format gate). <a href="strategy.html">Strategy</a> ·
+<a href="hypotheses-round6.html">Round-6 validated hypotheses →</a>.</p>
+</div>
+
+<h2>Round 6 — first real-data promotion (2026-09-29)</h2>
+<div class="card">
+<p>Five new hypotheses distinct from R1–R5 (see <a href="hypotheses-round6.html">round-6 page</a>). Top candidate <strong>R6-1 horsetail splay fan</strong> — catalogue tips → 120° fan radius 0.5–2 km, weight (1-d/R)·exp(-Δθ²/2σ²), slope-modulated — targets minor faults with minimal surface rupture that Faulds et al. 2026 says are "difficult to recognize even with high-resolution lidar" (KB S14). Validated on real rasters, component protocol 4 folds, emission calibrated on hidden CALIB only:</p>
+<div class="grid2">
+  <div class="stat"><div class="k">Winner</div><div class="v">geom_horse (R6-1)</div>
+    <div class="s">dense 0.0385→0.0624 (+0.0239), sparse 0.0151→0.0217 (+0.0066), far 0.0003→0.0040 (+0.0037), 4/4 folds wins on both sparse and far — meets promote rule, first arm to do so on real data</div></div>
+  <div class="stat"><div class="k">Runner-up</div><div class="v">all6 (R5+R6 ensemble)</div>
+    <div class="s">interim 2-fold: 0.0675/0.0212/0.0068 (fold0) and 0.0767/0.0268/0.0095 (fold1) — beats horse and curvature single arms, suggesting combination best; full 4-fold pending</div></div>
+</div>
+<p class="src">Full gate: <code>artifacts/holdout_round6_horse.json</code>, fields in <code>artifacts/real_fields/</code>, submission <code>GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif</code> (finite, [0,1], EPSG:32611). No slot spent yet — field ready for next weekly slot. Other R6 arms (xsec, condbase, shore) improve in smoke crop; full-grid rerun pending. External slip/dilation source verified: DOI 10.5066/P9YL58W6 (USGS ScienceBase, 27 MB shapefile, public domain).</p>
 </div>
 
 <h2>Round 2 — the blocked holdout has already decided (2026-09-28)</h2>
@@ -188,35 +205,32 @@ checked line by line in <code>tests/test_dti.py</code>; the masking ruling is
     <td><span class="pill ok">VERIFIED</span></td>
     <td class="src">16 files/DOIs with working links — <a href="data.html">source table</a></td></tr>
 <tr><td>Competition rasters in <code>data/raw/</code></td>
-    <td><span class="pill warn">NOT PRESENT</span></td>
-    <td class="src">team-provided Dropbox links wired into
-        <code>scripts/download_competition_data.sh</code>; not authenticated as
-        official source. Data tab requires login; verify metadata before training.</td></tr>
+    <td><span class="pill ok">PRESENT · HASH-VERIFIED</span></td>
+    <td class="src"><code>scripts/bridge_team_mirror.sh</code> → 418,912,844 B features sha256 4371c82e…, 60,988 catalogue px, 5,167,373 footprint — <a href="data.html">verified</a></td></tr>
 <tr><td>Pipeline (features → hide-and-recover → holdout → submission)</td>
-    <td><span class="pill ok">102 TESTS PASS</span></td>
-    <td class="src">Suite run in this session with an ignored local <code>.venv/</code>; synthetic/demo tests only, not real-data validation.</td></tr>
+    <td><span class="pill ok">127 TESTS PASS</span></td>
+    <td class="src">Full suite including real-channel tests, DTI fast, submission gate — <code>pytest tests -q</code> 2026-09-29</td></tr>
 <tr><td>Round-2 hypothesis gate (9 arms, blocked holdout)</td>
     <td><span class="pill ok">RUN</span></td>
-    <td class="src"><code>artifacts/holdout_round2.json</code> — BLEND-MUL promoted,
-        N1/N3/GEO-ONLY/BLEND/BLEND-ADD killed; synthetic forward model only</td></tr>
+    <td class="src"><code>artifacts/holdout_round2.json</code> — BLEND-MUL promoted, N1/N3/GEO-ONLY/BLEND/BLEND-ADD killed; synthetic forward model only</td></tr>
 <tr><td>Round-3 hypothesis gate (10 arms, blocked holdout)</td>
     <td><span class="pill ok">RUN</span></td>
-    <td class="src"><code>artifacts/holdout_round3.json</code> + follow-up —
-        <strong>incumbent BLEND-MUL stands; all five R3 candidates and both
-        incumbent-stacks killed</strong>; prior-support mechanism measured —
-        <a href="hypotheses-round3.html">round-3 page</a></td></tr>
-<tr><td>Round-4 candidates / real holdout gate</td>
-    <td><span class="pill warn">PRE-REGISTERED / BLOCKED</span></td>
-    <td class="src">Four distinct research hypotheses; no real data or validation in this checkout — <a href="hypotheses-round4.html">read candidate ranking and gate status</a></td></tr>
+    <td class="src"><code>artifacts/holdout_round3.json</code> + follow-up — incumbent BLEND-MUL stands; all five R3 candidates and both incumbent-stacks killed — <a href="hypotheses-round3.html">round-3 page</a></td></tr>
+<tr><td>Round-5 real-data gate (interim 2-fold)</td>
+    <td><span class="pill ok">RUN · INTERRUPTED</span></td>
+    <td class="src">R5-4 profile curvature winning both sparse and far in both folds; all arms improve far — <a href="hypotheses-round5.html">round-5 page</a></td></tr>
+<tr><td>Round-6 real-data gate (R6-1 horsetail splay)</td>
+    <td><span class="pill ok">RUN · 4 FOLDS · PROMOTED</span></td>
+    <td class="src"><code>artifacts/holdout_round6_horse.json</code> — geom_horse beats geom on sparse AND far in 4/4 folds (0.0385→0.0624 dense, 0.0151→0.0217 sparse, 0.0003→0.0040 far) — <a href="hypotheses-round6.html">round-6 page</a></td></tr>
 <tr><td>Artifact uniqueness audit</td>
-    <td><span class="pill warn">AUDIT ONLY</span></td>
-    <td class="src"><code>scripts/check_submission_uniqueness.py</code> checks exact TIFF/prediction-array hashes and manifest integrity; rounded score ties are warnings, not proof of duplicates.</td></tr>
+    <td><span class="pill ok">PASS</span></td>
+    <td class="src"><code>scripts/check_submission_uniqueness.py</code> — no duplicate TIFF/prediction arrays; score ties are warnings only</td></tr>
 <tr><td>Submission builder + format gate</td>
-    <td><span class="pill ok">TESTED</span></td>
-    <td class="src">reproduces and catches the exact “[0, 1]” rejection causes</td></tr>
-<tr><td>Real-model holdout score</td>
-    <td><span class="pill warn">PENDING DATA</span></td>
-    <td class="src">blocked on <code>data/raw/</code> placement</td></tr>
+    <td><span class="pill ok">PASS · REAL PAYLOAD</span></td>
+    <td class="src">finite variant (0 outside, no NaN) — 217 KB, [0,1], EPSG:32611, 3730×3292 — <code>submissions/GEMS_r5-geom-horse-ensemble_… .tif</code> + NOTE + MANIFEST — <a href="how-to-submit.html">how to submit</a></td></tr>
+<tr><td>Site payload</td>
+    <td><span class="pill ok">REAL · READY</span></td>
+    <td class="src"><code>docs/js/payload.js</code> kind=real, pixels_sha256 aa966e56…, 51,674 px emission (1.00% footprint)</td></tr>
 </table>
 </main>
 

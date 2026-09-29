@@ -84,11 +84,13 @@ BAND = {
 }
 
 # The physical channels every non-baseline arm may use.  Kept to the ones the
-# competition's own documentation and the round-5 hypotheses cite; adding all
-# 19 bands is a compute choice, not a scientific one.
+# competition's own documentation and the round-5/6 hypotheses cite; adding all
+# 19 bands is a compute choice, not a scientific one.  For R6 we need shear,
+# dilation and TMI as well.
 GEO_BANDS = ("det_elev", "det_elev_slope", "tmi_hg", "tmi_vg", "tc",
              "iso_grav_anom_hg", "iso_grav_anom_slope", "iso_grav_anom",
-             "cond_surf", "depth_to_base_surf", "geod_2ndinv", "deq_n100a15")
+             "cond_surf", "depth_to_base_surf", "geod_2ndinv", "deq_n100a15",
+             "geod_shearrate", "geod_dilaterate", "tmi")
 
 GEOM_CHANNELS = ("dist_trace", "az_sin", "az_cos", "across_strike",
                  "along_strike", "dist_endpoint", "trace_density",
@@ -167,9 +169,11 @@ def build_geom_channels(context: np.ndarray, window: int = 9) -> dict[str, np.nd
 
 def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
                           valid: np.ndarray, which: set[str]) -> dict[str, np.ndarray]:
-    """Round-5 hypothesis channels (only the ones the arm asked for)."""
+    """Round-5 + Round-6 hypothesis channels (only the ones the arm asked for)."""
     out: dict[str, np.ndarray] = {}
     elev = rc.nan_fill(static.get("det_elev", np.zeros(context.shape, np.float32)))
+    elev_slope = static.get("det_elev_slope", None)
+    # R5
     if "ramp" in which:
         out["ramp_maturity"] = rc.ramp_maturity_field(context)
     if "acc" in which:
@@ -185,7 +189,6 @@ def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
         out["profcurv"] = prof
         out["profcurv_line"] = rc.line_max(np.abs(prof), radius=2)
     if "gap" in which:
-        # completeness residual conditioned on the topographic field
         dens = rc.intersection_density(context)["trace_density"]
         res = rc.completeness_residual(dens, {
             "elev": elev,
@@ -194,6 +197,43 @@ def build_round5_channels(context: np.ndarray, static: dict[str, np.ndarray],
         }, smooth_sigma=32.0)
         out["gap_residual"] = np.asarray(res["residual"] if isinstance(res, dict) else res,
                                          dtype=np.float32)
+    # R6
+    if "horse" in which:
+        es = rc.nan_fill(elev_slope) if elev_slope is not None else None
+        out["horse_splay"] = rc.horsetail_splay_field(context, es, elev, radius_px=20.0, half_angle_deg=60.0)
+    if "xsec" in which:
+        shear = static.get("geod_shearrate", None)
+        dil = static.get("geod_dilaterate", None)
+        # also need tmi_hg for weighting optionally
+        out["xsec_halo"] = rc.intersection_halos(context, shear, dil, high_angle_deg=45.0, near_miss_px=20.0, halo_sigma_px=10.0)
+    if "condbase" in which:
+        cond = static.get("cond_surf", None)
+        depth = static.get("depth_to_base_surf", None)
+        tmi = static.get("tmi", None)
+        ghg = static.get("iso_grav_anom_hg", None)
+        cb = rc.conductive_base_step(cond, depth, tmi, ghg)
+        # conductive_base_step returns zeros if missing; handle shape mismatch
+        if isinstance(cb, np.ndarray) and cb.shape == context.shape:
+            out["condbase_step"] = cb
+        elif isinstance(cb, np.ndarray) and cb.size == context.size:
+            out["condbase_step"] = cb.reshape(context.shape)
+    if "shore" in which:
+        ghg = static.get("iso_grav_anom_hg", None)
+        res = rc.paleo_shoreline_suppression(elev, rc.nan_fill(elev_slope) if elev_slope is not None else None, ghg)
+        if res:
+            if "sublake_enhanced" in res and res["sublake_enhanced"].shape == context.shape:
+                out["sublake_enhanced"] = res["sublake_enhanced"]
+            if "shoreline_dist" in res and res["shoreline_dist"].shape == context.shape:
+                # invert distance: close to shoreline = low fault prob (suppression), far + sublake = high
+                # we emit the distance as feature; model learns suppression
+                out["shore_dist"] = res["shoreline_dist"]
+    if "slip" in which:
+        # external data not present in this sandbox run; placeholder returns empty
+        sd = rc.slip_dilation_tendency_field(context)
+        # if it ever returns something, add it
+        for k, v in sd.items():
+            if isinstance(v, np.ndarray) and v.shape == context.shape:
+                out[k] = v
     return {k: _f16(v) for k, v in out.items() if v is not None}
 
 
@@ -206,19 +246,29 @@ ARM_SPEC: dict[str, str] = {
     "geom_curv": "geom + geo + R5-4 profile curvature",
     "geom_gap": "geom + geo + R5-5 conditioned completeness residual",
     "all": "geom + geo + every round-5 channel",
+    # Round 6
+    "geom_horse": "geom + geo + R6-1 horsetail splay fan",
+    "geom_xsec": "geom + geo + R6-2 intersection halos (normal x strike-slip)",
+    "geom_condbase": "geom + geo + R6-3 conductive-base step / clay-cap edge",
+    "geom_shore": "geom + geo + R6-5 paleo-shoreline suppression + sub-lake enhancement",
+    "geom_slip": "geom + geo + R6-4 slip/dilation tendency (external, if present)",
+    "all6": "geom + geo + R5 + R6 (all channels)",
 }
 
 
 def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
-    """Return (feature names, round-5 extras, whether geo bands are included)."""
+    """Return (feature names, round-5/6 extras, whether geo bands are included)."""
     names = list(GEOM_CHANNELS)
     r5: set[str] = set()
     geo = arm != "geom"
     if arm == "geom":
         return names, r5, geo
-    for extra in ("ramp", "acc", "tilt", "curv", "gap"):
-        if arm == "all" or arm == f"geom_{extra}":
+    for extra in ("ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip"):
+        if arm in ("all", "all6") or arm == f"geom_{extra}":
             r5.add(extra)
+    if arm == "all6":
+        # all includes everything
+        r5.update({"ramp", "acc", "tilt", "curv", "gap", "horse", "xsec", "condbase", "shore", "slip"})
     if "ramp" in r5:
         names.append("ramp_maturity")
     if "acc" in r5:
@@ -229,6 +279,18 @@ def arm_channels(arm: str) -> tuple[list[str], set[str], bool]:
         names += ["profcurv", "profcurv_line"]
     if "gap" in r5:
         names.append("gap_residual")
+    if "horse" in r5:
+        names.append("horse_splay")
+    if "xsec" in r5:
+        names.append("xsec_halo")
+    if "condbase" in r5:
+        names.append("condbase_step")
+    if "shore" in r5:
+        names += ["sublake_enhanced", "shore_dist"]
+    if "slip" in r5:
+        # placeholder: if external raster ever present, its channels will be added dynamically
+        # keep name list open; design_matrix will skip missing
+        names += ["slip_tendency", "dilation_tendency"]
     if geo:
         names += list(GEO_BANDS)
     return names, r5, geo

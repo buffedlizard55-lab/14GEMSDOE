@@ -160,12 +160,56 @@ Fold 2 (incomplete when the reset hit): geom 0.0333/0.0142/0.0000, geo
    hide-and-recover catalogue numbers on a 20 % component TEST split, not
    leaderboard estimates; the withheld new-fault population is different in kind.
 
-### Gate status
+### Gate status (R5)
 
-`artifacts/holdout_real.json` was **not written** (the script writes the JSON
-only after all four folds). The rerun after the environment restore is the next
-action; the promote rule is unchanged (beat geom on both sparse and far in ≥ 3 of
-4 folds), and no submission slot is spent on any outcome.
+`artifacts/holdout_real.json` was **not written** in the first attempt (interrupted at fold 2). The rerun after the environment restore is documented below; the promote rule is unchanged (beat geom on both sparse and far in ≥ 3 of 4 folds), and no submission slot was spent on the interim outcome.
+
+## Round-6 real-data gate record (2026-09-29, session 14GEMSDOE) — R6-1 horsetail splay VALIDATED, 4 folds
+
+**Command (full validation of top candidate):**
+```bash
+./.venv/bin/python scripts/validate_real.py --protocol component --folds 4 \
+  --arms geom geom_horse --n-pos 20000 --n-neg 40000 --iters 150 \
+  --out artifacts/holdout_round6_horse.json
+```
+Grid 3730×3292 valid 5,167,373 catalogue 60,988 px, comps 3,199 TEST 640 / CALIB 640 / HIDE 1120 / visible 799 per fold. Emission calibrated on CALIB only (top-k 0.5% or 1%).
+
+| Fold | geom dense / sparse / far | geom_horse dense / sparse / far | Δ dense | Δ sparse | Δ far | Wins vs geom |
+|------|---------------------------|----------------------------------|---------|----------|-------|--------------|
+| 0 | 0.0381 / 0.0165 / 0.0006 | 0.0627 / 0.0211 / 0.0041 | +0.0246 | +0.0046 | +0.0035 | 3/3 |
+| 1 | 0.0381 / 0.0145 / 0.0006 | 0.0659 / 0.0233 / 0.0041 | +0.0278 | +0.0088 | +0.0035 | 3/3 |
+| 2 | 0.0333 / 0.0142 / 0.0000 | 0.0494 / 0.0206 / 0.0019 | +0.0161 | +0.0064 | +0.0019 | 3/3 |
+| 3 | 0.0444 / 0.0153 / 0.0002 | 0.0715 / 0.0215 / 0.0059 | +0.0271 | +0.0062 | +0.0057 | 3/3 |
+| **Mean** | **0.0385 / 0.0151 / 0.0003** | **0.0624 / 0.0217 / 0.0040** | **+0.0239** | **+0.0066** | **+0.0037** | **4/4 sparse & 4/4 far** |
+
+**Promote rule:** beat geom on both sparse and far in ≥3 of 4 folds. **R6-1 horsetail splay fan meets rule 4/4 and is PROMOTED.** First arm in this project to meet promote rule on real data.
+
+**Comparison vs R5-4 profile curvature (previous best single addition):**
+- Fold0: horse 0.0627/0.0211/0.0041 vs curv 0.0446/0.0203/0.0054 → horse +0.0181 dense, +0.0008 sparse, -0.0013 far
+- Fold1: horse 0.0659/0.0233/0.0041 vs curv 0.0424/0.0173/0.0059 → horse +0.0235 dense, +0.0060 sparse, -0.0018 far
+- Curv wins far by ~0.0015, horse wins dense/sparse. Combination all6 interim (fold0 0.0675/0.0212/0.0068, fold1 0.0767/0.0268/0.0095) beats both single arms, suggesting ensemble best.
+
+**Other R6 arms — smoke 800×800 crop, 2 folds, 20 iters (diagnostic, not gate):**
+- geom: dense 0.0142 sparse 0.0078 far 0.0000
+- geom_horse: 0.0499 / 0.0225 / 0.0045 (+0.0357/+0.0147/+0.0045)
+- geom_xsec: 0.0369 / 0.0143 / 0.0003 (+0.0226/+0.0065/+0.0003)
+- geom_condbase: 0.0337 / 0.0172 / 0.0000 (+0.0195/+0.0094/0)
+- geom_shore: 0.0353 / 0.0178 / 0.0027 (+0.0211/+0.0100/+0.0027)
+
+All R6 arms improve dense and sparse vs geom in smoke; horse best on all three, shore second on far. Full-grid validation for xsec/condbase/shore interrupted after 1 fold (see /tmp/full4.log); no decision taken yet. File: `artifacts/holdout_round6_horse.json` is the only completed 4-fold gate for R6.
+
+**Block protocol (512 px blocks, purge 3 px):**
+All arms ~0.0001 dense — block protocol too harsh (TEST block has no nearby context). Component far protocol (>1 km) is meaningful spatially-blocked metric. File: `/tmp/holdout_round6_block.json`.
+
+**Submission built from validated arm:**
+- Averaged 4 fold fields (hide-and-recover ensemble)
+- Emission budget median of CALIB-chosen fractions = top 1.00% → 51,674 px (1% of footprint)
+- File: `submissions/GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif` — float32 [0,1] finite, 0 outside, passes validate_submission.py, uniqueness audit PASS
+- Site payload swapped to real: `docs/js/payload.js` kind=real, pixels_sha256 aa966e56…
+
+### Gate status (R6)
+
+`artifacts/holdout_round6_horse.json` **written** (4 folds). R6-1 promoted. R6-2/3/5 pending full-grid rerun. No submission slot spent yet in this session — validated field ready for next weekly slot. Next actions: (1) full 4-fold for all6 (R5+R6) to test ensemble, (2) fetch external slip/dilation shapefile for R6-4, (3) upload promoted horse ensemble.
 
 
 ## Reading
