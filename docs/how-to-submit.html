@@ -34,10 +34,15 @@ fastest route to it, and every rejection we have already hit — with the fix.</
 <div class="card hero">
 <h2 style="border:0;padding:0;margin-top:0">The 60-second route</h2>
 <ol>
-  <li>Open the <a href="index.html#build-submission">Executive summary</a> and click
-      <strong>Build submission.tif</strong>. Your browser writes the GeoTIFF locally
-      and downloads it as <code>GEMS-…&lt;UTC&gt;-&lt;sha8&gt;.tif</code>.</li>
-  <li>Copy the <strong>Note</strong> shown under the button (it is unique to that build).</li>
+  <li><strong>Get the file</strong> — either
+      <a href="index.html#build-submission"><strong>download the finished .tif</strong></a>
+      that ships with the site (one click, no JavaScript, no install), or click
+      <strong>Build submission.tif</strong> to rebuild the identical pixel field in your
+      browser — it lands in your Downloads folder as
+      <code>gems-submission-&lt;UTC&gt;-&lt;sha8&gt;.tif</code>.
+      <span class="src">Both routes carry the same pixels; the shipped copy is
+      deflate-compressed by rasterio, the browser build uses CompressionStream.</span></li>
+  <li>Copy the <strong>Note</strong> shown beside the file (it is unique to that build).</li>
   <li>Go to the <a href="https://www.drivendata.org/competitions/306/competition-doe-gems/" target="_blank" rel="noopener">competition page</a>
       → <em>Submit</em> (left sidebar) → <em>Make new submission</em>.</li>
   <li><em>File to submit</em> → choose the downloaded .tif (or the .zip).</li>
@@ -58,10 +63,15 @@ fastest route to it, and every rejection we have already hit — with the fix.</
 <tr><td>Values</td><td>probabilities in <strong>[0, 1]</strong>; higher = more likely fault</td><td class="src">same</td></tr>
 </table>
 
-<h2>§2 Four ways to produce the file</h2>
+<h2>§2 Five ways to produce the file</h2>
 <ol>
-  <li><strong>From this site</strong> — <a href="index.html#build-submission">one click</a>
-      (no install; validated at build time).</li>
+  <li><strong>Direct download</strong> (easiest) — the finished GeoTIFF is committed at
+      <code>docs/downloads/</code> and linked from the top of the
+      <a href="index.html#build-submission">Executive summary</a>. Nothing runs, nothing is
+      built, no JavaScript is involved.</li>
+  <li><strong>From this site, in your browser</strong> —
+      <a href="index.html#build-submission">one click</a> (no install; the page verifies the
+      decoded field against its pinned sha256 before it offers the download).</li>
   <li><strong>From the pipeline</strong> —
       <code>python3 scripts/build_submission.py artifacts/pred.npy --policy "&lt;run id&gt;"</code>
       → writes <code>submissions/GEMS_&lt;policy&gt;_&lt;UTC&gt;_&lt;sha8&gt;.tif</code>
@@ -139,7 +149,27 @@ mechanical causes trip it (all reproduced and caught by
 triggered a rejection in our runs; if a new message appears, record it verbatim
 in <code>research/limitations_and_next.md</code> before changing anything.</p>
 
-<h2>§7 Pre-flight checklist</h2>
+<h2 id="incident">§7 If the buttons do nothing — the 2026-09-29 failure and its fix</h2>
+<p>Observed failure: the page loaded, the payload decoded, and then it printed
+<code>FAILED: tifBytesNan is not defined</code> with every button greyed out and nothing in
+the Downloads folder. Cause: an undeclared variable inside the strict-mode IIFE in
+<code>docs/js/site.js</code>, thrown inside the promise chain and hidden by
+<code>.catch()</code>. Fix, in three parts:</p>
+<ul>
+  <li>the variable is declared, and the optional NaN-nodata variant now fails in isolation
+      instead of blocking the required file;</li>
+  <li>a finished <code>.tif</code> ships at <code>docs/downloads/</code> and is linked at
+      the top of the Executive summary, so the site always has a file to give you
+      regardless of what JavaScript does;</li>
+  <li><code>node scripts/check_site_build.mjs</code> (also <code>pytest tests/test_site_build.py</code>)
+      now executes the real site scripts under a DOM shim, so this class of failure fails
+      in CI rather than on the published page.</li>
+</ul>
+<p class="src">If a build button is ever greyed out again, open your browser console: the
+page logs every self-check line with the prefix <code>[gems]</code>, and the last line
+before the failure names the cause.</p>
+
+<h2>§8 Pre-flight checklist</h2>
 <ul>
   <li>☐ File name carries its own <code>sha8</code> and policy slug.</li>
   <li>☐ Note pasted and matches the run (policy · holdout DTI · sha8).</li>

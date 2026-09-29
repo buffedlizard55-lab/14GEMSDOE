@@ -47,11 +47,68 @@
   var payload = null;
   var field = null;
   var tifBytes = null;
+  var tifBytesNan = null;   // secondary "literal format" build; see buildSecondary()
+  var finiteField = null;   // the field actually written (NaN resolved to 0.0)
   var fieldSha = "";
 
   function setStatus(msg, cls) {
     var s = el("buildState");
     if (s) { s.textContent = msg; s.className = "pill " + (cls || ""); }
+  }
+
+  /**
+   * Secondary variant: identical prediction with NaN outside the footprint and
+   * GDAL_NODATA=nan.  Optional — any failure is logged and the primary build
+   * stays available.
+   */
+  function buildSecondary() {
+    function fail(e) {
+      tifBytesNan = null;
+      log("note: the optional NaN-nodata variant could not be built (" + e.message +
+          "); the primary download is unaffected");
+    }
+    try {
+      GemsTiff.writeGeoTiffFloat32Deflate({
+        rows: payload.rows, cols: payload.cols, values: field,
+        transform: payload.transform, epsg: payload.epsg, nodata: "nan"
+      }).then(function (bytes) {
+        tifBytesNan = bytes;
+        if (window._gemsBuild) window._gemsBuild.secondary = true;
+        log("GeoTIFF container written: secondary " + fmtBytes(bytes.length) +
+            " (NaN outside, GDAL_NODATA=nan) - optional variant, not required");
+      }, fail);
+    } catch (e) {
+      fail(e);
+    }
+  }
+
+  /**
+   * Fill any element whose id is listed here with numbers MEASURED from the
+   * payload that is actually shipped, so the page can never quote a stale
+   * pixel count or hash for the field it is handing out.
+   */
+  function payloadStats(buffer, finite) {
+    var nPos = 0, nRows = payload.rows, nCols = payload.cols;
+    for (var i = 0; i < finite.length; i++) if (finite[i] > 0) nPos++;
+    var pctAll = (nPos / finite.length) * 100;
+    var vals = {
+      payloadGrid: nCols.toLocaleString() + " \u00d7 " + nRows.toLocaleString(),
+      payloadRuns: String(payload.rle.n_runs),
+      payloadSource: String(payload.source_file),
+      payloadFieldSha: String(payload.pixels_sha256),
+      payloadFieldSha8: String(payload.pixels_sha256).slice(0, 8),
+      payloadEmission: nPos.toLocaleString(),
+      payloadEmissionPct: pctAll.toFixed(3) + "% of the grid",
+      payloadFileBytes: fmtBytes(buffer.length),
+      payloadKind: String(payload.kind),
+      payloadNote: String(payload.note || "")
+    };
+    Object.keys(vals).forEach(function (k) {
+      var nodes = document.querySelectorAll ? document.querySelectorAll('[data-gems="' + k + '"]') : [];
+      for (var j = 0; j < nodes.length; j++) nodes[j].textContent = vals[k];
+    });
+    window._gemsPayloadStats = vals;
+    return vals;
   }
 
   function ready() {
@@ -84,7 +141,7 @@
       // "Predicted values must be in range [0, 1]" (observed 2026-09-28 on a
       // real upload attempt), so the default download is the finite one and
       // the literal NaN-nodata build is demoted to the secondary button.
-      var finite = new Float32Array(field.length);
+      var finite = finiteField = new Float32Array(field.length);
       var vmin = Infinity, vmax = -Infinity, nBad = 0;
       for (var i = 0; i < field.length; i++) {
         var v = field[i];
@@ -101,18 +158,20 @@
       }
       log("value gate: all finite, min=" + (vmin === Infinity ? "n/a" : vmin.toFixed(6)) +
           " max=" + (vmax === -Infinity ? "n/a" : vmax.toFixed(6)) + " (within [0,1])");
-      tifBytes = GemsTiff.writeGeoTiffFloat32({
+      // PRIMARY build: deflate-compressed when the browser can (matches
+      // scripts/build_submission.py's rasterio compress="deflate" artifact —
+      // ~0.2 MB instead of ~47 MB), uncompressed otherwise.
+      var opts = {
         rows: payload.rows, cols: payload.cols, values: finite,
         transform: payload.transform, epsg: payload.epsg, nodata: null
+      };
+      return GemsTiff.writeGeoTiffFloat32Deflate(opts).then(function (bytes) {
+        tifBytes = bytes;
+        log("GeoTIFF container written: primary " + fmtBytes(tifBytes.length) +
+            " (finite, 0.0 outside, no GDAL_NODATA" +
+            (tifBytes.length < payload.rows * payload.cols * 4 ? ", deflate-compressed" : ", stored") + ")");
+        return GemsTiff.sha256Hex(tifBytes);
       });
-      // SECONDARY build: literal official format (NaN outside, GDAL_NODATA=nan).
-      tifBytesNan = GemsTiff.writeGeoTiffFloat32({
-        rows: payload.rows, cols: payload.cols, values: field,
-        transform: payload.transform, epsg: payload.epsg, nodata: "nan"
-      });
-      log("GeoTIFF containers written: primary " + fmtBytes(tifBytes.length) +
-          " (finite), secondary " + fmtBytes(tifBytesNan.length) + " (NaN-nodata)");
-      return GemsTiff.sha256Hex(tifBytes);
     }).then(function (fileSha) {
       // self re-read: parse the header we just wrote and verify it agrees
       var dv = new DataView(tifBytes.buffer, tifBytes.byteOffset, tifBytes.byteLength);
@@ -137,15 +196,36 @@
       }
       log("self-check: required tags present (GeoKeyDirectory + georeferencing; " +
           "no GDAL_NODATA on the finite primary build)");
+      // SECONDARY build: the literal official format (NaN outside the footprint,
+      // GDAL_NODATA=nan).  It is a convenience variant only — a failure here must
+      // never block the primary download.  Before 2026-09-29 this line ran
+      // unguarded inside the promise chain and an undeclared variable in it threw
+      // ReferenceError, which .catch() turned into "FAILED: tifBytesNan is not
+      // defined" with every download button left disabled.
+      buildSecondary();
       window._gemsBuild = {
         fileSha: fileSha, fieldSha: fieldSha,
-        rows: payload.rows, cols: payload.cols, epsg: payload.epsg
+        rows: payload.rows, cols: payload.cols, epsg: payload.epsg,
+        secondary: false   // set to true if the optional NaN variant builds
       };
+      var stats = payloadStats(tifBytes, finiteField);
+      var stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "Z");
       var bn = el("btnName");
-      if (bn) bn.textContent = "gems-submission-" + new Date().toISOString()
-        .replace(/[-:]/g, "").replace(/\..+/, "Z").replace("T", "T") + "-" + fileSha.slice(0, 8) + ".tif";
+      if (bn) bn.textContent = "gems-submission-" + stamp + "-" + fileSha.slice(0, 8) + ".tif";
+      // The Note is what tells two submissions apart in the DrivenData list, so
+      // it names this build's own hash, size and pixel count — never a constant.
       var nt = el("noteText");
-      if (nt && payload.note) nt.textContent = payload.note;
+      if (nt) {
+        nt.textContent = [
+          "14GEMSDOE",
+          (payload.source_file || "payload").replace(/\.tif$/, ""),
+          "site build " + stamp,
+          "file sha8=" + fileSha.slice(0, 8),
+          "pixels sha8=" + String(payload.pixels_sha256).slice(0, 8),
+          stats.payloadEmission + " px > 0",
+          "finite [0,1] no-NaN"
+        ].join(" · ");
+      }
       setStatus(payload.kind === "demo" ? "DEMO payload — not uploadable" : "READY",
                 payload.kind === "demo" ? "demo" : "ok");
       if (payload.kind !== "demo") ready();

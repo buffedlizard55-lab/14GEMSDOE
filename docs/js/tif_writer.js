@@ -72,19 +72,32 @@
    * opts = { rows, cols, values: Float32Array (row-major, NaN outside ok),
    *          transform: [a, b, c, d, e, f] (rasterio Affine order:
    *            x = a*col + b*row + c, y = d*col + e*row + f),
-   *          epsg: 32611, nodata: "nan" }
+   *          epsg: 32611, nodata: "nan",
+   *          pixelBytes: pre-encoded pixel block (optional),
+   *          compression: TIFF Compression value (1 = none, 8 = deflate) }
    * Returns Uint8Array.
    */
   function writeGeoTiffFloat32(opts) {
+    return writeGeoTiffContainer(opts);
+  }
+
+  function writeGeoTiffContainer(opts) {
     var rows = opts.rows, cols = opts.cols;
     var tr = opts.transform || [100, 0, 500000, 0, -100, 4500000];
     var a = tr[0], b = tr[1], c = tr[2], d = tr[3], e = tr[4], f = tr[5];
     if (b !== 0 || d !== 0) {
       throw new Error("only north-up (b=d=0) geotransforms are supported");
     }
-    var values = opts.values;
-    if (values.length !== rows * cols) {
-      throw new Error("values length " + values.length + " != " + rows * cols);
+    var compression = (opts.compression === undefined) ? 1 : opts.compression;
+    var pixelBytes = opts.pixelBytes;
+    if (!pixelBytes) {
+      var values = opts.values;
+      if (!values || values.length !== rows * cols) {
+        throw new Error("values length " + (values ? values.length : "none") + " != " + rows * cols);
+      }
+      pixelBytes = new Uint8Array(rows * cols * 4);
+      var dvp = new DataView(pixelBytes.buffer);
+      for (var q = 0; q < values.length; q++) dvp.setFloat32(q * 4, values[q], true);
     }
     var epsg = opts.epsg || 32611;
     var scale = [Math.abs(a), Math.abs(e), 0];
@@ -126,12 +139,12 @@
     ifdEntry(sink, 256, T_LONG, 1, false, cols);            // ImageWidth
     ifdEntry(sink, 257, T_LONG, 1, false, rows);            // ImageLength
     ifdEntry(sink, 258, T_SHORT, 1, false, 32);             // BitsPerSample
-    ifdEntry(sink, 259, T_SHORT, 1, false, 1);              // Compression=none
+    ifdEntry(sink, 259, T_SHORT, 1, false, compression);    // Compression (1=none, 8=deflate)
     ifdEntry(sink, 262, T_SHORT, 1, false, 1);              // Photometric=minisblack
     ifdEntry(sink, 273, T_LONG, 1, false, pixOff);          // StripOffsets
     ifdEntry(sink, 277, T_SHORT, 1, false, 1);              // SamplesPerPixel
     ifdEntry(sink, 278, T_LONG, 1, false, rows);            // RowsPerStrip
-    ifdEntry(sink, 279, T_LONG, 1, false, rows * cols * 4); // StripByteCounts
+    ifdEntry(sink, 279, T_LONG, 1, false, pixelBytes.length); // StripByteCounts
     ifdEntry(sink, 284, T_SHORT, 1, false, 1);              // PlanarConfiguration
     ifdEntry(sink, 339, T_SHORT, 1, false, 3);              // SampleFormat=float
     ifdEntry(sink, 33550, T_DOUBLE, 3, true, pixelScaleOff);  // ModelPixelScale
@@ -149,13 +162,54 @@
     for (var i = 0; i < 6; i++) sink.f64le(tie[i]);
     while (sink.bytes.length < pixOff) sink.bytes.push(0);
 
-    // pixels (float32 little endian)
-    var pix = new Uint8Array(rows * cols * 4);
-    var dv = new DataView(pix.buffer);
-    for (var p = 0; p < values.length; p++) dv.setFloat32(p * 4, values[p], true);
-    for (var p = 0; p < pix.length; p++) sink.bytes.push(pix[p]);
+    // header + IFD + georeferencing, then the pixel block appended by copy
+    // (a typed-array copy rather than one push per byte: the uncompressed
+    //  block is 47 MB, and pushing 47M numbers would cost ~400 MB of heap)
+    var head = sink.toUint8();
+    if (head.length !== pixOff) {
+      throw new Error("container layout error: head " + head.length + " != pixOff " + pixOff);
+    }
+    var out = new Uint8Array(pixOff + pixelBytes.length);
+    out.set(head, 0);
+    out.set(pixelBytes, pixOff);
+    return out;
+  }
 
-    return sink.toUint8();
+  /**
+   * Same GeoTIFF as writeGeoTiffFloat32, but with the pixel block deflated
+   * (TIFF Compression=8, "Adobe Deflate" = zlib) — the layout
+   * scripts/build_submission.py writes with rasterio `compress="deflate"`.
+   * A two-valued probability field shrinks from ~47 MB to ~0.2 MB, which is
+   * what makes the upload quick and matches the Python pipeline's artifact.
+   *
+   * Returns a Promise<Uint8Array> (CompressionStream is async).  Falls back to
+   * the uncompressed sync writer when the browser has no CompressionStream.
+   */
+  function writeGeoTiffFloat32Deflate(opts) {
+    if (typeof CompressionStream === "undefined") {
+      return Promise.resolve(writeGeoTiffFloat32(opts));
+    }
+    var rows = opts.rows, cols = opts.cols;
+    var values = opts.values;
+    if (values.length !== rows * cols) {
+      return Promise.reject(new Error("values length " + values.length + " != " + rows * cols));
+    }
+    var pix = new Uint8Array(rows * cols * 4);
+    var dvp = new DataView(pix.buffer);
+    for (var p = 0; p < values.length; p++) dvp.setFloat32(p * 4, values[p], true);
+
+    // Deflate the raw little-endian float32 pixel stream.  The writer's Sink
+    // takes an array of byte values, so expand the compressed bytes once.
+    var cs = new CompressionStream("deflate");
+    var stream = new Blob([pix]).stream().pipeThrough(cs);
+    return new Response(stream).arrayBuffer().then(function (buf) {
+      var comp = new Uint8Array(buf);
+      var o = Object.create(null);
+      for (var k in opts) if (Object.prototype.hasOwnProperty.call(opts, k)) o[k] = opts[k];
+      o.pixelBytes = comp;
+      o.compression = 8;
+      return writeGeoTiffContainer(o);
+    });
   }
 
   // ---- gems-payload-v1 decode ---------------------------------------------
@@ -215,6 +269,7 @@
 
   global.GemsTiff = {
     writeGeoTiffFloat32: writeGeoTiffFloat32,
+    writeGeoTiffFloat32Deflate: writeGeoTiffFloat32Deflate,
     decodePayloadJson: decodePayloadJson,
     decodeField: decodeField,
     fieldSha256: fieldSha256,
