@@ -537,7 +537,11 @@ def run(args) -> int:
 
     want_align = any("align" in arm_channels(a)[1] for a in args.arms)
 
-    fields_dir = ROOT / "artifacts" / "real_fields"
+    # smoke-crop runs must never write into the deployment field cache: a
+    # cropped field saved as fold{k}_{arm}.npy would poison the submission
+    # builder (real fields are full-grid only)
+    fields_dir = (ROOT / "artifacts" / "real_fields_smoke" if sl is not None
+                  else ROOT / "artifacts" / "real_fields")
     fields_dir.mkdir(parents=True, exist_ok=True)
     results = {arm: {"arm": arm, "spec": ARM_SPEC.get(arm, arm), "folds": []}
                for arm in args.arms}

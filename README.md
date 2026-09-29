@@ -183,16 +183,19 @@ the target, then predicts with the submission-time context), emission policy
 calibrated on hidden CALIB components only, scored with the official metric on
 `dense`, `sparse(20 %)` and `far` (>1 km from any context trace) truth protocols.
 
-**Status: the first full-grid run reached fold 2 of 4 and was interrupted by a
-sandbox reset** (the snapshot keeps git-tracked files only, so `.venv/`,
-`data/raw/`, `data/processed/` and the saved fields disappeared mid-run).
-`artifacts/holdout_real.json` is therefore *not* written yet. The interim 2-fold
-table — R5-4 profile curvature winning both protocols in both completed folds,
-every arm improving `far`, calibrated budget ≈ 0.5 % of the footprint — is
-recorded in `research/results_ledger.md` and repeated in
-`research/hypotheses_round5.md` §4. **Nothing is promoted, nothing is killed, no
-submission slot is spent.** Re-run is item 1 of
-`research/limitations_and_next.md` §B.
+**Status (2026-09-29, session 15): superseded by the round-6 gates.** The
+round-5 full-grid run was interrupted twice (sandbox resets) and its interim
+2-fold table is preserved in `research/results_ledger.md`. The completed
+round-6 gates (`artifacts/holdout_round6_horse.json`,
+`artifacts/holdout_round6_rest.json`) run the same protocol with four folds:
+**R6-1 horsetail splay, R6-5 paleo-shoreline and R6-3 conductive-base step each
+meet the promote rule** (sparse AND far in ≥3/4 folds vs the same-run geom
+baseline); R6-2 intersection halos is killed by rule. The all6 ensemble gate
+(R5+R6) is in progress. Round-7 hypotheses — grounded in C28
+(misregistration-as-target) and C21 (continuations-as-truth) — are
+pre-registered in `research/hypotheses_round7.md` and gated behind the round-6
+queue. No submission slot is spent; one validated field goes to the next
+weekly slot.
 
 ## How this repo fulfils the prompt
 
@@ -202,7 +205,7 @@ submission slot is spent.** Re-run is item 1 of
 | Real competition data verified before use | `scripts/bridge_team_mirror.sh`, `scripts/verify_real_data.py`, `artifacts/real_data_audit.json` | grid/CRS/bands/nodata/catalogue-pixel checks against the official spec |
 | No hallucinations; verify line by line | `research/knowledge_base.md` (VERIFIED / TEAM-REPORTED / FLAG vocabulary), `research/limitations_and_next.md` §C | irregularities enumerated with both values |
 | Why 0.1563; unique submissions | `research/artifact_audit.md`, `artifacts/scored_artifact_audit.json` | git blob SHA-1 = byte identity across two repos; 8/8 distinct prediction arrays |
-| 3–5 ranked geological hypotheses with layers/signature/why-missing/differences | `research/hypotheses_round5.md`, `docs/hypotheses-round5.html` | pre-registered before the gate ran |
+| 3–5 ranked geological hypotheses with layers/signature/why-missing/differences | `research/hypotheses_round7.md` (rounds 1–6 archived alongside), `docs/hypotheses-round7.html` | pre-registered before each gate ran |
 | Holdout gate before any submission slot | `scripts/validate_real.py`, `gems/realchannels.py`, `tests/` | real rasters; calibration on hidden traces only |
 | Catalogue-geometry features + corridors | `gems/realchannels.py` (distance/azimuth, along- vs across-strike, endpoint distance, relay corridors, accommodation corridors, junction density, strike mismatch) | `tests/test_realchannels.py` |
 | Completeness angle (strain/relief/range-front vs catalogue) | `gems/realchannels.completeness_residual` (+ R5-5 conditioning) | fit restricted to the training footprint |

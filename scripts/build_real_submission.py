@@ -103,7 +103,13 @@ def main() -> int:
         p = ROOT / args.fields_dir / f"fold{f['fold']}_{arm}.npy"
         if not p.exists():
             raise SystemExit(f"missing field {p}: the gate must finish first")
-        fields.append(np.load(p).astype(np.float32))
+        arr = np.load(p).astype(np.float32)
+        if arr.shape != valid.shape:
+            raise SystemExit(
+                f"field {p} has shape {arr.shape}, expected {valid.shape} — "
+                f"a smoke-crop run contaminated the field cache; re-run the "
+                f"gate at full grid before building a submission")
+        fields.append(arr)
     field = np.mean(fields, axis=0)
     print(f"[submission] arm={arm} folds={len(fields)} "
           f"rationale={rationale or 'caller-specified'}", flush=True)
