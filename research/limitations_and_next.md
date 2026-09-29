@@ -34,7 +34,11 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
 *Updated 2026-09-29 after Round 6 promotion. Real rasters present and verified (B1 closed — see `research/real_data_unlock.md`). **Sandbox snapshot keeps git-tracked files only: `.venv/`, `data/raw/`, `data/processed/` and `artifacts/*` (except whitelisted JSONs) do NOT survive reset.** Rebuild via Quickstart block in README.*
 
 1. **Upload the validated artifact — HUMAN ACTION (DrivenData login).**
-   **READY:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`
+   **READY:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T154852Z_ccbe1de0.tif`
+   (recovered prediction-exactly from the merged site payload after the second
+   reset; prediction `e96e942f…` identical to the recorded artifact — see the
+   ledger's recovery entry; container hash differs by GDAL serialization only).
+   The original build was `submissions/GEMS_r5-geom-horse-ensemble_20260929T080858Z_76116a29.tif`
    (horse 4-fold ensemble, official-economics budget q 0.0225, TEST dense
    0.0699; uniqueness audit PASS; zero uploads of these pixels). All ensemble
    alternatives (all6, horse7 v1, horse7 v2) were decided by the pre-registered
