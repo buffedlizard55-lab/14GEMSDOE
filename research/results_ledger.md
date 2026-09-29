@@ -490,3 +490,28 @@ NOT used in the choice): q 0.0056 → 0.0540; q 0.0100 (v1 artifact) → 0.0657;
   (site one-click builder now yields 76116a29).
 - Exact command: `./.venv/bin/python scripts/build_real_submission.py --gate
   artifacts/holdout_v2_horse7.json --arm geom_horse --budget 0.022492`
+
+## Artifact recovery after the second workspace reset (2026-09-29T15:50Z)
+
+The reset that hit at 15:4xZ (immediately after the PR #9 merge) again wiped
+`submissions/`, `artifacts/` (non-whitelisted), and `.venv`. The upload
+artifact was reconstructed **bit-exactly at the prediction level** from the
+merged `docs/js/payload.js` (the site payload is the canonical pixel record):
+
+- Decoded the RLE payload → prediction array; **sha256 verified
+  `e96e942fc27b…`** (identical to the recorded artifact; 116,225 px, [0,1]).
+- Rebuilt the TIFF with `scripts/build_submission.py` and the exact recorded
+  NOTE. The **container** sha256 is `ccbe1de0cfd7…` instead of `76116a293d9c…`
+  — the fresh venv's GDAL/rasterio serializes the TIFF differently. The
+  prediction array (the identity the scorer and the uniqueness gate compare)
+  is unchanged; F1/F8 compare containers/predictions accordingly and PASS.
+- **Upload candidate is now `submissions/GEMS_r5-geom-horse-ensemble_
+  20260929T154852Z_ccbe1de0.tif`** (prediction `e96e942f…` — the same
+  prediction the ledger records above). Payload re-sourced; uniqueness audit
+  PASS; suite 169 passed.
+- Recovery command chain (exact): payload decode (RLE, `gems-payload-v1`) →
+  `np.save("artifacts/real_emission_ensemble.npy")` →
+  `./.venv/bin/python scripts/build_submission.py artifacts/real_emission_ensemble.npy
+  --policy "r5 real-data ensemble geom_horse" --policy-name r5-geom-horse-ensemble
+  --note "<the recorded NOTE>" --outdir submissions --zero-outside` →
+  `./.venv/bin/python scripts/build_site_payload.py submissions/<new tif>`.
