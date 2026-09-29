@@ -190,6 +190,25 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
     ablation; a strictly contracting field must never read as coupling
     (tests pin this).
 
+16. **FLAG #13 — uniqueness-gate F7 design gap (found by executing the
+    documented flow, fixed 2026-09-29).** The README step-5 order is
+    build → `check_submission_uniqueness.py` (exit 0) →
+    `build_site_payload.py <the built tif>`; the site payload therefore
+    *necessarily* ends up carrying the pixels of the artifact whose manifest
+    sits in `submissions/`. The original F7 hard-failed on any payload↔manifest
+    pixel-hash match — including the payload's own source — so the documented
+    end state could never pass, and `tests/test_submission_uniqueness.py::
+    test_script_runs_on_the_real_repo` (exit 0 on the real repo) only held
+    while `submissions/` was empty (a reset artifact). Fixed on principle, not
+    convenience: F7 now permits exactly one match — the manifest of the tif the
+    payload header declares as its `Source:` — and still hard-fails when the
+    payload pins the pixels of any *other* built artifact (the historical
+    "site pins identical hash" failure mode, 5GEMSDOE row). F1/F8 are
+    untouched: two artifacts with identical prediction arrays can never be
+    built at all. Two unit tests pin both sides (payload-sourced match passes;
+    foreign match fires). Cross-team scored-artifact identity remains the job
+    of `scripts/audit_scored_artifacts.py --fetch-scored` (README step 4).
+
 ## C2. Session log — 14GEMSDOE (2026-09-28, round 3)
 
 * **Pass 1 (implement + verify).** R3 arms implemented

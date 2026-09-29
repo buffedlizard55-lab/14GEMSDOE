@@ -331,3 +331,64 @@ component with an endpoint within 20 px of a visible endpoint, strikes within
 vs iso 0.0193; condbase: cont 0.0420 vs 0.0162). The C21 continuation class is
 the mass of the truth population; the isolated remainder is where R7-2's
 bridge must reach. Suite: 157 tests (3 new).
+
+## Round-7 gates 5–7 + all6 decision (2026-09-29) — R7-1 PROMOTED, all6 ineligible for the slot
+
+**R7-1 `geom_align` decision (pre-registered rule: win δ=2 and not lose δ=0):**
+- δ=0 (`artifacts/holdout_round7_align_d0.json`, no --misreg-px → default 0):
+  sparse 3/4 (0.0176/0.0132/0.0149/0.0168 vs geom 0.0165/0.0145/0.0142/0.0153),
+  far **4/4** (0.0064/0.0016/0.0020/0.0037 — fold-0 far 0.0064 best single far yet).
+  Not lost ✓
+- δ=2 (`artifacts/holdout_round7_align_d2.json`, `--misreg-px 2` protocol stress:
+  one rigid shift per catalogue component, shared by every view of every fold;
+  TEST truth never displaced; baseline sees the same misregistered world):
+  sparse **4/4** (0.0188/0.0175/0.0170/0.0174), far **4/4** (0.0070/0.0033/0.0040/
+  0.0060). Wins ✓
+→ **R7-1 PROMOTED.** Interpretation caveat: the stress trains both arms on the
+displaced world but only geom_align models/corrects the displacement; a
+correction-only-on-the-align-side asymmetry is part of the arm design.
+
+**GATE 7 `all6` vs horse (pre-registered: all6 needs sparse AND far ≥3/4
+fold wins; else the slot goes to the rebuilt horse ensemble — §B1):**
+`artifacts/holdout_round6_all6.json` (exit 0 — the incremental `_f16` memory
+fix held through all 4 folds):
+
+| Fold | all6 dense / sparse / far | horse (pinned, ledger above) | all6 wins? |
+|------|---------------------------|------------------------------|------------|
+| 0 | 0.0676 / 0.0214 / 0.0068 | 0.0627 / 0.0211 / 0.0041 | S+F |
+| 1 | 0.0766 / 0.0268 / 0.0094 | 0.0659 / 0.0233 / 0.0041 | S+F |
+| 2 | 0.0594 / 0.0193 / 0.0069 | 0.0494 / 0.0206 / 0.0019 | F only |
+| 3 | 0.0680 / 0.0207 / 0.0063 | 0.0715 / 0.0215 / 0.0059 | F only |
+| **Mean** | **0.0679 / 0.0221 / 0.0074** | **0.0624 / 0.0217 / 0.0040** | **sparse 2/4, far 4/4** |
+
+**Decision: all6 FAILS the sparse ≥3/4 rule (2/4) despite better means — the
+fold-wise rule stands. Submission field = rebuilt `geom_horse` 4-fold ensemble**
+(horse gate re-run: `artifacts/holdout_round6_horse.json`, repinning the
+pinned rows). If a future all6-class arm adds a sparse-stable term (R7-2
+bridge is the candidate), re-test under the same rule.
+
+## Submission artifact rebuilt after the reset (2026-09-29) — horse ensemble, HUMAN upload pending
+
+The round-6 horse TIFF (`GEMS_r5-geom-horse-ensemble_20260929T012833Z_b9d51ebb.tif`)
+and its manifest were lost in the workspace reset (`submissions/` is
+gitignored); the site payload (`docs/js/payload.js`, committed in PR #8)
+survived with `pixels_sha256=aa966e56…`. Rebuilt byte-identically from the
+re-pinned gate (`artifacts/holdout_round6_horse.json`, all 4 folds reproduce
+the pinned rows exactly):
+
+- **Command:** `./.venv/bin/python scripts/build_real_submission.py --gate
+  artifacts/holdout_round6_horse.json --arm geom_horse`
+- **Artifact:** `submissions/GEMS_r5-geom-horse-ensemble_20260929T044943Z_b9d51ebb.tif`
+  — tif sha256 `b9d51ebbde12…` (identical container hash to the lost file:
+  same bytes), prediction sha256 `aa966e5672db…`, 51,674 px emitted
+  (top 1.00%, CALIB-median budget), validate_submission PASS, [0,1] finite.
+- **Zero uploads of these pixels exist** (leaderboard n=3 unchanged; no slot
+  spent). One upload is planned per §B1. "Never re-upload byte-identical"
+  protects uploads, not rebuilds after loss — recorded here so the rebuild is
+  never mistaken for a second artifact (F8 would have caught two manifests).
+- **Uniqueness audit:** `check_submission_uniqueness.py` → **PASS** after the
+  F7 design-gap fix (FLAG #13) and the documented payload re-source
+  (`build_site_payload.py submissions/GEMS_..._044943Z_b9d51ebb.tif`).
+  F5 warnings retained by design (score 0.1563 ties ≠ artifact identity).
+- Payload pixels unchanged (aa966e56); only the header `Source:` name moved
+  from the lost 01:28 filename to the rebuilt one.

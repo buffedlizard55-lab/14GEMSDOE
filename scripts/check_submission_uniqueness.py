@@ -15,7 +15,11 @@ Checks:
   F5  warns on repeated rounded scores / ledger fingerprints (not a hard error)
   F6  warns on an unexplained ledger `NO` marker
   F7  compares exact prediction-array hashes in manifests with the current site
-      payload hash (when both are present)
+      payload hash (when both are present).  The payload may legitimately carry
+      the pixels of exactly one artifact: its own declared `Source:` tif (the
+      README step-5 flow ends with build_site_payload.py <the built tif>).
+      Pinning the pixels of any other built artifact is the historical "site
+      pins identical hash" failure mode and is a hard error.
   F8  no two manifests share the same prediction-array hash
 
 Exit code 0 means no proven artifact duplication or integrity failure was
@@ -161,12 +165,16 @@ def check(submissions: Path, ledger: Path, payload_js: Path,
         m = re.search(r"pixels_sha256=([0-9a-f]{16,64})", text)
         if m:
             short = m.group(1)
+            src = re.search(r"Source:\s*(\S+\.tif)", text)
+            source_name = src.group(1) if src else ""
             dup = [name for h, group in by_prediction_hash.items()
-                   if h.startswith(short) for name in group]
+                   if h.startswith(short) for name in group
+                   if name != source_name]
             if dup:
                 problems.append(
                     f"F7: site payload pixel hash {short}... matches prediction-array "
-                    f"hash in {len(dup)} submission manifest(s): {', '.join(dup)}")
+                    f"hash in {len(dup)} submission manifest(s) that are NOT its "
+                    f"declared source {source_name or '(none)'}: {', '.join(dup)}")
     return problems, warnings
 
 
