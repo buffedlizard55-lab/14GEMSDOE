@@ -121,7 +121,7 @@ now runs the real <code>payload.js</code>, <code>tif_writer.js</code> and
 <code>site.js</code> under a DOM shim. Against the unfixed file it prints
 <code>buildState = "FAILED: tifBytesNan is not defined"</code> and
 <code>none enabled</code>. Against the fixed file it prints
-<code>verdict: PASS (15/15 steps)</code>.</p>
+<code>verdict: PASS (20/20 steps)</code>.</p>
 <p><strong>Three fixes, not one.</strong></p>
 <ol>
 <li><code>tifBytesNan</code> is declared, and the optional NaN-nodata variant is built in
@@ -135,7 +135,7 @@ from the top of this page, so a visitor with JavaScript disabled — or with a b
 cannot run the builder — still has a file to submit. This is the pattern the sibling team
 sites use.</li>
 </ol>
-<p class="src">Covered by <code>tests/test_site_build.py</code> (15 tests) in both routes:
+<p class="src">Covered by <code>tests/test_site_build.py</code> (16 tests) in both routes, and run for two browsers in each — one with <code>CompressionStream</code> and one without:
 the browser build is read back with rasterio and compared to the shipped payload
 bit-for-bit, and both files must pass <code>gems.raster.check_submission</code> — the same
 gate that refuses a file the form would reject with

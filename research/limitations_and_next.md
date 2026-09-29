@@ -263,14 +263,16 @@ before gate numbers). Records: `artifacts/holdout_round6_rest.json`,
     top of `docs/index.html`, so a JavaScript-free route to a submission file
     always exists — the pattern the sibling team sites use.
     *New guard:* `scripts/check_site_build.mjs` + `tests/test_site_build.py`
-    (15 tests) run the real `payload.js` / `tif_writer.js` / `site.js` under a
-    DOM shim, require `verdict: PASS (15/15 steps)`, read the built file back with
+    (16 tests) run the real `payload.js` / `tif_writer.js` / `site.js` under a
+    DOM shim, require `verdict: PASS (20/20 steps)` across both writer paths (deflate and
+    no-CompressionStream), read the built file back with
     rasterio, compare it bit-for-bit with the shipped payload and put it through
     `gems.raster.check_submission`. `.github/workflows/ci.yml` runs both the
     Python suite and this check on every push.
     *Verified:* against the unfixed file the harness prints
     `buildState = "FAILED: tifBytesNan is not defined"` and `none enabled`;
-    against the fixed file, `verdict: PASS (15/15 steps)`.
+    against the fixed file, `verdict: PASS` (15/15 steps at the time of the fix;
+    20/20 once both writer paths were added to the harness).
     *Contradiction found and corrected while auditing the page's own claims:*
     `docs/index.html` advertised `pixels_sha256 aa966e56…` and `51,674 px
     emission (1.00% footprint)` for a payload that actually ships
